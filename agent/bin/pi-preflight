@@ -98,6 +98,27 @@ def ledger():
     return r.returncode == 0, (r.stdout.strip().splitlines() or ["no output"])[-1]
 
 
+def snapshot():
+    """The publish repo must be a working repo, not a half-built directory."""
+    problems = []
+    for name in ("README.md", "LICENSE", "PUBLISHING.md"):
+        if not (PUB / name).exists():
+            problems.append(f"missing {name}")
+    if not (PUB / ".git").exists():
+        problems.append("no .git (render deleted it?)")
+    else:
+        if (PUB / ".git" / "rebase-merge").exists() or (PUB / ".git" / "rebase-apply").exists():
+            problems.append("stuck mid-rebase")
+        rem = subprocess.run(["git", "-C", str(PUB), "remote"], capture_output=True, text=True).stdout.strip()
+        if not rem:
+            problems.append("no git remote")
+        br = subprocess.run(["git", "-C", str(PUB), "rev-parse", "--abbrev-ref", "HEAD"],
+                            capture_output=True, text=True).stdout.strip()
+        if br != "main":
+            problems.append(f"on branch {br!r}, expected main")
+    return (not problems), "; ".join(problems) or "snapshot repo healthy"
+
+
 def resources():
     mem = 0
     for line in open("/proc/meminfo"):
@@ -114,6 +135,7 @@ def main():
     check("license", license)
     check("judge", judge)
     check("ledger", ledger)
+    check("snapshot", snapshot)
     check("resources", resources)
     failed = [r for r in results if not r[1]]
     for name, ok, detail in results:

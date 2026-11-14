@@ -73,3 +73,21 @@ Format: what happened → root cause → guard → where the guard lives.
 - **Guard**: k≥3 with a fresh baseline, no per-task regression, Δ≥2, and a per-task breakdown printed
   by the gate; a change that trades one class for another is a reject.
 - **Lives in**: `selfimprove/gate.py`, `policy.json`, `decisions.md`.
+
+## 2026-11-14 — the publish repo silently stopped publishing (three bugs in a row)
+
+- **What**: `pi-publish --push` printed "pushed" while the remote stayed on the old commit; later a
+  push failed with "origin does not appear to be a git repository"; the top-level README and
+  PUBLISHING.md vanished from the snapshot.
+- **Causes**, in the order they were found:
+  1. `render()` did `rmtree(DST)`, which deleted the snapshot repo's `.git` — so every run
+     re-initialised a repo with no remote, and `git` fell through to the parent repo.
+  2. The reject path used `git pull --rebase`, which conflicts on a snapshot repo (every file is
+     "added" on both sides) and left the repo stuck mid-rebase; the next push then no-ops.
+  3. `README.md`/`LICENSE`/`PUBLISHING.md` were written *after* `render()`, so the reject path's
+     re-render wiped them.
+- **Guards**: `render()` preserves `.git` and writes README/LICENSE/PUBLISHING itself; a stuck
+  rebase is aborted at start; a rejected push does `fetch` + `reset --hard origin/main` + re-render
+  + commit (never rebase); the local branch is forced to `main`; `pi-preflight` now checks that the
+  snapshot has README/LICENSE/PUBLISHING, that a remote exists, and that no rebase is in progress.
+- **Lives in**: `bin/pi-publish`, `bin/pi-preflight`.
