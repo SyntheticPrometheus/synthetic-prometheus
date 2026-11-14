@@ -198,6 +198,9 @@ def render(pairs):
                 out, PUB / "last" / rel, shallow=False):
             changed += 1
     (DST / "LICENSE").write_text(LICENSE_TEXT)
+    (DST / "README.md").write_text(readme(len(pairs)))
+    if (AGENT / "PUBLISHING.md").exists():
+        shutil.copy2(AGENT / "PUBLISHING.md", DST / "PUBLISHING.md")
     return changed
 
 
@@ -284,8 +287,6 @@ def main():
     if state_ok or not changed:
         return state_ok
 
-    (DST / "README.md").write_text(readme(len(pairs)))
-    shutil.copy2(AGENT / "PUBLISHING.md", DST / "PUBLISHING.md") if (AGENT / "PUBLISHING.md").exists() else None
 
     if (DST / ".git" / "rebase-merge").exists() or (DST / ".git" / "rebase-apply").exists():
         subprocess.run(["git", "rebase", "--abort"], cwd=DST, capture_output=True, text=True)
