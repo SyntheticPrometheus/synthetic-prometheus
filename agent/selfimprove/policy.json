@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "note": "Pinned policy. The loop may not edit this file; audit.py refuses an arm whose diff would change it. Thresholds are the pre-registered decision rule.",
+  "gate": {
+    "min_reps": 3,
+    "min_delta": 2,
+    "require_no_regression": true
+  },
+  "proposal": {
+    "max_added_lines": 12,
+    "anneal_per_accepted_arm": 2,
+    "min_added_lines": 4,
+    "forbidden_patterns": [
+      "verifier",
+      "_verify",
+      "suite.json",
+      "gate.py",
+      "ledger",
+      "policy.json",
+      "test suite",
+      "expected values",
+      "expected output",
+      "the tests",
+      "selftest"
+    ],
+    "must_extend_base": true
+  },
+  "run": {
+    "max_wall_per_task_s": 240,
+    "max_cost_per_task_usd": 0.02,
+    "memory_guard_mb": 1200
+  }
+}

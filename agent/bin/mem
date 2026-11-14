@@ -1,0 +1,5 @@
+#!/bin/sh
+# launcher: use the bundled venv interpreter (dense layer) when present, else system python3
+V="$HOME/.pi/agent/memory/venv/bin/python"
+[ -x "$V" ] || V=python3
+exec "$V" "$HOME/.pi/agent/bin/mem.py" "$@"

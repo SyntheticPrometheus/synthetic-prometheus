@@ -1,0 +1,125 @@
+#!$HOME/.pi/agent/laya/.venv/bin/python
+"""layaq — one-shot Laya decision from the shell, compact output.
+
+  layaq '<questions json>' "state text"      # or: ... < file
+  layaq --preset triage "state text"
+  layaq --schema '<json schema>' "state text"
+  layaq --batch requests.jsonl               # one {state,questions} JSON object per line
+
+Prints one line per question: name, label/score/P(true), confidence, and the full distribution
+on --json. Warm MCP tools (mcp__laya__*) are cheaper for repeated calls; this pays ~7 s load.
+"""
+import json
+import sys
+
+import laya
+
+HELP = __doc__
+
+
+def parse(argv):
+    questions = schema = preset = None
+    batch = None
+    texts = []
+    as_json = False
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a in ("-h", "--help"):
+            print(HELP)
+            sys.exit(0)
+        elif a == "--json":
+            as_json = True
+        elif a in ("--preset", "--questions", "--schema", "--batch"):
+            if i + 1 >= len(argv):
+                sys.exit(f"{a} needs a value")
+            val = argv[i + 1]
+            if a == "--preset":
+                preset = val
+            elif a == "--schema":
+                schema = json.loads(val)
+            elif a == "--batch":
+                batch = val
+            else:
+                questions = json.loads(val)
+            i += 1
+        elif a == "-":
+            texts.append(sys.stdin.read())
+        else:
+            texts.append(a)
+        i += 1
+    return questions, schema, preset, batch, texts, as_json
+
+
+def questions_for(preset):
+    if preset is None:
+        return None
+    fn = getattr(laya, f"{preset}_questions", None)
+    if fn is None:
+        sys.exit(f"unknown preset {preset!r}; try: triage, email, guard, moderation, router")
+    return fn()
+
+
+def summarize(out, as_json):
+    if as_json:
+        print(json.dumps(out, indent=1, ensure_ascii=False))
+        return
+    ans = out.get("answers", out)
+    route = out.get("routing", {}).get("model")
+    for name, a in ans.items():
+        if not isinstance(a, dict):
+            continue
+        conf = a.get("confidence")
+        if a.get("type") == "choice":
+            probs = a.get("probabilities") or {}
+            runner = max((p for k, p in probs.items() if k != a.get("choice")), default=0.0)
+            val = f"{a.get('choice')} (p={probs.get(a.get('choice'), 0):.3f}, next={runner:.3f})"
+        elif a.get("type") == "score":
+            val = f"level {a.get('score'):.2f} of {len(a.get('legend', {})) or '?'}"
+        else:
+            val = f"P(true)={a.get('noul')}"
+        done = " abstain" if a.get("abstain") else ""
+        print(f"{name:16s} {val:44s} conf={conf if conf is None else round(conf, 3)}{done}")
+    if route:
+        print(f"-- checkpoint: {route}", file=sys.stderr)
+
+
+def main():
+    questions, schema, preset, batch, texts, as_json = parse(sys.argv[1:])
+    router = laya.Router(max_loaded=1, device="cpu")
+
+    if batch:
+        reqs = []
+        with open(batch) as fh:
+            for line in fh:
+                line = line.strip()
+                if line:
+                    reqs.append(json.loads(line))
+        if not reqs:
+            sys.exit("empty batch")
+        default_qs = questions_for(preset) or questions
+        for r in reqs:
+            if "questions" not in r and default_qs:
+                r["questions"] = default_qs
+            if isinstance(r.get("state"), str):
+                r["state"] = {"request": r["state"]}
+        outs = router.predict_batch(reqs, sort_by_length=True)
+        for out in outs:
+            summarize({"answers": out.get("answers", out), "routing": out.get("routing", {})}, as_json)
+        return
+
+    if not texts:
+        texts = [sys.stdin.read()]
+    state = {"request": " ".join(texts).strip()}
+    qs = questions_for(preset) or questions
+    if schema:
+        out = router.decide(state, schema=schema)
+        print(json.dumps(out, indent=1, ensure_ascii=False))
+        return
+    if not qs:
+        sys.exit("give questions JSON, --preset NAME, or --schema SCHEMA (see layaq --help)")
+    summarize(router.predict(state, qs), as_json)
+
+
+if __name__ == "__main__":
+    main()

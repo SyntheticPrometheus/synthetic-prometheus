@@ -1,0 +1,290 @@
+#!/usr/bin/env python3
+"""pi-publish — build a sanitized public snapshot of the harness + dotfiles and push it rarely.
+
+  pi-publish                 plan only: what would change, secret scan, size check (no network)
+  pi-publish --push          build, commit and push IF the batching rules allow it
+  pi-publish --force         push regardless of the batching rules (first publish, or a fix)
+  pi-publish --status        show the batching state and the remote
+
+Why it is deliberately slow: GitHub dislikes push floods, and a public snapshot is not a backup of
+my working tree. One squashed commit per week at most, only when there is something worth reading.
+
+Rules (state in publish/state.json):
+  - refuse to push if any secret pattern matches, or a file is > 512 KB, or total > 20 MB;
+  - skip unless (changed files >= min_changed_files) or (days since last push >= min_days);
+  - at most max_pushes_per_7d pushes in any rolling 7 days, --force excepted.
+"""
+import argparse
+import filecmp
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+HOME = Path.home()
+AGENT = HOME / ".pi" / "agent"
+PUB = AGENT / "publish"
+DST = PUB / "repo"
+STATE = PUB / "state.json"
+REMOTE = "git@github.com:SyntheticPrometheus/synthetic-prometheus.git"
+
+# explicit allowlist, relative to ~/.pi/agent. Nothing else is ever copied.
+ALLOW = [
+    "AGENTS.md", "mcp.json",
+    "agents", "skills", "prompts", "extensions", "research",
+    "bin/mem", "bin/mem.py", "bin/layaq", "bin/pi-attach", "bin/pi-delegate", "bin/pi-term",
+    "bin/pi-publish", "bin/pi-github-bootstrap", "PUBLISHING.md",
+    "delegation/README.md", "delegation/policy.md",
+    "laya/NOTES.md", "laya/bench.py", "laya/mcp_probe.py", "laya/probe2.py",
+    "selfimprove/DESIGN.md", "selfimprove/decisions.md", "selfimprove/suite", "selfimprove/arms",
+    "selfimprove/audit.py", "selfimprove/gate.py", "selfimprove/maintain.py",
+    "selfimprove/policy.json", "selfimprove/propose.py", "selfimprove/run.py",
+    "selfimprove/selftest.py",
+]
+DOTFILES = [
+    ".bashrc", ".bash_profile",
+    ".config/systemd/user/pi-selfimprove.service",
+    ".config/systemd/user/pi-selfimprove.timer",
+    ".config/autostart/pi-terminal.desktop",
+]
+EXCLUDE_NAMES = {".git", "__pycache__", "runs", "auth.json", "state.json", ".venv"}
+TEXT_EXT = {".md", ".py", ".sh", ".ts", ".json", ".service", ".timer", ".desktop", ".toml",
+            ".yaml", ".yml", ".txt", ""}
+
+SECRETS = [
+    (r"sk-[A-Za-z0-9_-]{20,}", "openai-style key"),
+    (r"gh[pousr]_[A-Za-z0-9]{20,}", "github token"),
+    (r"github_pat_[A-Za-z0-9_]{20,}", "github fine-grained token"),
+    (r"xox[baprs]-[A-Za-z0-9-]{10,}", "slack token"),
+    (r"AKIA[0-9A-Z]{16}", "aws key id"),
+    (r"-----BEGIN [A-Z ]*PRIVATE KEY-----", "private key"),
+    (r"(?i)(api[_-]?key|secret|password)\s*[:=]\s*['\"][A-Za-z0-9/+=_-]{12,}['\"]", "inline credential"),
+]
+
+DEFAULTS = {"min_changed_files": 3, "min_days": 7, "max_pushes_per_7d": 2, "max_file_kb": 512,
+            "max_total_mb": 20, "last_push": 0, "history": []}
+
+
+def load_state():
+    if STATE.exists():
+        s = json.loads(STATE.read_text())
+    else:
+        s = {}
+    return {**DEFAULTS, **s}
+
+
+def save_state(s):
+    PUB.mkdir(parents=True, exist_ok=True)
+    STATE.write_text(json.dumps(s, indent=1) + "\n")
+
+
+def is_text(p):
+    if p.suffix.lower() in TEXT_EXT:
+        return True
+    try:
+        p.read_text()
+        return True
+    except Exception:
+        return False
+
+
+def redact(text):
+    """Make the snapshot portable and keep the owner's machine name out of a public repo."""
+    text = text.replace(str(HOME), "$HOME")
+    text = text.replace("$HOME", "$HOME")
+    text = re.sub(r"(?i)\bdaedalus\b", "host", text)
+    return text
+
+
+def walk(path):
+    if path.is_file():
+        yield path
+    elif path.is_dir():
+        for root, dirs, files in os.walk(path):
+            dirs[:] = [d for d in dirs if d not in EXCLUDE_NAMES]
+            for f in files:
+                if f in EXCLUDE_NAMES:
+                    continue
+                yield Path(root) / f
+
+
+def build_plan():
+    """Return the list of (source, destination) pairs and the total size."""
+    pairs = []
+    for rel in ALLOW:
+        src = AGENT / rel
+        if not src.exists():
+            continue
+        for f in walk(src):
+            r = f.relative_to(AGENT)
+            pairs.append((f, Path("agent") / r))
+    for rel in DOTFILES:
+        src = HOME / rel
+        if src.exists():
+            pairs.append((src, Path("dotfiles") / rel.lstrip(".")))
+    etcl = Path("/etc/lightdm/lightdm.conf.d/50-autologin.conf")
+    if etcl.exists():
+        pairs.append((etcl, Path("dotfiles/etc/lightdm/50-autologin.conf")))
+    return pairs
+
+
+def scan(pairs):
+    problems = []
+    total = 0
+    for src, rel in pairs:
+        size = src.stat().st_size
+        total += size
+        if size > 512 * 1024:
+            problems.append(f"{rel} is {size//1024} KB (> 512 KB)")
+        if not is_text(src):
+            continue
+        body = src.read_text(errors="replace")
+        for pat, label in SECRETS:
+            if re.search(pat, body):
+                problems.append(f"{rel}: looks like a {label}")
+        if "auth.json" in str(rel):
+            problems.append(f"{rel}: auth file must never be published")
+    if total > 20 * 1024 * 1024:
+        problems.append(f"total snapshot {total//1024//1024} MB (> 20 MB)")
+    return problems, total
+
+
+def render(pairs):
+    if DST.exists():
+        shutil.rmtree(DST)
+    DST.mkdir(parents=True)
+    changed = 0
+    for src, rel in pairs:
+        out = DST / rel
+        out.parent.mkdir(parents=True, exist_ok=True)
+        if is_text(src):
+            out.write_text(redact(src.read_text(errors="replace")))
+        else:
+            shutil.copy2(src, out)
+        if not (PUB / "last" / rel).exists() or not filecmp.cmp(
+                out, PUB / "last" / rel, shallow=False):
+            changed += 1
+    return changed
+
+
+def readme(n_files):
+    return f"""# synthetic-prometheus
+
+The working harness and dotfiles of an unattended coding agent on a single Arch Linux machine:
+prose protocol (`agent/AGENTS.md`), skills, the subagent roster, and a measured
+self-improvement loop (`agent/selfimprove`) whose design and evidence live next to the code.
+
+Published as periodic snapshots, not a mirror of the working tree — one squashed commit per cycle,
+only when there is something worth reading. Secrets, sessions and personal memory are excluded by
+an explicit allowlist; see `PUBLISHING.md`.
+
+- `agent/` — harness: AGENTS.md, agents/, skills/, prompts/, extensions/, bin/, research/,
+  selfimprove/ (design, decisions, suite, gate, audit, maintenance)
+- `dotfiles/` — shell, systemd user units, autostart, lightdm autologin
+- files: {n_files} · snapshot: {time.strftime('%Y-%m-%d')}
+
+Research behind the loop: `agent/research/self-improving-harnesses.md`.
+"""
+
+
+def git(*args, cwd=None, check=True):
+    return subprocess.run(["git", *args], cwd=cwd or DST, capture_output=True, text=True, check=False)
+
+
+def plan(changed, total, problems, state, force=False):
+    days = (time.time() - state["last_push"]) / 86400 if state["last_push"] else 999
+    windows = [t for t in state["history"] if time.time() - t < 7 * 86400]
+    print(f"snapshot: {changed} changed file(s), {total//1024} KB")
+    print(f"state: last push {days:.1f}d ago, {len(windows)} push(es) in the last 7d "
+          f"(cap {state['max_pushes_per_7d']})")
+    for p in problems:
+        print("BLOCK:", p)
+    if problems:
+        return 3
+    if force:
+        print("FORCE: batching rules bypassed")
+        return 0
+    if len(windows) >= state["max_pushes_per_7d"]:
+        print(f"SKIP: push cap reached ({len(windows)}/{state['max_pushes_per_7d']} in 7d)")
+        return 0
+    if changed < state["min_changed_files"] and days < state["min_days"]:
+        print(f"SKIP: {changed} changed < {state['min_changed_files']} and only {days:.1f}d "
+              f"< {state['min_days']}d since the last push")
+        return 0
+    return 0
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--push", action="store_true")
+    ap.add_argument("--force", action="store_true")
+    ap.add_argument("--status", action="store_true")
+    ap.add_argument("--remote", default=REMOTE)
+    a = ap.parse_args()
+    state = load_state()
+
+    if a.status:
+        days = (time.time() - state["last_push"]) / 86400 if state["last_push"] else None
+        print(f"remote: {a.remote}\nlast push: {f'{days:.1f}d ago' if days is not None else 'never'}")
+        print(f"rules: {state['min_changed_files']} files or {state['min_days']}d, "
+              f"max {state['max_pushes_per_7d']}/7d")
+        print(f"repo dir: {DST}")
+        return 0
+
+    pairs = build_plan()
+    problems, total = scan(pairs)
+    changed = render(pairs) if not problems else 0
+    rc = plan(changed, total, problems, state, a.force)
+    if rc or not a.push:
+        if not a.push:
+            print("plan only (use --push to publish)")
+        return rc
+
+    state_ok = plan(changed, total, problems, state, a.force)
+    if state_ok or not changed:
+        return state_ok
+
+    (DST / "README.md").write_text(readme(len(pairs)))
+    (DST / "LICENSE").write_text("MIT License\n\nCopyright (c) "
+                                 f"{time.strftime('%Y')} SyntheticPrometheus\n\n"
+                                 "Permission is hereby granted, free of charge, to any person obtaining a "
+                                 "copy\nof this software and associated documentation files (the \"Software\"), "
+                                 "to deal\nin the Software without restriction, including without limitation the "
+                                 "rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or "
+                                 "sell\ncopies of the Software, and to permit persons to whom the Software is\n"
+                                 "furnished to do so, subject to the following conditions:\n\nThe above "
+                                 "copyright notice and this permission notice shall be included in all\ncopies "
+                                 "or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", "
+                                 "WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO "
+                                 "THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND "
+                                 "NONINFRINGEMENT.\n")
+    shutil.copy2(AGENT / "PUBLISHING.md", DST / "PUBLISHING.md") if (AGENT / "PUBLISHING.md").exists() else None
+
+    if not (DST / ".git").exists():
+        git("init", "-q")
+        git("remote", "add", "origin", a.remote)
+    git("add", "-A")
+    msg = f"snapshot {time.strftime('%Y-%m-%d')}: {changed} file(s) changed"
+    git("-c", "user.email=agent@local", "-c", "user.name=SyntheticPrometheus",
+        "commit", "-q", "-m", msg)
+    print(f"committed: {msg}")
+    out = subprocess.run(["git", "push", "-q", "origin", "HEAD:main"],
+                         cwd=DST, capture_output=True, text=True)
+    if out.returncode != 0:
+        print("PUSH FAILED (no credentials or no remote yet):")
+        print((out.stderr or out.stdout).strip()[:600])
+        print("\nnext: gh auth login   (or add the SSH key and re-run)")
+        return 4
+    state["last_push"] = time.time()
+    state["history"] = [t for t in state["history"] if time.time() - t < 30 * 86400] + [time.time()]
+    save_state(state)
+    print("pushed")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

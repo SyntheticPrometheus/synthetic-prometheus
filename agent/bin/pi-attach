@@ -1,0 +1,10 @@
+#!/bin/bash
+# Attach to the persistent pi tmux session, creating it (and resuming the last chat) if absent.
+# Started by ~/.config/autostart/pi-terminal.desktop after autologin, so an unattended machine
+# comes back with the agent's session on screen.
+set -u
+if tmux has-session -t pi 2>/dev/null; then
+  exec tmux attach-session -t pi
+fi
+cd "$HOME" || exit 1
+exec tmux new-session -s pi "pi --continue || exec bash"

@@ -1,0 +1,10 @@
+[Unit]
+Description=Weekly pi maintenance (Mon 04:17)
+
+[Timer]
+OnCalendar=Mon 04:17
+Persistent=true
+RandomizedDelaySec=900
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# pi-github-bootstrap — finish what cannot be automated: verify auth, create the repo, publish.
+#
+# Prerequisites that a human must do once (GitHub has no account-creation API, and automating
+# signup breaks their ToS — the fastest route to a ban):
+#   1. create the account at https://github.com/signup with the username SyntheticPrometheus
+#   2. run:  gh auth login        (browser flow, choose SSH or HTTPS)
+#
+# Then:  pi-github-bootstrap [--repo-name synthetic-prometheus] [--private]
+set -euo pipefail
+
+REPO="synthetic-prometheus"
+VIS="--public"
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --repo-name) REPO="$2"; shift 2 ;;
+    --private) VIS="--private"; shift ;;
+    *) echo "unknown option: $1" >&2; exit 1 ;;
+  esac
+done
+
+command -v gh >/dev/null || { echo "gh is not installed (sudo pacman -S github-cli)"; exit 1; }
+
+if ! gh auth status >/dev/null 2>&1; then
+  echo "Not authenticated. Run 'gh auth login' first (browser flow), then re-run this."
+  exit 2
+fi
+
+USER="$(gh api user --jq .login)"
+echo "authenticated as: $USER"
+if [ "$USER" != "SyntheticPrometheus" ]; then
+  echo "warning: expected SyntheticPrometheus, continuing with $USER"
+fi
+
+if gh repo view "$USER/$REPO" >/dev/null 2>&1; then
+  echo "repo exists: $USER/$REPO"
+else
+  gh repo create "$REPO" "$VIS" --description \
+    "Harness, skills and dotfiles of an unattended coding agent, with a measured self-improvement loop" \
+    --disable-wiki
+fi
+
+# Prefer SSH when a key exists, otherwise let gh's credential helper drive HTTPS.
+if [ -f "$HOME/.ssh/id_ed25519.pub" ] || [ -f "$HOME/.ssh/id_rsa.pub" ]; then
+  REMOTE="git@github.com:$USER/$REPO.git"
+else
+  REMOTE="https://github.com/$USER/$REPO.git"
+fi
+echo "remote: $REMOTE"
+
+mkdir -p "$HOME/.pi/agent/publish"
+touch "$HOME/.pi/agent/publish/enabled"
+"$HOME/.pi/agent/bin/pi-publish" --force --push --remote "$REMOTE"
+echo
+echo "done. weekly snapshots: systemctl --user status pi-publish.timer"

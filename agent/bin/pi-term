@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# pi-term — open a *new* interactive pi chat, in a new terminal window or a detached tmux session.
+#
+#   pi-term                          new terminal, new chat in $PWD
+#   pi-term --cwd ~/proj "task..."   new terminal, chat seeded with a task
+#   pi-term --tmux [--name slug] ... detached tmux session (ssh-safe, survives the window)
+#   pi-term --bg ...                 alias for --tmux
+#
+# Why: some work is better handed to a *separate* interactive session (a long refactor, a
+# second opinion, a parallel exploration) than serialised into this one. The session file is
+# per-directory, so each terminal keeps its own history; use --continue to resume.
+set -euo pipefail
+
+CWD="$PWD"
+NAME=""
+MODE="terminal"
+ARGS=()
+PI_ARGS=()
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --cwd)   CWD="$(cd "$2" && pwd)"; shift 2 ;;
+    --name)  NAME="$2"; shift 2 ;;
+    --tmux)  MODE="tmux"; shift ;;
+    --bg)    MODE="tmux"; shift ;;
+    --model) PI_ARGS+=("--model" "$2"); shift 2 ;;
+    -h|--help) sed -n '2,8p' "$0" | sed 's/^# \?//'; exit 0 ;;
+    --)      shift; ARGS+=("$@"); break ;;
+    *)       ARGS+=("$1"); shift ;;
+  esac
+done
+
+slug() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' | sed 's/^-//; s/-$//' | cut -c1-32; }
+
+TITLE="${NAME:-$(basename "$CWD")}"
+[ ${#ARGS[@]} -gt 0 ] && TITLE="$TITLE: $(slug "${ARGS[0]}")"
+
+if [ "$MODE" = "tmux" ]; then
+  SESSION="pi-$(slug "$TITLE")-$(date +%H%M%S)"
+  tmux new-session -d -s "$SESSION" -c "$CWD" \
+    "pi ${PI_ARGS[*]:-} ${ARGS[*]:-}; echo; echo '[pi-term] session ended — press Enter to close'; read -r _"
+  echo "tmux session: $SESSION  (attach: tmux attach -t $SESSION)"
+  exit 0
+fi
+
+TERM_BIN="$(command -v xfce4-terminal || command -v x-terminal-emulator || command -v foot || command -v kitty || true)"
+if [ -z "$TERM_BIN" ]; then
+  echo "pi-term: no terminal emulator found; use --tmux" >&2
+  exit 1
+fi
+
+case "$TERM_BIN" in
+  *xfce4-terminal)
+    setsid nohup "$TERM_BIN" --title="pi: $TITLE" --working-directory="$CWD" \
+      --command="pi ${PI_ARGS[*]:-} ${ARGS[*]:-}" >/dev/null 2>&1 & ;;
+  *)
+    setsid nohup "$TERM_BIN" -e pi "${PI_ARGS[@]}" "${ARGS[@]}" >/dev/null 2>&1 & ;;
+esac
+echo "opened terminal: pi: $TITLE (cwd $CWD)"

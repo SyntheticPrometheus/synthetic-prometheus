@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=pi session
+Comment=Open a terminal attached to the persistent pi tmux session
+Exec=xfce4-terminal --title=pi --geometry=120x40 --command=$HOME/.pi/agent/bin/pi-attach
+Terminal=false
+X-GNOME-Autostart-enabled=true

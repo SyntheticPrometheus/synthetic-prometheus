@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "laya": {
+      "command": "$HOME/.pi/agent/laya/.venv/bin/laya-mcp-server",
+      "description": "Laya: non-autoregressive System-1 decision model (~421M encoders) that answers typed choice/score/boolean questions over text in one forward pass. Zero LLM tokens; CPU-only on this host.",
+      "env": {
+        "LAYA_DEVICE": "cpu",
+        "LAYA_MODELS": "english",
+        "LAYA_THREADS": "4",
+        "LAYA_PRELOAD": "0",
+        "HF_HUB_DISABLE_PROGRESS_BARS": "1",
+        "HF_HUB_DISABLE_TELEMETRY": "1"
+      },
+      "toolExposure": {
+        "laya_predict": "direct",
+        "laya_predict_batch": "direct",
+        "laya_route": "direct"
+      }
+    }
+  }
+}

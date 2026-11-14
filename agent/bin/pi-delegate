@@ -1,0 +1,399 @@
+#!/usr/bin/env python3
+"""pi-delegate — headless subagent dispatch + the delegation ledger that measures it.
+
+Companion to the in-TUI `subagent` tool (extensions/subagent/index.ts, which appends the same
+rows to the same ledger). This CLI is for dispatches outside a pi session: cron, scripts, the
+self-improve suite, or a shell where no TUI is running.
+
+  pi-delegate plan  "<task>" [--cwd DIR] [--files N]     decide solo / delegate / parallel
+  pi-delegate run   --agent NAME --task "..." [--cwd DIR] [--model M] [--timeout S]
+                                                          dispatch one agent, fold its output
+  pi-delegate verdict pass|fail [--sha SHA|--last] [--note "..."]
+                                                          record the real outcome of a dispatch
+  pi-delegate report [--min-n N]                          posteriors + proposals
+  pi-delegate agents                                      list agent definitions
+
+Ledger: ~/.pi/agent/delegation/ledger.jsonl (append-only JSONL; dispatch rows from the extension
+and from `run`, verdict rows from here). Policy + rationale: delegation/policy.md,
+skills/delegate/SKILL.md.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import shlex
+import subprocess
+import sys
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+
+AGENT_DIR = Path(os.environ.get("PI_AGENT_DIR") or Path.home() / ".pi" / "agent")
+AGENTS = AGENT_DIR / "agents"
+LEDGER = AGENT_DIR / "delegation" / "ledger.jsonl"
+PI = os.environ.get("PI_BIN") or "pi"
+
+# --- task cue taxonomy -------------------------------------------------------
+# Buckets are coarse on purpose: with ~dozens of samples, fine buckets are noise
+# (CADMAS-CTX 2604.17950 needs a context bucket small enough to share a posterior).
+BUCKETS = {
+    "recon": r"\b(find|locate|where|search|grep|which files?|list all|inventory|recon|explore|scan|survey|trace|map (out|the))\b",
+    "patch": r"\b(fix|implement|add|refactor|migrat|patch|rewrite|change|update|rename|make .* pass|bump)\b",
+    "verify": r"\b(verify|check|confirm|audit|re-?run|reproduce|does .* (pass|work)|validate|review)\b",
+    "research": r"\b(find papers?|arxiv|literature|state of the art|cite|survey|look up|docs for|upstream)\b",
+    "bulk": r"\b(each of|every (file|row|line|item)|batch|all \d+|n=|triage|classify|extract from each)\b",
+    "understand": r"\b(read|understand|summari[sz]e|explain|interpret|why|compare|review|audit)\b",
+}
+
+# ordered by specificity: an execution cue beats a reading cue when both match
+AGENT_FIT = {
+    "worker": {"patch"},
+    "bulker": {"bulk"},
+    "verifier": {"verify"},
+    "researcher": {"research"},
+    "scout": {"recon", "understand"},
+}
+
+SOLO_CUES = r"\b(one file|single file|this function|this line|in this file|less than a page|just (rename|bump|change)|tweak)\b"
+
+# Measured on this host: a 30-shard aggregate was answered solo by rg/awk in 5-7 s, and an arm told
+# to delegate it dispatched nothing. Counting is shell work, not reading work.
+SHELL_CUES = (r"\b(count|counts|how many|sum|total|average|join|grep|rg|ripgrep|which lines?|each line|"
+              r"aggregate|find|locate|list all|which files?|compare (?:the )?(?:file )?sizes?)\b")
+
+
+def now() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+
+
+def task_sha(task: str) -> str:
+    import hashlib
+
+    return hashlib.sha256(" ".join(task.split()).encode()).hexdigest()[:12]
+
+
+def classify(task: str) -> list[str]:
+    t = task.lower()
+    hits = [b for b, pat in BUCKETS.items() if re.search(pat, t)]
+    return hits or ["other"]
+
+
+def read_ledger() -> list[dict]:
+    if not LEDGER.exists():
+        return []
+    rows = []
+    for line in LEDGER.read_text().splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            rows.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue
+    return rows
+
+
+def append(rows: list[dict]) -> None:
+    LEDGER.parent.mkdir(parents=True, exist_ok=True)
+    with LEDGER.open("a") as fh:
+        for r in rows:
+            fh.write(json.dumps(r) + "\n")
+
+
+def posteriors(rows: list[dict]) -> dict:
+    """Beta(1,1)+evidence per (agent, bucket), joined with the latest verdict per task_sha."""
+    verdicts: dict[str, dict] = {}
+    dispatches = []
+    for r in rows:
+        if r.get("type") == "verdict":
+            verdicts[r.get("task_sha", "")] = r
+        elif r.get("agent"):
+            dispatches.append(r)
+    stats: dict[tuple[str, str], dict] = {}
+    for d in dispatches:
+        buckets = d.get("bucket") or classify(d.get("task", ""))
+        v = verdicts.get(d.get("task_sha", ""))
+        outcome = v["verdict"] if v else None
+        for b in buckets:
+            s = stats.setdefault((d["agent"], b), {"n": 0, "pass": 0, "fail": 0, "unverified": 0,
+                                                   "in": 0, "out": 0, "cost": 0.0, "wall": 0.0})
+            s["n"] += 1
+            s["in"] += d.get("input", 0) or 0
+            s["out"] += d.get("output", 0) or 0
+            s["cost"] += d.get("cost", 0.0) or 0.0
+            s["wall"] += (d.get("wall_ms") or 0) / 1000.0
+            if outcome == "pass":
+                s["pass"] += 1
+            elif outcome == "fail":
+                s["fail"] += 1
+            else:
+                s["unverified"] += 1
+    return stats
+
+
+def score(s: dict) -> tuple[float, float]:
+    """Risk-aware score from CADMAS-CTX: posterior mean minus an uncertainty penalty."""
+    a = 1 + s["pass"]
+    b = 1 + s["fail"]
+    mean = a / (a + b)
+    var = (a * b) / ((a + b) ** 2 * (a + b + 1))
+    return mean, mean - 1.0 * var**0.5
+
+
+def cmd_agents(_args) -> int:
+    for f in sorted(AGENTS.glob("*.md")):
+        text = f.read_text()
+        name = re.search(r"^name:\s*(.+)$", text, re.M)
+        desc = re.search(r"^description:\s*(.+)$", text, re.M)
+        print(f"{f.stem:<10} {(desc.group(1) if desc else '').strip()[:110]}")
+    return 0
+
+
+def cmd_plan(args) -> int:
+    task = " ".join(args.task)
+    cues = classify(task)
+    stats = posteriors(read_ledger())
+    print(f"task:   {task[:160]}")
+    print(f"buckets: {', '.join(cues)}")
+
+    understand = "understand" in cues
+    shell_cue = re.search(SHELL_CUES, task, re.I)
+    file_tokens = re.findall(r"\b[\w/.-]+\.(?:py|ts|tsx|js|sh|rs|go|md|json|ya?ml|txt)\b", task)
+    notes = []
+
+    # 1. shell-first: countable / locatable in one call, and no understanding asked for
+    if shell_cue and not understand:
+        notes.append(f"shell-first: '{shell_cue.group(0)}' is answerable with one rg/awk/jq call — "
+                     "the shell beat delegation 5-7s vs 47s on this host (research/delegation.md)")
+    # 2. one or two named artefacts, editing work: solo (a verifier/reader is a different case)
+    narrow = len(set(file_tokens)) <= 2 and "patch" in cues and not re.search(
+        r"\b(each|all|every|across|shards?|modules?|files?)\b", task, re.I)
+    if narrow:
+        notes.append(f"solo cue: {len(set(file_tokens))} named artefact(s) to edit "
+                     f"({', '.join(sorted(set(file_tokens)))}) — contract+fold exceed the saving")
+    if re.search(SOLO_CUES, task, re.I):
+        notes.append("solo cue: one file / one symbol / one tweak (OneFlow 2601.12307, KV-cache reuse)")
+    if args.files and args.files > 1 and ("recon" in cues or understand):
+        notes.append(f"{args.files} files: context-lossy, the parent only needs the digest "
+                     "(Context-Folding 2510.11967; subagent-vs-skill 2609.09233)")
+    if "bulk" in cues:
+        notes.append("independent items: one fixed rule over many items fits bulker; keep the rule "
+                     "in the contract, not in the child's judgement")
+
+    fits = [a for a, bs in AGENT_FIT.items() if bs & set(cues)]
+    if shell_cue and not understand:
+        fits = []
+    if narrow:
+        fits = []
+
+    for a in fits:
+        for b in cues:
+            st = stats.get((a, b))
+            if not st:
+                notes.append(f"{a}/{b}: no evidence yet — first dispatch is a measurement, log a verdict")
+                continue
+            mean, risk = score(st)
+            tag = (f"{a}/{b}: n={st['n']} pass={st['pass']} fail={st['fail']} "
+                   f"unverified={st['unverified']} risk-score={risk:.2f}")
+            if st["n"] < 3 or st["pass"] + st["fail"] < 2:
+                tag += " (thin evidence: treat as hypothesis)"
+            notes.append(tag)
+
+    if not notes:
+        notes.append("no delegation cue matched: solo")
+    for n in notes:
+        print("  -", n)
+
+    decision = "SOLO"
+    if fits and not re.search(SOLO_CUES, task, re.I):
+        # execution cues beat reading cues; bulker batches instead of fanning out
+        order = ["worker", "bulker", "verifier", "researcher", "scout"]
+        decision = f"DELEGATE:{next(a for a in order if a in fits)}"
+        if decision.endswith("worker") and not shell_cue:
+            decision += " (worker then verifier)"
+    if "verify" in cues:
+        notes.append("verifier caveat: worth a dispatch when the claim is about to be reported or its "
+                     "author is also its judge; a 1-second check you can run yourself is not")
+    print(f"decision: {decision}")
+    print("reasons: delegation/policy.md (v2) — cue-based until the ledger has ≥3 verified samples per cell")
+    return 0
+
+
+def load_agent(name: str) -> dict:
+    path = AGENTS / f"{name}.md"
+    if not path.exists():
+        sys.exit(f"pi-delegate: no agent {name!r} in {AGENTS}")
+    text = path.read_text()
+    fm = {}
+    if text.startswith("---"):
+        _, front, body = text.split("---", 2)
+        for line in front.splitlines():
+            if ":" in line:
+                k, v = line.split(":", 1)
+                fm[k.strip()] = v.strip()
+        text = body
+    return {"name": name, "tools": fm.get("tools"), "model": fm.get("model"), "prompt": text.strip()}
+
+
+def cmd_run(args) -> int:
+    agent = load_agent(args.agent)
+    cwd = Path(args.cwd or ".").resolve()
+    model = args.model or agent["model"]
+    cmd = [PI, "--mode", "json", "-p", "--no-session"]
+    if model:
+        cmd += ["--model", model]
+    if agent["tools"]:
+        cmd += ["--tools", agent["tools"]]
+    prompt_file = Path("/tmp") / f"pi-delegate-{os.getpid()}.md"
+    prompt_file.write_text(agent["prompt"])
+    cmd += ["--append-system-prompt", str(prompt_file), f"Task: {args.task}"]
+    # Never inherit a parent session's model/thinking: a dispatched agent must resolve its own
+    # model (CADMAS-CTX 2604.17950 — the capability posterior is per model+context, so a child that
+    # silently changes model makes the ledger lie).
+    env = {k: v for k, v in os.environ.items() if not k.startswith("PI_") or k == "PI_AGENT_DIR"}
+    t0 = time.time()
+    try:
+        p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=args.timeout,
+                           stdin=subprocess.DEVNULL, env=env)
+        rc, out, err = p.returncode, p.stdout, p.stderr
+    except subprocess.TimeoutExpired as e:
+        rc, out, err = 124, (e.stdout or ""), "timeout"
+    finally:
+        prompt_file.unlink(missing_ok=True)
+    wall_ms = int((time.time() - t0) * 1000)
+
+    # parse the json event stream: last assistant text + usage
+    text, usage, model_seen, stop_reason = [], {"input": 0, "output": 0, "cacheRead": 0,
+                                               "cacheWrite": 0, "cost": 0.0, "contextTokens": 0,
+                                               "turns": 0}, None, None
+    for line in out.splitlines():
+        try:
+            ev = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        kind = ev.get("type")
+        if kind == "message_end":
+            msg = ev.get("message") or {}
+            if msg.get("role") == "assistant":
+                for blk in msg.get("content") or []:
+                    if blk.get("type") == "text":
+                        text.append(blk.get("text", ""))
+                u = msg.get("usage") or {}
+                usage["input"] += (u.get("input") or 0)
+                usage["output"] += (u.get("output") or 0)
+                usage["cacheRead"] += (u.get("cacheRead") or 0)
+                usage["cacheWrite"] += (u.get("cacheWrite") or 0)
+                usage["contextTokens"] = u.get("totalTokens") or usage["contextTokens"]
+                usage["cost"] += ((u.get("cost") or {}).get("total") or 0)
+                usage["turns"] += 1
+                model_seen = msg.get("model") or model_seen
+                stop_reason = msg.get("stopReason") or stop_reason
+    final = "\n".join(t for t in text if t).strip()
+    status = "completed" if rc == 0 and stop_reason != "error" else "failed"
+    row = {"ts": now(), "mode": "cli", "agent": args.agent, "agent_source": "user",
+           "model": model_seen or model, "status": status, "stop_reason": stop_reason,
+           "cwd": str(cwd), "bucket": classify(args.task),
+           "task": " ".join(args.task.split())[:200], "task_sha": task_sha(args.task),
+           **{k: usage[k] for k in ("input", "output", "cacheRead", "cacheWrite", "contextTokens", "turns", "cost")},
+           "wall_ms": wall_ms}
+    row["cache_read"], row["cache_write"], row["context_tokens"] = row.pop("cacheRead"), row.pop("cacheWrite"), row.pop("contextTokens")
+    append([row])
+    if args.json:
+        print(json.dumps({"row": row, "output": final}, indent=1))
+    else:
+        print(final or "(no output)")
+        print(f"\n[{args.agent}] {status} {usage['turns']}t in={usage['input']} out={usage['output']} "
+              f"ctx={usage['contextTokens']} ${usage['cost']:.4f} {wall_ms/1000:.1f}s", file=sys.stderr)
+    if err.strip():
+        print(err[-2000:], file=sys.stderr)
+    return 0 if status == "completed" else 1
+
+
+def cmd_verdict(args) -> int:
+    rows = read_ledger()
+    sha = args.sha
+    if args.last or not sha:
+        for r in reversed(rows):
+            if r.get("agent"):
+                sha = r.get("task_sha")
+                break
+    if not sha:
+        sys.exit("pi-delegate: no dispatch in the ledger to attach a verdict to")
+    append([{"ts": now(), "type": "verdict", "task_sha": sha, "verdict": args.verdict,
+             "note": args.note or "", "by": "parent"}])
+    print(f"verdict {args.verdict} -> {sha}")
+    return 0
+
+
+def cmd_report(args) -> int:
+    rows = read_ledger()
+    stats = posteriors(rows)
+    if not stats:
+        print("ledger empty — no delegations yet")
+        return 0
+    print(f"{'agent':<10} {'bucket':<9} {'n':>3} {'pass':>4} {'fail':>4} {'unv':>4} {'mean':>5} {'risk':>5} "
+          f"{'out_tok':>8} {'$':>8} {'wall_s':>7}")
+    proposals = []
+    for (agent, bucket), s in sorted(stats.items(), key=lambda kv: (kv[0][0], kv[0][1])):
+        mean, risk = score(s)
+        print(f"{agent:<10} {bucket:<9} {s['n']:>3} {s['pass']:>4} {s['fail']:>4} {s['unverified']:>4} "
+              f"{mean:>5.2f} {risk:>5.2f} {s['out']:>8} {s['cost']:>8.4f} {s['wall']:>7.1f}")
+        if s["n"] >= args.min_n:
+            if s["fail"] >= 2 and mean < 0.5:
+                proposals.append(f"DROP {agent}/{bucket}: {s['fail']} verified failures (risk {risk:.2f}) — "
+                                 f"stop delegating this cell, keep the row as evidence")
+            elif mean >= 0.8 and s["pass"] >= 2:
+                proposals.append(f"KEEP {agent}/{bucket}: {s['pass']}/{s['pass']+s['fail']} verified, "
+                                 f"~{s['out']//max(1,s['n'])} out-tok/dispatch — promote to default for this cue")
+            elif s["unverified"] == s["n"]:
+                proposals.append(f"MEASURE {agent}/{bucket}: all {s['n']} dispatches unverified — run "
+                                 f"`pi-delegate verdict pass|fail` after checking, or the cell cannot be judged")
+    if proposals:
+        print("\nproposals (act via skills/delegate/SKILL.md; A/B them through selfimprove/):")
+        for p in proposals:
+            print(" -", p)
+    return 0
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(prog="pi-delegate", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = ap.add_subparsers(dest="cmd", required=True)
+
+    p = sub.add_parser("plan")
+    p.add_argument("task", nargs="+")
+    p.add_argument("--cwd", default=".")
+    p.add_argument("--files", type=int)
+    p.set_defaults(func=cmd_plan)
+
+    p = sub.add_parser("run")
+    p.add_argument("--agent", required=True)
+    p.add_argument("--task", required=True)
+    p.add_argument("--cwd", default=".")
+    p.add_argument("--model")
+    p.add_argument("--timeout", type=int, default=900)
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=cmd_run)
+
+    p = sub.add_parser("verdict")
+    p.add_argument("verdict", choices=["pass", "fail"])
+    p.add_argument("--sha")
+    p.add_argument("--last", action="store_true")
+    p.add_argument("--note")
+    p.set_defaults(func=cmd_verdict)
+
+    p = sub.add_parser("report")
+    p.add_argument("--min-n", type=int, default=2)
+    p.set_defaults(func=cmd_report)
+
+    p = sub.add_parser("agents")
+    p.set_defaults(func=cmd_agents)
+
+    args = ap.parse_args()
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
