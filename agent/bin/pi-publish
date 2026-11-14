@@ -93,11 +93,16 @@ def is_text(p):
         return False
 
 
+GPG_FPR = "<gpg-key-fingerprint>"
+
+
 def redact(text):
     """Make the snapshot portable and keep the owner's machine name out of a public repo."""
     text = text.replace(str(HOME), "$HOME")
     text = text.replace("$HOME", "$HOME")
     text = re.sub(r"(?i)\bdaedalus\b", "host", text)
+    # the store's key id is public, but a published template has no use for it
+    text = text.replace(GPG_FPR, "<gpg-key-fingerprint>")
     return text
 
 

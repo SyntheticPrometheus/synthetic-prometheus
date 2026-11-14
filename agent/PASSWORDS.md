@@ -5,7 +5,7 @@ Nothing is written to a plaintext file, a repo, a shell history or a chat log.
 
 ## Store
 
-- `pass` + a dedicated GPG key `09A9474FDB18202DB1C706A7DB757F38203F911A`
+- `pass` + a dedicated GPG key `<gpg-key-fingerprint>`
   (`SyntheticPrometheus <prometheussynthetic@gmail.com>`), no passphrase so unattended runs work.
 - `~/.password-store` is `700`, every entry `600`, and the store is a git repo (encrypted history).
 - Threat model, stated plainly: this protects against casual reads, accidental commits, repo leaks

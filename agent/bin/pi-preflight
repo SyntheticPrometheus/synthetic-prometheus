@@ -98,6 +98,36 @@ def ledger():
     return r.returncode == 0, (r.stdout.strip().splitlines() or ["no output"])[-1]
 
 
+def credentials():
+    """Every password in the store must be absent from the git tree and the publish snapshot."""
+    store = HOME / ".password-store"
+    if not store.exists():
+        return True, "no store"
+    secrets = []
+    for f in store.rglob("*.gpg"):
+        r = subprocess.run(["pass", "show", str(f.relative_to(store))[:-4]],
+                           capture_output=True, text=True)
+        if r.returncode == 0 and r.stdout.strip():
+            first = r.stdout.splitlines()[0].strip()
+            if len(first) >= 8 and not first.startswith("no-password"):
+                secrets.append((str(f.relative_to(store))[:-4], first))
+    tree = subprocess.run(["git", "-C", str(AGENT), "ls-files"], capture_output=True, text=True).stdout
+    targets = [AGENT / f for f in tree.splitlines()] + (
+        [p for p in PUB.rglob("*")] if PUB.exists() else [])
+    hits = []
+    for p in targets:
+        if not p.is_file() or ".git" in p.parts or p.stat().st_size > 2_000_000:
+            continue
+        try:
+            body = p.read_text(errors="ignore")
+        except Exception:
+            continue
+        for name, secret in secrets:
+            if secret in body:
+                hits.append(f"{p.name} contains the password for {name}")
+    return (not hits), "; ".join(hits[:3]) or f"{len(secrets)} stored secret(s) absent from publishable files"
+
+
 def snapshot():
     """The publish repo must be a working repo, not a half-built directory."""
     problems = []
@@ -135,6 +165,7 @@ def main():
     check("license", license)
     check("judge", judge)
     check("ledger", ledger)
+    check("credentials", credentials)
     check("snapshot", snapshot)
     check("resources", resources)
     failed = [r for r in results if not r[1]]

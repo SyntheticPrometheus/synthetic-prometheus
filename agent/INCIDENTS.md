@@ -91,3 +91,16 @@ Format: what happened → root cause → guard → where the guard lives.
   + commit (never rebase); the local branch is forced to `main`; `pi-preflight` now checks that the
   snapshot has README/LICENSE/PUBLISHING, that a remote exists, and that no rebase is in progress.
 - **Lives in**: `bin/pi-publish`, `bin/pi-preflight`.
+
+## 2026-11-14 — audit: "did we push the passwords?"
+
+- **What**: after the first publish, the owner asked whether the passwords had been pushed. They had
+  not — but nothing in the pipeline *proved* that, which is the actual deficiency.
+- **Checked**: the literal Google password does not appear in the snapshot or in any commit of the
+  publish repo (`git grep` over all revs); no `.gpg`/`.key`/`.pem` file is published; the only
+  credential-adjacent files are `PASSWORDS.md` (the protocol) and `bin/pi-secret` (the helper), which
+  carried the GPG **fingerprint** — a public key id, not a secret.
+- **Guards**: `pi-preflight` now reads every entry in the password store and fails if any stored
+  password appears in a git-tracked file or in the publish snapshot; `pi-publish` redacts the store's
+  fingerprint from the published copy, so a template carries no key id at all.
+- **Lives in**: `bin/pi-preflight` (`credentials`), `bin/pi-publish` (`redact`).
