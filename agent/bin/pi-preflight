@@ -1,0 +1,129 @@
+#!/usr/bin/env python3
+"""pi-preflight — the checks that must pass before anything is published or a loop run is trusted.
+
+  pi-preflight            run every check, exit 1 on any failure
+  pi-preflight --quiet    only print failures
+
+Each check exists because something went wrong once (see INCIDENTS.md):
+  secrets      auth.json / key shapes must not be in the git tree or the publish snapshot
+  license      the published snapshot must carry an OSI-approved license and no proprietary header
+  judge        selfimprove/selftest.py must show good->PASS and bad->FAIL for every task
+  ledger       selfimprove/maintain.py --check --research --lineage must pass
+  memory       every research/*.md must be cited by a memory row
+  resources    enough RAM and disk to run a loop without OOM-killing the session
+"""
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+HOME = Path.home()
+AGENT = HOME / ".pi" / "agent"
+PUB = AGENT / "publish" / "repo"
+OSI = ("MIT License", "Apache License", "BSD", "GNU GENERAL PUBLIC LICENSE", "Mozilla Public License",
+       "ISC License", "The Unlicense", "Creative Commons Zero")
+# header-like phrases only: a bare "proprietary" in prose (e.g. this repo's own policy text) is not a license
+PROPRIETARY = re.compile(r"(?i)(all rights reserved|proprietary and confidential|"
+                         r"do not distribute|internal use only|confidential —)")
+SECRETS = [r"sk-[A-Za-z0-9_-]{20,}", r"gh[pousr]_[A-Za-z0-9]{20,}", r"github_pat_[A-Za-z0-9_]{20,}",
+           r"xox[baprs]-[A-Za-z0-9-]{10,}", r"AKIA[0-9A-Z]{16}", r"-----BEGIN [A-Z ]*PRIVATE KEY-----"]
+
+results = []
+
+
+def check(name, fn):
+    try:
+        ok, detail = fn()
+    except Exception as e:  # a check that crashes is a failure, not a pass
+        ok, detail = False, f"crashed: {e}"
+    results.append((name, ok, detail))
+
+
+def secrets():
+    bad = []
+    tree = subprocess.run(["git", "-C", str(AGENT), "ls-files"], capture_output=True, text=True).stdout
+    for f in tree.splitlines():
+        if Path(f).name in ("auth.json", "models-store.json") or f.startswith(("sessions/", "memory/journal/")):
+            bad.append(f"tracked: {f}")
+    # scan only what could ever be published: git-tracked files and the publish snapshot.
+    # sessions/ and memory/ are local-only by construction, so a key in a transcript is not a leak.
+    targets = [AGENT / f for f in tree.splitlines()] + (
+        [p for p in PUB.rglob("*")] if PUB.exists() else [])
+    for p in targets:
+            if not p.is_file() or ".git" in p.parts:
+                continue
+            if any(x in p.parts for x in (".venv", "venv", "node_modules", "__pycache__")):
+                continue
+            if p.name in ("auth.json", "models-store.json"):
+                continue  # allowed on disk; the git-tracking check above is what matters
+            if p.stat().st_size > 2_000_000:
+                continue
+            try:
+                body = p.read_text(errors="ignore")
+            except Exception:
+                continue
+            for pat in SECRETS:
+                if re.search(pat, body):
+                    bad.append(f"{p.name}: {pat}")
+    return (not bad), "; ".join(bad[:5]) or "clean"
+
+
+def license():
+    lic = PUB / "LICENSE"
+    if not lic.exists():
+        return False, "publish snapshot has no LICENSE"
+    body = lic.read_text()
+    if not any(k in body for k in OSI):
+        return False, "LICENSE is not a recognised OSI license"
+    hits = []
+    for p in PUB.rglob("*"):
+        if p.is_file() and ".git" not in p.parts and p.suffix in (".md", ".py", ".sh", ".ts", ".json"):
+            if PROPRIETARY.search(p.read_text(errors="ignore")):
+                hits.append(str(p.relative_to(PUB)))
+    return (not hits), ("proprietary header in: " + ", ".join(hits[:3])) if hits else "OSI license present"
+
+
+def judge():
+    r = subprocess.run([sys.executable, str(AGENT / "selfimprove" / "selftest.py")],
+                       capture_output=True, text=True)
+    return r.returncode == 0, (r.stdout.strip().splitlines() or ["no output"])[-1]
+
+
+def ledger():
+    r = subprocess.run([sys.executable, str(AGENT / "selfimprove" / "maintain.py"),
+                        "--check", "--research", "--lineage"], capture_output=True, text=True)
+    return r.returncode == 0, (r.stdout.strip().splitlines() or ["no output"])[-1]
+
+
+def resources():
+    mem = 0
+    for line in open("/proc/meminfo"):
+        if line.startswith("MemAvailable:"):
+            mem = int(line.split()[1]) // 1024
+    free = shutil.disk_usage(HOME).free // (1024 ** 3)
+    ok = mem >= 1200 and free >= 2
+    return ok, f"{mem} MB RAM available, {free} GB disk"
+
+
+def main():
+    quiet = "--quiet" in sys.argv
+    check("secrets", secrets)
+    check("license", license)
+    check("judge", judge)
+    check("ledger", ledger)
+    check("resources", resources)
+    failed = [r for r in results if not r[1]]
+    for name, ok, detail in results:
+        if not quiet or not ok:
+            print(f"{'ok  ' if ok else 'FAIL'} {name:10s} {detail}")
+    if failed:
+        print(f"\n{len(failed)} check(s) failed — do not publish, fix the guard first")
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

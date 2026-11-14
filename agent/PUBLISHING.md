@@ -1,6 +1,8 @@
 # Publishing protocol
 
-Public snapshots go to `github.com/SyntheticPrometheus/synthetic-prometheus`. The working tree is
+Public snapshots go to `github.com/SyntheticPrometheus/synthetic-prometheus` (created 2026-11-14,
+public, pushed over SSH with `~/.ssh/id_ed25519_prometheus`; the account is Google SSO, so there is
+no GitHub password — see `PASSWORDS.md`). The working tree is
 **not** a mirror of what is published, and that is deliberate.
 
 ## Rules

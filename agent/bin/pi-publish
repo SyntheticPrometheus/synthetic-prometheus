@@ -37,7 +37,8 @@ ALLOW = [
     "AGENTS.md", "mcp.json",
     "agents", "skills", "prompts", "extensions", "research",
     "bin/mem", "bin/mem.py", "bin/layaq", "bin/pi-attach", "bin/pi-delegate", "bin/pi-term",
-    "bin/pi-publish", "bin/pi-github-bootstrap", "PUBLISHING.md",
+    "bin/pi-publish", "bin/pi-github-bootstrap", "bin/pi-preflight", "bin/pi-secret",
+    "PUBLISHING.md", "PASSWORDS.md", "RUNBOOK-accounts.md", "INCIDENTS.md",
     "delegation/README.md", "delegation/policy.md",
     "laya/NOTES.md", "laya/bench.py", "laya/mcp_probe.py", "laya/probe2.py",
     "selfimprove/DESIGN.md", "selfimprove/decisions.md", "selfimprove/suite", "selfimprove/arms",
@@ -153,10 +154,38 @@ def scan(pairs):
     return problems, total
 
 
+LICENSE_TEXT = """MIT License
+
+Copyright (c) 2026 SyntheticPrometheus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
+
 def render(pairs):
+    # never delete .git: the snapshot repo's history and remote live there
     if DST.exists():
-        shutil.rmtree(DST)
-    DST.mkdir(parents=True)
+        for child in DST.iterdir():
+            if child.name == ".git":
+                continue
+            shutil.rmtree(child) if child.is_dir() else child.unlink()
+    DST.mkdir(parents=True, exist_ok=True)
     changed = 0
     for src, rel in pairs:
         out = DST / rel
@@ -168,6 +197,7 @@ def render(pairs):
         if not (PUB / "last" / rel).exists() or not filecmp.cmp(
                 out, PUB / "last" / rel, shallow=False):
             changed += 1
+    (DST / "LICENSE").write_text(LICENSE_TEXT)
     return changed
 
 
@@ -244,29 +274,28 @@ def main():
             print("plan only (use --push to publish)")
         return rc
 
+    pre = subprocess.run([str(AGENT / "bin" / "pi-preflight"), "--quiet"],
+                         capture_output=True, text=True)
+    if pre.returncode != 0:
+        print("PREFLIGHT FAILED — not publishing:")
+        print(pre.stdout.strip()[-800:])
+        return 5
     state_ok = plan(changed, total, problems, state, a.force)
     if state_ok or not changed:
         return state_ok
 
     (DST / "README.md").write_text(readme(len(pairs)))
-    (DST / "LICENSE").write_text("MIT License\n\nCopyright (c) "
-                                 f"{time.strftime('%Y')} SyntheticPrometheus\n\n"
-                                 "Permission is hereby granted, free of charge, to any person obtaining a "
-                                 "copy\nof this software and associated documentation files (the \"Software\"), "
-                                 "to deal\nin the Software without restriction, including without limitation the "
-                                 "rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or "
-                                 "sell\ncopies of the Software, and to permit persons to whom the Software is\n"
-                                 "furnished to do so, subject to the following conditions:\n\nThe above "
-                                 "copyright notice and this permission notice shall be included in all\ncopies "
-                                 "or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", "
-                                 "WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO "
-                                 "THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND "
-                                 "NONINFRINGEMENT.\n")
     shutil.copy2(AGENT / "PUBLISHING.md", DST / "PUBLISHING.md") if (AGENT / "PUBLISHING.md").exists() else None
 
+    if (DST / ".git" / "rebase-merge").exists() or (DST / ".git" / "rebase-apply").exists():
+        subprocess.run(["git", "rebase", "--abort"], cwd=DST, capture_output=True, text=True)
     if not (DST / ".git").exists():
         git("init", "-q")
+        git("checkout", "-q", "-b", "main")
         git("remote", "add", "origin", a.remote)
+    else:
+        # keep the local branch name aligned with the remote so HEAD:main is not a cross-branch push
+        git("checkout", "-q", "-B", "main")
     git("add", "-A")
     msg = f"snapshot {time.strftime('%Y-%m-%d')}: {changed} file(s) changed"
     git("-c", "user.email=agent@local", "-c", "user.name=SyntheticPrometheus",
@@ -274,11 +303,27 @@ def main():
     print(f"committed: {msg}")
     out = subprocess.run(["git", "push", "-q", "origin", "HEAD:main"],
                          cwd=DST, capture_output=True, text=True)
+    if out.returncode != 0 and ("fetch first" in (out.stderr or "") or "rejected" in (out.stderr or "")):
+        # the remote moved. This repo is a snapshot, not a history: take the remote as the base and
+        # re-commit the current tree on top of it. (A rebase conflicts here — every file is "added"
+        # on both sides — and leaves the repo stuck mid-rebase, which is how a push silently no-ops.)
+        subprocess.run(["git", "fetch", "-q", "origin", "main"], cwd=DST, capture_output=True, text=True)
+        subprocess.run(["git", "reset", "-q", "--hard", "origin/main"], cwd=DST, capture_output=True, text=True)
+        render(pairs)  # the reset wiped the working tree; rebuild the snapshot before committing
+        subprocess.run(["git", "add", "-A"], cwd=DST, capture_output=True, text=True)
+        subprocess.run(["git", "-c", "user.email=agent@local", "-c", "user.name=SyntheticPrometheus",
+                        "commit", "-q", "-m", msg], cwd=DST, capture_output=True, text=True)
+        out = subprocess.run(["git", "push", "-q", "origin", "HEAD:main"],
+                             cwd=DST, capture_output=True, text=True)
     if out.returncode != 0:
         print("PUSH FAILED (no credentials or no remote yet):")
         print((out.stderr or out.stdout).strip()[:600])
         print("\nnext: gh auth login   (or add the SSH key and re-run)")
         return 4
+    last = PUB / "last"
+    if last.exists():
+        shutil.rmtree(last)
+    shutil.copytree(DST, last, ignore=shutil.ignore_patterns(".git"))
     state["last_push"] = time.time()
     state["history"] = [t for t in state["history"] if time.time() - t < 30 * 86400] + [time.time()]
     save_state(state)

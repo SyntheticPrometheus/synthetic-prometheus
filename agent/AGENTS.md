@@ -113,10 +113,30 @@ no LLM calls). Research notes go in `research/` and every file there must be cit
 
 ## Publishing (public snapshots)
 
+Everything published is free and open source: the snapshot carries an MIT `LICENSE`, and
+`pi-preflight` refuses to publish if the license is missing, is not OSI-approved, or if any file
+carries a proprietary/confidential header. Do not add third-party code with an incompatible
+license; cite papers and link upstream projects instead of copying them.
+
 `bin/pi-publish` builds a sanitized snapshot (explicit allowlist, `$HOME` redaction, secret scan)
 under `github.com/SyntheticPrometheus/synthetic-prometheus`, at most 2 pushes per rolling 7 days and
 only when >=3 files changed or 7 days have passed. Working tree != published tree; `auth.json`,
 sessions and memory are excluded by construction. Protocol: `PUBLISHING.md`; weekly timer
 `pi-publish.timer` (gated on `publish/enabled`).
+
+## Every failure gets a guard
+
+When something goes wrong — a wrong answer, a broken push, a blocked signup, a wasted hour — the
+fix is not done until the *class* of failure cannot repeat. Write it in `INCIDENTS.md` as
+what happened → root cause → **guard** → where the guard lives, and make the guard executable
+(a check in `bin/pi-preflight`, a refusal in a script, a rule in this file) rather than a promise.
+`pi-preflight` runs before every publish and every weekly maintenance pass; a failure there blocks
+the action. A fix without a guard is a promise, and promises are what failed the first time.
+
+## Credentials
+
+`bin/pi-secret` (backed by `pass`, GPG key `09A9474F…`) is the only place a password may live.
+Generate with `pi-secret new <service>/<account>`, never reuse, never write one into a file, a
+commit, a memory row or a chat message. Protocol: `PASSWORDS.md`.
 
 - Keep this file under ~120 lines; prune stale entries instead of appending forever.

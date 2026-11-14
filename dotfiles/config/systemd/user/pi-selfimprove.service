@@ -7,6 +7,7 @@ WorkingDirectory=%h/.pi/agent
 # memory upkeep first (additive digests only), then integrity checks; a failure is visible in
 # `systemctl --user status pi-selfimprove` and exits non-zero.
 ExecStart=/usr/bin/bash -lc '%h/.pi/agent/bin/mem consolidate --digest'
+ExecStart=%h/.pi/agent/bin/pi-preflight --quiet
 ExecStart=/usr/bin/python3 %h/.pi/agent/selfimprove/maintain.py --check --research --lineage --yield --prune 40
 # delegation ledger review: posteriors + KEEP/DROP/MEASURE proposals (read-only, no LLM)
 ExecStart=/usr/bin/bash -lc '%h/.pi/agent/bin/pi-delegate report --min-n 3'
