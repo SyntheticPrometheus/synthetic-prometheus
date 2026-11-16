@@ -1,0 +1,138 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/Y4AtNDlB1Yw3P0UJ68i2zOawY8Y</id>
+  <title>arXiv Query: search_query=all:code&amp;id_list=&amp;start=0&amp;max_results=6</title>
+  <updated>2026-11-15T16:02:40Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=all:code&amp;start=0&amp;max_results=6&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>6</opensearch:itemsPerPage>
+  <opensearch:totalResults>201166</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2303.12869v1</id>
+    <title>JaCoText: A Pretrained Model for Java Code-Text Generation</title>
+    <updated>2023-03-22T19:01:25Z</updated>
+    <link href="https://arxiv.org/abs/2303.12869v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2303.12869v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Pretrained transformer-based models have shown high performance in natural language generation task. However, a new wave of interest has surged: automatic programming language generation. This task consists of translating natural language instructions to a programming code. Despite the fact that well-known pretrained models on language generation have achieved good performance in learning programming languages, effort is still needed in automatic code generation. In this paper, we introduce JaCoText, a model based on Transformers neural network. It aims to generate java source code from natural language text. JaCoText leverages advantages of both natural language and code generation models. More specifically, we study some findings from the state of the art and use them to (1) initialize our model from powerful pretrained models, (2) explore additional pretraining on our java dataset, (3) carry out experiments combining the unimodal and bimodal data in the training, and (4) scale the input and output length during the fine-tuning of the model. Conducted experiments on CONCODE dataset show that JaCoText achieves new state-of-the-art results.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2023-03-22T19:01:25Z</published>
+    <arxiv:comment>International Conference on Code Generation and Implementation Volume: 17</arxiv:comment>
+    <arxiv:primary_category term="cs.CL"/>
+    <arxiv:journal_ref>Espejel, J. L., Alassan, M. S. Y., Dahhane, W., &amp; Ettifouri, E. H. (2023). JaCoText: A Pretrained Model for Java Code-Text Generation. International Journal of Computer and Systems Engineering, 17(2), 100-105</arxiv:journal_ref>
+    <author>
+      <name>Jessica López Espejel</name>
+    </author>
+    <author>
+      <name>Mahaman Sanoussi Yahaya Alassan</name>
+    </author>
+    <author>
+      <name>Walid Dahhane</name>
+    </author>
+    <author>
+      <name>El Hassane Ettifouri</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/1802.05737v1</id>
+    <title>JU_KS@SAIL_CodeMixed-2017: Sentiment Analysis for Indian Code Mixed Social Media Texts</title>
+    <updated>2018-02-15T20:02:43Z</updated>
+    <link href="https://arxiv.org/abs/1802.05737v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/1802.05737v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>This paper reports about our work in the NLP Tool Contest @ICON-2017, shared task on Sentiment Analysis for Indian Languages (SAIL) (code mixed). To implement our system, we have used a machine learning algo-rithm called Multinomial Naïve Bayes trained using n-gram and SentiWordnet features. We have also used a small SentiWordnet for English and a small SentiWordnet for Bengali. But we have not used any SentiWordnet for Hindi language. We have tested our system on Hindi-English and Bengali-English code mixed social media data sets released for the contest. The performance of our system is very close to the best system participated in the contest. For both Bengali-English and Hindi-English runs, our system was ranked at the 3rd position out of all submitted runs and awarded the 3rd prize in the contest.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2018-02-15T20:02:43Z</published>
+    <arxiv:comment>NLP Tool Contest on Sentiment Analysis for Indian Languages (Code Mixed) held in conjunction with the 14th International Conference on Natural Language Processing, 2017</arxiv:comment>
+    <arxiv:primary_category term="cs.CL"/>
+    <arxiv:journal_ref>Kamal Sarkar, JU_KS@SAIL_CodeMixed-2017: Sentiment Analysis for Indian Code Mixed Social Media Texts, NLP Tool Contest@the 14th International Conference on Natural Language Processing, 2017</arxiv:journal_ref>
+    <author>
+      <name>Kamal Sarkar</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/1803.08920v1</id>
+    <title>pynucastro: an interface to nuclear reaction rates and code generator for reaction network equations</title>
+    <updated>2018-03-20T21:17:14Z</updated>
+    <link href="https://arxiv.org/abs/1803.08920v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/1803.08920v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>pynucastro addresses two needs in the field of nuclear astrophysics: visual exploration of nuclear reaction rates or networks and automated code generation for integrating reaction network ODEs. pynucastro accomplishes this by interfacing with nuclear reaction rate parameterizations published by the JINA Reaclib project (Cyburt et al. 2010).</summary>
+    <category term="astro-ph.IM" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2018-03-20T21:17:14Z</published>
+    <arxiv:comment>published in the Journal of Open Source Software; 3 pages; all code freely available on github (see text for repo links)</arxiv:comment>
+    <arxiv:primary_category term="astro-ph.IM"/>
+    <arxiv:journal_ref>Willcox et al., (2018). pynucastro: an interface to nuclear reaction rates and code generator for reaction network equations. Journal of Open Source Software, 3(23), 588, https://doi.org/10.21105/joss.00588</arxiv:journal_ref>
+    <author>
+      <name>Donald E. Willcox</name>
+    </author>
+    <author>
+      <name>Michael Zingale</name>
+    </author>
+    <arxiv:doi>10.21105/joss.00588</arxiv:doi>
+    <link rel="related" href="https://doi.org/10.21105/joss.00588" title="doi"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2101.08425v1</id>
+    <title>Some punctured codes of several families of binary linear codes</title>
+    <updated>2021-01-21T03:46:38Z</updated>
+    <link href="https://arxiv.org/abs/2101.08425v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2101.08425v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Two general constructions of linear codes with functions over finite fields have been extensively studied in the literature. The first one is given by $\mathcal{C}(f)=\left\{ {\rm Tr}(af(x)+bx)_{x \in \mathbb{F}_{q^m}^*}: a,b \in \mathbb{F}_{q^m} \right\}$, where $q$ is a prime power, $\bF_{q^m}^*=\bF_{q^m} \setminus \{0\}$, $\tr$ is the trace function from $\bF_{q^m}$ to $\bF_q$, and $f(x)$ is a function from $\mathbb{F}_{q^m}$ to $\mathbb{F}_{q^m}$ with $f(0)=0$. Almost bent functions, quadratic functions and some monomials on $\bF_{2^m}$ were used in the first construction, and many families of binary linear codes with few weights were obtained in the literature. This paper studies some punctured codes of these binary codes. Several families of binary linear codes with few weights and new parameters are obtained in this paper. Several families of distance-optimal binary linear codes with new parameters are also produced in this paper.</summary>
+    <category term="cs.IT" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2021-01-21T03:46:38Z</published>
+    <arxiv:comment>Boolean function, linear code, punctured code, distance-optimal code, weight distribution</arxiv:comment>
+    <arxiv:primary_category term="cs.IT"/>
+    <author>
+      <name>Xiaoqiang Wang</name>
+    </author>
+    <author>
+      <name>Dabin Zheng</name>
+    </author>
+    <author>
+      <name>Cunsheng Ding</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/1106.6159v1</id>
+    <title>Understanding Code Patterns - Analysis, Interpretation &amp; Measurement</title>
+    <updated>2011-06-30T09:33:18Z</updated>
+    <link href="https://arxiv.org/abs/1106.6159v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/1106.6159v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>This research paper aims to find, analyze and understand code patterns in any software system and measure its quality by defining standards and proposing a formula for the same. Every code that is written can be divided into different code segments, each having its own impact on the overall system. We can analyze these code segments to get the code quality. The measures used in this paper include Lines of Code, Number of calls made by a module, Execution time, the system knowledge of user and developers, the use of generalization, inheritance, reusability and other object-oriented concepts. The entire software code is divided into code snippets, based on the logic that they implement. Each of these code snippets has an impact. This measure is called Impact Factor and is valued by the software developer and/or other system stakeholders. Efficiency = (Code Area / Execution Time) * Qr</summary>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.PL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2011-06-30T09:33:18Z</published>
+    <arxiv:comment>Index Terms - code area, code patterns, efficiency, lines of code, pattern recognition, software quality; http://www.ijcee.org/papers/008.pdf</arxiv:comment>
+    <arxiv:primary_category term="cs.SE"/>
+    <arxiv:journal_ref>International Journal of Computer and Electrical Engineering, Vol. 1, No. 1, April 2009</arxiv:journal_ref>
+    <author>
+      <name>Jitesh Dundas</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2503.03656v2</id>
+    <title>Robust Learning of Diverse Code Edits</title>
+    <updated>2025-05-10T11:59:18Z</updated>
+    <link href="https://arxiv.org/abs/2503.03656v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2503.03656v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Software engineering activities frequently involve edits to existing code. However, contemporary code language models (LMs) lack the ability to handle diverse types of code-edit requirements. In this work, we attempt to overcome this shortcoming through (1) a novel synthetic data generation pipeline and (2) a robust model adaptation algorithm. Starting with seed code examples and diverse editing criteria, our pipeline generates high-quality samples comprising original and modified code, along with natural language instructions in different styles and verbosity. Today's code LMs come bundled with strong abilities, such as code generation and instruction following, which should not be lost due to fine-tuning. To ensure this, we propose a novel adaptation algorithm, SeleKT, that (a) leverages a dense gradient-based step to identify the weights that are most important for code editing, and (b) does a sparse projection onto the base model to avoid overfitting. Using our approach, we obtain a new series of models NextCoder (adapted from QwenCoder-2.5) that achieves strong results on five code-editing benchmarks, outperforming comparable size models and even several larger ones. We show the generality of our approach on two model families (DeepSeekCoder and QwenCoder), compare against other fine-tuning approaches, and demonstrate robustness by showing retention of code generation and general problem-solving abilities post adaptation. We opensource the models, synthetic dataset, and implementation at https://aka.ms/nextcoder.</summary>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-03-05T16:39:04Z</published>
+    <arxiv:comment>To appear in ICML 2025 as 'NextCoder: Robust Adaptation of Code LMs to Diverse Code Edits'</arxiv:comment>
+    <arxiv:primary_category term="cs.SE"/>
+    <author>
+      <name>Tushar Aggarwal</name>
+    </author>
+    <author>
+      <name>Swayam Singh</name>
+    </author>
+    <author>
+      <name>Abhijeet Awasthi</name>
+    </author>
+    <author>
+      <name>Aditya Kanade</name>
+    </author>
+    <author>
+      <name>Nagarajan Natarajan</name>
+    </author>
+  </entry>
+</feed>

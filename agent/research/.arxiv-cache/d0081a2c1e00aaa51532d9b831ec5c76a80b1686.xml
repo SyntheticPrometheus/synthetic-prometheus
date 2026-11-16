@@ -1,0 +1,295 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/EhZXvhsgk760J5TF+mz4Y9qzmRw</id>
+  <title>arXiv Query: search_query=all:repository-level&amp;id_list=&amp;start=0&amp;max_results=8</title>
+  <updated>2026-11-15T16:02:38Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=all:repository-level&amp;start=0&amp;max_results=8&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>8</opensearch:itemsPerPage>
+  <opensearch:totalResults>1824</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2604.03622v1</id>
+    <title>Toward Executable Repository-Level Code Generation via Environment Alignment</title>
+    <updated>2026-04-04T07:37:55Z</updated>
+    <link href="https://arxiv.org/abs/2604.03622v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2604.03622v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Large language models (LLMs) have achieved strong performance on code generation, but existing methods still struggle with repository-level code generation under executable validation. Under this evaluation setting, success is determined not by the plausibility of isolated code fragments, but by whether a generated multi-file repository can be successfully installed, have its dependencies and internal references resolved, be launched, and be validated in a real execution environment. To address this challenge, we propose EnvGraph, a framework for repository-level code generation that formulates repository executability as an environment alignment problem. EnvGraph jointly models two coupled conditions for successful repository execution, namely external dependency satisfaction and repository-internal reference resolution. It maintains a dual-layer environment representation, uses execution evidence to perform execution-evidence-based attribution, and guides repository generation through a unified targeted revision mechanism within an iterative alignment loop. We evaluate EnvGraph on repository-level code generation with three representative backbone LLMs and compare it against representative environment-aware and repository-level baselines. Experimental results show that EnvGraph consistently achieves the best performance on these repository-level benchmarks. In particular, it outperforms the strongest non-EnvGraph baseline by an absolute margin of 5.72--5.87 percentage points in Functional Correctness and 4.58--8.66 percentage points in Non-Functional Quality.</summary>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-04-04T07:37:55Z</published>
+    <arxiv:primary_category term="cs.SE"/>
+    <author>
+      <name>Ruwei Pan</name>
+    </author>
+    <author>
+      <name>Junlei Shen</name>
+    </author>
+    <author>
+      <name>Linhao Wu</name>
+    </author>
+    <author>
+      <name>Yueheng Zhu</name>
+    </author>
+    <author>
+      <name>Zixiong Yang</name>
+    </author>
+    <author>
+      <name>Yakun Zhang</name>
+    </author>
+    <author>
+      <name>Lu Zhang</name>
+    </author>
+    <author>
+      <name>Hongyu Zhang</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2604.03632v1</id>
+    <title>Persistent Cross-Attempt State Optimization for Repository-Level Code Generation</title>
+    <updated>2026-04-04T08:03:03Z</updated>
+    <link href="https://arxiv.org/abs/2604.03632v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2604.03632v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Large language models (LLMs) have achieved substantial progress in repository-level code generation. However, solving the same repository-level task often requires multiple attempts, while existing methods still optimize each attempt in isolation and do not preserve or reuse task-specific state across attempts. In this paper, we propose LiveCoder, a novel framework for repository-level code generation based on cross-attempt knowledge optimization. LiveCoder maintains persistent task-specific state from prior attempts to guide subsequent generation. This state includes success knowledge, which captures reusable signals from previously strong repositories, failure knowledge, which records unsuccessful outcomes and their diagnostic signals, and a historical-best repository, which preserves the strongest result found so far and prevents regression. These components collectively transform repeated repository generation into a persistent, knowledge-driven optimization process. We evaluate LiveCoder using four frontier LLMs on two representative repository-level code generation benchmarks. Extensive experimental results demonstrate the effectiveness and efficiency of LiveCoder, improving the functional score by up to 22.94 percentage points, increasing repository reuse to 81.58%, and reducing cost by up to 53.63% on RAL-Bench while maintaining broadly stable non-functional quality.</summary>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-04-04T08:03:03Z</published>
+    <arxiv:primary_category term="cs.SE"/>
+    <author>
+      <name>Ruwei Pan</name>
+    </author>
+    <author>
+      <name>Jiangshuai Wang</name>
+    </author>
+    <author>
+      <name>Qisheng Zhang</name>
+    </author>
+    <author>
+      <name>Yueheng Zhu</name>
+    </author>
+    <author>
+      <name>Linhao Wu</name>
+    </author>
+    <author>
+      <name>Zixiong Yang</name>
+    </author>
+    <author>
+      <name>Yakun Zhang</name>
+    </author>
+    <author>
+      <name>Lu Zhang</name>
+    </author>
+    <author>
+      <name>Hongyu Zhang</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2608.02001v1</id>
+    <title>VulnGym: Benchmarking Coding Agents for Repository-Level Vulnerability Detection</title>
+    <updated>2026-08-03T10:03:29Z</updated>
+    <link href="https://arxiv.org/abs/2608.02001v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2608.02001v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Recent advances in LLM-based vulnerability detection have shown promising results, while coding agents further extend this capability from isolated code snippets to complete repositories. This shift requires agents to autonomously explore repositories and locate vulnerability-relevant code, instead of performing detection on preselected functions. However, existing benchmarks primarily focus on vulnerability classification over preselected code snippets, limiting their ability to evaluate coding agents in repository-level vulnerability detection. Moreover, without fine-grained vulnerability trace annotations, the capability limitations underlying the detection process remain difficult to explore. To address these limitations, we present \textbf{VulnGym}, a real-world repository-level benchmark for evaluating vulnerability detection by coding agents. VulnGym aligns reviewed GitHub advisories with their corresponding vulnerable version repositories. It contains 184 advisories and 408 vulnerability entries across 23 repositories, with each entry annotated with line-level entry points, critical operations, and vulnerability traces. Using this fine-grained ground truth, VulnGym defines an end-to-end detection task and three oracle-based subtasks to jointly evaluate vulnerability detection and diagnose limitations in code localization and evidence construction. Our evaluation indicates that current coding agents remain limited in both end-to-end repository-level vulnerability detection and the construction of accurate supporting traces.</summary>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-08-03T10:03:29Z</published>
+    <arxiv:primary_category term="cs.SE"/>
+    <author>
+      <name>Kexing Ji</name>
+    </author>
+    <author>
+      <name>Jiachen Liu</name>
+    </author>
+    <author>
+      <name>Enze Hu</name>
+    </author>
+    <author>
+      <name>Cuiyun Gao</name>
+    </author>
+    <author>
+      <name>Keke Lian</name>
+    </author>
+    <author>
+      <name>Yongheng Liu</name>
+    </author>
+    <author>
+      <name>Lei Zhang</name>
+    </author>
+    <author>
+      <name>Tian Dong</name>
+    </author>
+    <author>
+      <name>Hao Chen</name>
+    </author>
+    <author>
+      <name>Wang Bin</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2502.07067v1</id>
+    <title>Repository-level Code Search with Neural Retrieval Methods</title>
+    <updated>2025-02-10T21:59:01Z</updated>
+    <link href="https://arxiv.org/abs/2502.07067v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2502.07067v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>This paper presents a multi-stage reranking system for repository-level code search, which leverages the vastly available commit histories of large open-source repositories to aid in bug fixing. We define the task of repository-level code search as retrieving the set of files from the current state of a code repository that are most relevant to addressing a user's question or bug. The proposed approach combines BM25-based retrieval over commit messages with neural reranking using CodeBERT to identify the most pertinent files. By learning patterns from diverse repositories and their commit histories, the system can surface relevant files for the task at hand. The system leverages both commit messages and source code for relevance matching, and is evaluated in both normal and oracle settings. Experiments on a new dataset created from 7 popular open-source repositories demonstrate substantial improvements of up to 80% in MAP, MRR and P@1 over the BM25 baseline, across a diverse set of queries, demonstrating the effectiveness this approach. We hope this work aids LLM agents as a tool for better code search and understanding. Our code and results obtained are publicly available.</summary>
+    <category term="cs.IR" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-02-10T21:59:01Z</published>
+    <arxiv:comment>16 pages</arxiv:comment>
+    <arxiv:primary_category term="cs.IR"/>
+    <author>
+      <name>Siddharth Gandhi</name>
+    </author>
+    <author>
+      <name>Luyu Gao</name>
+    </author>
+    <author>
+      <name>Jamie Callan</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2412.17744v2</id>
+    <title>RepoTransBench: A Real-World Multilingual Benchmark for Repository-Level Code Translation</title>
+    <updated>2025-12-16T15:45:13Z</updated>
+    <link href="https://arxiv.org/abs/2412.17744v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2412.17744v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Repository-level code translation refers to translating an entire code repository from one programming language to another while preserving the functionality of the source repository. Many benchmarks have been proposed to evaluate the performance of such code translators. However, previous benchmarks mostly provide fine-grained samples, focusing at either code snippet, function, or file-level code translation. Such benchmarks do not accurately reflect real-world demands, where entire repositories often need to be translated, involving longer code length and more complex functionalities. To address this gap, we propose a new benchmark, named RepoTransBench, which is a real-world multilingual repository-level code translation benchmark featuring 1,897 real-world repository samples across 13 language pairs with automatically executable test suites. Besides, we introduce RepoTransAgent, a general agent framework to perform repository-level code translation. We evaluate both our benchmark's challenges and agent's effectiveness using several methods and backbone LLMs, revealing that repository-level translation remains challenging, where the best-performing method achieves only a 32.8% success rate. Furthermore, our analysis reveals that translation difficulty varies significantly by language pair direction, with dynamic-to-static language translation being much more challenging than the reverse direction (achieving below 10% vs. static-to-dynamic at 45-63%). Finally, we conduct a detailed error analysis and highlight current LLMs' deficiencies in repository-level code translation, which could provide a reference for further improvements. We provide the code and data at https://github.com/DeepSoftwareAnalytics/RepoTransBench.</summary>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2024-12-23T17:52:10Z</published>
+    <arxiv:primary_category term="cs.SE"/>
+    <author>
+      <name>Yanli Wang</name>
+    </author>
+    <author>
+      <name>Yanlin Wang</name>
+    </author>
+    <author>
+      <name>Suiquan Wang</name>
+    </author>
+    <author>
+      <name>Daya Guo</name>
+    </author>
+    <author>
+      <name>Jiachi Chen</name>
+    </author>
+    <author>
+      <name>John Grundy</name>
+    </author>
+    <author>
+      <name>Xilin Liu</name>
+    </author>
+    <author>
+      <name>Yuchi Ma</name>
+    </author>
+    <author>
+      <name>Mingzhi Mao</name>
+    </author>
+    <author>
+      <name>Hongyu Zhang</name>
+    </author>
+    <author>
+      <name>Zibin Zheng</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2309.12499v1</id>
+    <title>CodePlan: Repository-level Coding using LLMs and Planning</title>
+    <updated>2023-09-21T21:45:17Z</updated>
+    <link href="https://arxiv.org/abs/2309.12499v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2309.12499v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Software engineering activities such as package migration, fixing errors reports from static analysis or testing, and adding type annotations or other specifications to a codebase, involve pervasively editing the entire repository of code. We formulate these activities as repository-level coding tasks.
+  Recent tools like GitHub Copilot, which are powered by Large Language Models (LLMs), have succeeded in offering high-quality solutions to localized coding problems. Repository-level coding tasks are more involved and cannot be solved directly using LLMs, since code within a repository is inter-dependent and the entire repository may be too large to fit into the prompt. We frame repository-level coding as a planning problem and present a task-agnostic framework, called CodePlan to solve it. CodePlan synthesizes a multi-step chain of edits (plan), where each step results in a call to an LLM on a code location with context derived from the entire repository, previous code changes and task-specific instructions. CodePlan is based on a novel combination of an incremental dependency analysis, a change may-impact analysis and an adaptive planning algorithm.
+  We evaluate the effectiveness of CodePlan on two repository-level tasks: package migration (C#) and temporal code edits (Python). Each task is evaluated on multiple code repositories, each of which requires inter-dependent changes to many files (between 2-97 files). Coding tasks of this level of complexity have not been automated using LLMs before. Our results show that CodePlan has better match with the ground truth compared to baselines. CodePlan is able to get 5/6 repositories to pass the validity checks (e.g., to build without errors and make correct code edits) whereas the baselines (without planning but with the same type of contextual information as CodePlan) cannot get any of the repositories to pass them.</summary>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2023-09-21T21:45:17Z</published>
+    <arxiv:primary_category term="cs.SE"/>
+    <author>
+      <name>Ramakrishna Bairi</name>
+    </author>
+    <author>
+      <name>Atharv Sonwane</name>
+    </author>
+    <author>
+      <name>Aditya Kanade</name>
+    </author>
+    <author>
+      <name>Vageesh D C</name>
+    </author>
+    <author>
+      <name>Arun Iyer</name>
+    </author>
+    <author>
+      <name>Suresh Parthasarathy</name>
+    </author>
+    <author>
+      <name>Sriram Rajamani</name>
+    </author>
+    <author>
+      <name>B. Ashok</name>
+    </author>
+    <author>
+      <name>Shashank Shet</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2403.00448v1</id>
+    <title>When Large Language Models Confront Repository-Level Automatic Program Repair: How Well They Done?</title>
+    <updated>2024-03-01T11:07:41Z</updated>
+    <link href="https://arxiv.org/abs/2403.00448v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2403.00448v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>In recent years, large language models (LLMs) have demonstrated substantial potential in addressing automatic program repair (APR) tasks. However, the current evaluation of these models for APR tasks focuses solely on the limited context of the single function or file where the bug is located, overlooking the valuable information in the repository-level context. This paper investigates the performance of popular LLMs in handling repository-level repair tasks. We introduce RepoBugs, a new benchmark comprising 124 typical repository-level bugs from open-source repositories. Preliminary experiments using GPT3.5 based on the function where the error is located, reveal that the repair rate on RepoBugs is only 22.58%, significantly diverging from the performance of GPT3.5 on function-level bugs in related studies. This underscores the importance of providing repository-level context when addressing bugs at this level. However, the repository-level context offered by the preliminary method often proves redundant and imprecise and easily exceeds the prompt length limit of LLMs. To solve the problem, we propose a simple and universal repository-level context extraction method (RLCE) designed to provide more precise context for repository-level code repair tasks. Evaluations of three mainstream LLMs show that RLCE significantly enhances the ability to repair repository-level bugs. The improvement reaches a maximum of 160% compared to the preliminary method. Additionally, we conduct a comprehensive analysis of the effectiveness and limitations of RLCE, along with the capacity of LLMs to address repository-level bugs, offering valuable insights for future research.</summary>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2024-03-01T11:07:41Z</published>
+    <arxiv:comment>Accepted by ICSE 2024 Industry Challenge Track</arxiv:comment>
+    <arxiv:primary_category term="cs.SE"/>
+    <author>
+      <name>Yuxiao Chen</name>
+    </author>
+    <author>
+      <name>Jingzheng Wu</name>
+    </author>
+    <author>
+      <name>Xiang Ling</name>
+    </author>
+    <author>
+      <name>Changjiang Li</name>
+    </author>
+    <author>
+      <name>Zhiqing Rui</name>
+    </author>
+    <author>
+      <name>Tianyue Luo</name>
+    </author>
+    <author>
+      <name>Yanjun Wu</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2610.34141v1</id>
+    <title>SpeC2Rust: Specification-Driven Repository-Level C-to-Rust Translation</title>
+    <updated>2026-10-25T08:20:30Z</updated>
+    <link href="https://arxiv.org/abs/2610.34141v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2610.34141v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Legacy C codebases remain central to system software and performance-critical infrastructure, but their weak memory safety imposes security and maintenance risks. Recent C-to-Rust translation systems, including LLM-based translators, make automated migration increasingly feasible, yet they still struggle to recover repository-level intent, avoid raw pointers and unsafe constructs, maintain cross-file interfaces, and repair compilation and validation failures efficiently. We propose SpeC2Rust, a specification-driven pipeline for repository-level C-to-Rust translation. It has three stages: (1) Project-Intent Structuring, which decomposes a C repository into semantically coherent modules and generates persistent repository- and module-level specifications; (2) Spec-Guided Generation, which translates each Rust module against these specifications with a live symbol registry to preserve cross-file consistency; and (3) Layered-Feedback Repair, which batches repairs and injects only failure-relevant diagnostics, specification context, and source evidence for efficient compilation and test-driven correction. We evaluate SpeC2Rust on eight repository-level C projects. It generates Rust projects that compile and pass the original end-to-end tests, with no raw-pointer declarations, raw-pointer dereferences, or unsafe lines. On projects shared with an LLM-based baseline, SpeC2Rust reduces cost by 66.1% and input-token usage by 84.7%.</summary>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-10-25T08:20:30Z</published>
+    <arxiv:primary_category term="cs.SE"/>
+    <author>
+      <name>Junjie Yao</name>
+    </author>
+    <author>
+      <name>Xiongzheng Guan</name>
+    </author>
+    <author>
+      <name>Jia Feng</name>
+    </author>
+    <author>
+      <name>Yujia Chen</name>
+    </author>
+    <author>
+      <name>Hongliang Tian</name>
+    </author>
+    <author>
+      <name>Cuiyun Gao</name>
+    </author>
+  </entry>
+</feed>

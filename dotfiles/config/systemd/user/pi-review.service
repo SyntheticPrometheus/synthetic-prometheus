@@ -1,0 +1,8 @@
+[Unit]
+Description=Weekly reflection pass over the harness (writes selfimprove/review.md)
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h
+ExecStart=%h/.pi/agent/bin/pi-review --quiet
+TimeoutStartSec=300

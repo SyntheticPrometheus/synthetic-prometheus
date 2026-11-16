@@ -1,18 +1,24 @@
 # delegation/ — the measurable delegation loop
 
-Small directory on purpose: two artefacts and one append-only log.
+Small directory on purpose: three documents and one append-only log.
 
 | file | role |
 |---|---|
-| `policy.md` | the versioned prose rules (hypothesis). Citations to `research/delegation.md` |
+| `policy.md` | the versioned prose rules (v3). Citations to `research/ai-swarm-delegation.md` + `research/org-delegation.md` |
+| `contracts.md` | copy-paste six-field contracts (scout/worker/verifier/bulker/integrator) + DoR/DoD |
 | `ledger.jsonl` | append-only evidence: one row per dispatch, one row per verdict |
+| `routes.jsonl` | routing decisions (regex + optional Laya) for the fit-readiness report |
+| `route-eval.py` | the 24-case benchmark that decides whether Laya may route (policy §1c) |
 | `README.md` | this file |
 
 Related code, deliberately outside this directory so the log stays data:
 - `extensions/subagent/index.ts` — in-TUI `subagent` tool (upstream pi example + local ledger patch)
-- `agents/*.md` — the roster; frontmatter `tools:` is the least-privilege authorization
-- `bin/pi-delegate` — `plan` / `run` / `verdict` / `report` for dispatches outside a TUI
-- `bin/pi-term` — new interactive pi chat in a new terminal window or detached tmux session
+- `agents/*.md` — the roster (scout, worker, verifier, bulker, integrator); frontmatter `tools:` is
+  the least-privilege authorization
+- `bin/pi-delegate` — `plan` / `partition` / `run` / `verdict` / `report` / `flow` for dispatches
+  outside a TUI (the in-TUI path shares the same ledger)
+- `bin/pi-term` — new interactive pi chat or `--exec` window: tiled on open, named, recorded,
+  closed on exit; `--list` / `--close` / `--reap` are the lifecycle (policy §6b)
 - `skills/delegate/SKILL.md` — the procedure the parent agent follows
 
 ## Row schema (dispatch)
@@ -42,9 +48,15 @@ was right; a cell full of unverified rows is reported as `MEASURE`, never as suc
 
 ```sh
 pi-delegate plan "find every place the repo writes to the socket" --files 20
+pi-delegate partition --shard a=src/a --shard b=src/b --strict --min-lines 60   # fan-out gate
 pi-delegate run --agent scout --task "..." --cwd ~/proj          # headless, logs itself
 pi-delegate verdict pass --last --note "digest matched the code I re-read"
 pi-delegate report                                               # posteriors + proposals
+pi-delegate flow --days 30 [--json]                              # cycle time, yield, $/pass
+pi-delegate targets                                             # agents/models + local rails
+pi-delegate route --laya "<task>"                                # regex decision + Laya second opinion
+pi-delegate route-report                                         # labels/route, fit readiness
+python3 delegation/route-eval.py                                 # 24-case routing benchmark
 ```
 
 In an interactive session the same decisions are made with the `subagent` tool (it streams in the

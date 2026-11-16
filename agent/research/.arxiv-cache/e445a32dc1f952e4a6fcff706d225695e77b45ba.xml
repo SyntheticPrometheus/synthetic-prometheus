@@ -1,0 +1,192 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api//BC4jBzE9sRjYOIx38Y5CVl905o</id>
+  <title>arXiv Query: search_query=all:retrieval&amp;id_list=&amp;start=0&amp;max_results=6</title>
+  <updated>2026-11-15T16:02:39Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=all:retrieval&amp;start=0&amp;max_results=6&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>6</opensearch:itemsPerPage>
+  <opensearch:totalResults>67729</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2611.08228v1</id>
+    <title>Domain-specific information retrieval</title>
+    <updated>2026-11-05T16:12:53Z</updated>
+    <link href="https://arxiv.org/abs/2611.08228v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2611.08228v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Information Retrieval (IR) is much more than ad hoc web search: a large portion of the information seeking activities takes place in specific domains, often addressing work-related tasks. Examples are lawyers finding relevant prior cases for a legal case and academic researchers studying the background material for a paper. In Chapter 2 we outline the most common domain-specific tasks, datasets and applications. Domain-specific IR has a number of challenges that make set it apart from simple web search tasks: they often deal with long documents, long queries and long sessions with specific user needs. We discuss these in Chapter 3. We also address issues related to bias and fairness of models. In Chapter 4, we describe the models and methods developed for domain-specific tasks and data, addressing the specific challenges, including user aspects related to domain-specific IR tasks, dealing with queries, user models, and user interactions. We show that many of the methodological advances in domain-specific IR are transferable to other domains and even to open-domain web search. We conclude with the main takeaways and propose research directions for the near future.</summary>
+    <category term="cs.IR" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-11-05T16:12:53Z</published>
+    <arxiv:comment>Published in Foundations and Trends in Information Retrieval</arxiv:comment>
+    <arxiv:primary_category term="cs.IR"/>
+    <arxiv:journal_ref>Foundations and Trends in Information Retrieval (2026) 20 (5): 381-495</arxiv:journal_ref>
+    <author>
+      <name>Suzan Verberne</name>
+    </author>
+    <author>
+      <name>Florina Piroi</name>
+    </author>
+    <author>
+      <name>Allan Hanbury</name>
+    </author>
+    <arxiv:doi>10.1108/FTINR-09-2025-0088</arxiv:doi>
+    <link rel="related" href="https://doi.org/10.1108/FTINR-09-2025-0088" title="doi"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/1811.08772v1</id>
+    <title>Overcoming low-utility facets for complex answer retrieval</title>
+    <updated>2018-11-21T15:09:00Z</updated>
+    <link href="https://arxiv.org/abs/1811.08772v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/1811.08772v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Many questions cannot be answered simply; their answers must include numerous nuanced details and additional context. Complex Answer Retrieval (CAR) is the retrieval of answers to such questions. In their simplest form, these questions are constructed from a topic entity (e.g., `cheese') and a facet (e.g., `health effects'). While topic matching has been thoroughly explored, we observe that some facets use general language that is unlikely to appear verbatim in answers. We call these low-utility facets. In this work, we present an approach to CAR that identifies and addresses low-utility facets. We propose two estimators of facet utility. These include exploiting the hierarchical structure of CAR queries and using facet frequency information from training data. To improve the retrieval performance on low-utility headings, we also include entity similarity scores using knowledge graph embeddings. We apply our approaches to a leading neural ranking technique, and evaluate using the TREC CAR dataset. We find that our approach perform significantly better than the unmodified neural ranker and other leading CAR techniques. We also provide a detailed analysis of our results, and verify that low-utility facets are indeed more difficult to match, and that our approach improves the performance for these difficult queries.</summary>
+    <category term="cs.IR" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2018-11-21T15:09:00Z</published>
+    <arxiv:comment>This is a pre-print of an article published in Information Retrieval Journal. The final authenticated version (including additional experimental results, analysis, etc.) is available online at: https://doi.org/10.1007/s10791-018-9343-0</arxiv:comment>
+    <arxiv:primary_category term="cs.IR"/>
+    <arxiv:journal_ref>Information Retrieval Journal 2018</arxiv:journal_ref>
+    <author>
+      <name>Sean MacAvaney</name>
+    </author>
+    <author>
+      <name>Andrew Yates</name>
+    </author>
+    <author>
+      <name>Arman Cohan</name>
+    </author>
+    <author>
+      <name>Luca Soldaini</name>
+    </author>
+    <author>
+      <name>Kai Hui</name>
+    </author>
+    <author>
+      <name>Nazli Goharian</name>
+    </author>
+    <author>
+      <name>Ophir Frieder</name>
+    </author>
+    <arxiv:doi>10.1007/s10791-018-9343-0</arxiv:doi>
+    <link rel="related" href="https://doi.org/10.1007/s10791-018-9343-0" title="doi"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2504.05181v2</id>
+    <title>Lightweight and Direct Document Relevance Optimization for Generative Information Retrieval</title>
+    <updated>2025-04-24T23:04:52Z</updated>
+    <link href="https://arxiv.org/abs/2504.05181v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2504.05181v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Generative information retrieval (GenIR) is a promising neural retrieval paradigm that formulates document retrieval as a document identifier (docid) generation task, allowing for end-to-end optimization toward a unified global retrieval objective. However, existing GenIR models suffer from token-level misalignment, where models trained to predict the next token often fail to capture document-level relevance effectively. While reinforcement learning-based methods, such as reinforcement learning from relevance feedback (RLRF), aim to address this misalignment through reward modeling, they introduce significant complexity, requiring the optimization of an auxiliary reward function followed by reinforcement fine-tuning, which is computationally expensive and often unstable. To address these challenges, we propose direct document relevance optimization (DDRO), which aligns token-level docid generation with document-level relevance estimation through direct optimization via pairwise ranking, eliminating the need for explicit reward modeling and reinforcement learning. Experimental results on benchmark datasets, including MS MARCO document and Natural Questions, show that DDRO outperforms reinforcement learning-based methods, achieving a 7.4% improvement in MRR@10 for MS MARCO and a 19.9% improvement for Natural Questions. These findings highlight DDRO's potential to enhance retrieval effectiveness with a simplified optimization approach. By framing alignment as a direct optimization problem, DDRO simplifies the ranking optimization pipeline of GenIR models while offering a viable alternative to reinforcement learning-based methods.</summary>
+    <category term="cs.IR" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.DL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-04-07T15:27:37Z</published>
+    <arxiv:comment>12 pages, 3 figures. SIGIR '25 Proceedings of the 48th International ACM SIGIR Conference on Research and Development in Information Retrieval July 13--18, 2025 Padua, Italy. Code and pretrained models available at: https://github.com/kidist-amde/ddro/</arxiv:comment>
+    <arxiv:primary_category term="cs.IR"/>
+    <arxiv:journal_ref>Proceedings of the 48th International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR '25), pages 1327-1338, 2025</arxiv:journal_ref>
+    <author>
+      <name>Kidist Amde Mekonnen</name>
+    </author>
+    <author>
+      <name>Yubao Tang</name>
+    </author>
+    <author>
+      <name>Maarten de Rijke</name>
+    </author>
+    <arxiv:doi>10.1145/3726302.3730023</arxiv:doi>
+    <link rel="related" href="https://doi.org/10.1145/3726302.3730023" title="doi"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2603.02888v1</id>
+    <title>LLandMark: A Multi-Agent Framework for Landmark-Aware Multimodal Interactive Video Retrieval</title>
+    <updated>2026-03-03T11:36:34Z</updated>
+    <link href="https://arxiv.org/abs/2603.02888v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2603.02888v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>The increasing diversity and scale of video data demand retrieval systems capable of multimodal understanding, adaptive reasoning, and domain-specific knowledge integration. This paper presents LLandMark, a modular multi-agent framework for landmark-aware multimodal video retrieval to handle real-world complex queries. The framework features specialized agents that collaborate across four stages: query parsing and planning, landmark reasoning, multimodal retrieval, and reranked answer synthesis. A key component, the Landmark Knowledge Agent, detects cultural or spatial landmarks and reformulates them into descriptive visual prompts, enhancing CLIP-based semantic matching for Vietnamese scenes. To expand capabilities, we introduce an LLM-assisted image-to-image pipeline, where a large language model (Gemini 2.5 Flash) autonomously detects landmarks, generates image search queries, retrieves representative images, and performs CLIP-based visual similarity matching, removing the need for manual image input. In addition, an OCR refinement module leveraging Gemini and LlamaIndex improves Vietnamese text recognition. Experimental results show that LLandMark achieves adaptive, culturally grounded, and explainable retrieval performance.</summary>
+    <category term="cs.CV" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-03-03T11:36:34Z</published>
+    <arxiv:comment>Accepted by AAAI 2026 Workshop on New Frontiers in Information Retrieval</arxiv:comment>
+    <arxiv:primary_category term="cs.CV"/>
+    <arxiv:journal_ref>AAAI 2026 Workshop on New Frontiers in Information Retrieval</arxiv:journal_ref>
+    <author>
+      <name>Minh-Chi Phung</name>
+    </author>
+    <author>
+      <name>Thien-Bao Le</name>
+    </author>
+    <author>
+      <name>Cam-Tu Tran-Thi</name>
+    </author>
+    <author>
+      <name>Thu-Dieu Nguyen-Thi</name>
+    </author>
+    <author>
+      <name>Vu-Hung Dao</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2604.23396v1</id>
+    <title>Lost in Decoding? Reproducing and Stress-Testing the Look-Ahead Prior in Generative Retrieval</title>
+    <updated>2026-04-25T17:58:15Z</updated>
+    <link href="https://arxiv.org/abs/2604.23396v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2604.23396v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Generative retrieval (GR) ranks documents by autoregressively generating document identifiers. Because many GR methods rely on trie-constrained beam search, they are vulnerable to early pruning of relevant prefixes under finite-beam decoding. Planning Ahead in Generative Retrieval (PAG) mitigates this failure mode by using simultaneous decoding to compute a document-level look-ahead prior that guides subsequent sequential decoding. We reproduce PAG at inference time and stress-test its decoding behavior. Using the authors' released checkpoint and identifier/trie artifacts under the reported decoding setup, we reproduce the main effectiveness results on MS MARCO Dev and TREC-DL 2019/2020, and corroborate the reported beam-size-latency trade-off in our hardware setting. Beyond reproduction, we introduce plan drift diagnostics that quantify how intent-preserving query variations alter the planner's top-n candidate set and highest-weight planner tokens, and how these changes affect guided decoding. We find that PAG's planning signal is brittle under lexical surface-form variation: intent-preserving typos can trigger plan collapse, where the planned candidate pool shifts enough that the look-ahead bonus provides little useful guidance, effectively reverting decoding toward weaker unguided search. We further evaluate fixed-index cross-lingual robustness using non-English mMARCO queries against an English index, and assess query-side mitigation strategies that require no re-indexing; query translation provides the strongest recovery in our setting. Overall, our results confirm PAG's reported effectiveness and the benefit of planning-guided decoding under the released inference setup, while showing that these gains depend on the stability of the planning signal under realistic query variation and query-document mismatch.</summary>
+    <category term="cs.IR" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-04-25T17:58:15Z</published>
+    <arxiv:comment>12 pages, 5 figures, 9 tables; accepted to the 49th International ACM SIGIR Conference on Research and Development in Information Retrieval, July 20-24, 2026, Melbourne/Naarm, Australia</arxiv:comment>
+    <arxiv:primary_category term="cs.IR"/>
+    <arxiv:journal_ref>Proceedings of the 49th International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR '26), pages XXX-XXX, 2026</arxiv:journal_ref>
+    <author>
+      <name>Kidist Amde Mekonnen</name>
+    </author>
+    <author>
+      <name>Yongkang Li</name>
+    </author>
+    <author>
+      <name>Yubao Tang</name>
+    </author>
+    <author>
+      <name>Simon Lupart</name>
+    </author>
+    <author>
+      <name>Maarten de Rijke</name>
+    </author>
+    <arxiv:doi>10.1145/3805712.3808567</arxiv:doi>
+    <link rel="related" href="https://doi.org/10.1145/3805712.3808567" title="doi"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2505.21439v1</id>
+    <title>Towards Better Instruction Following Retrieval Models</title>
+    <updated>2025-05-27T17:14:37Z</updated>
+    <link href="https://arxiv.org/abs/2505.21439v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2505.21439v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Modern information retrieval (IR) models, trained exclusively on standard &lt;query, passage&gt; pairs, struggle to effectively interpret and follow explicit user instructions. We introduce InF-IR, a large-scale, high-quality training corpus tailored for enhancing retrieval models in Instruction-Following IR. InF-IR expands traditional training pairs into over 38,000 expressive &lt;instruction, query, passage&gt; triplets as positive samples. In particular, for each positive triplet, we generate two additional hard negative examples by poisoning both instructions and queries, then rigorously validated by an advanced reasoning model (o3-mini) to ensure semantic plausibility while maintaining instructional incorrectness. Unlike existing corpora that primarily support computationally intensive reranking tasks for decoder-only language models, the highly contrastive positive-negative triplets in InF-IR further enable efficient representation learning for smaller encoder-only models, facilitating direct embedding-based retrieval. Using this corpus, we train InF-Embed, an instruction-aware Embedding model optimized through contrastive learning and instruction-query attention mechanisms to align retrieval outcomes precisely with user intents. Extensive experiments across five instruction-based retrieval benchmarks demonstrate that InF-Embed significantly surpasses competitive baselines by 8.1% in p-MRR, measuring the instruction-following capabilities.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.IR" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-05-27T17:14:37Z</published>
+    <arxiv:comment>Retrieval Models, Embedding, Retrieval with Instructions</arxiv:comment>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Yuchen Zhuang</name>
+    </author>
+    <author>
+      <name>Aaron Trinh</name>
+    </author>
+    <author>
+      <name>Rushi Qiang</name>
+    </author>
+    <author>
+      <name>Haotian Sun</name>
+    </author>
+    <author>
+      <name>Chao Zhang</name>
+    </author>
+    <author>
+      <name>Hanjun Dai</name>
+    </author>
+    <author>
+      <name>Bo Dai</name>
+    </author>
+  </entry>
+</feed>

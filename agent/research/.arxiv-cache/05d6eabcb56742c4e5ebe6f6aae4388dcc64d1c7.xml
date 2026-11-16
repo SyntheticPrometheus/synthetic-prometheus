@@ -1,0 +1,471 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/mp9vC2V/nl39L81jCDNu6a5qbuY</id>
+  <title>arXiv Query: search_query=&amp;id_list=2608.23395,2610.07261,2609.23790,2603.22651,2611.16526,2411.07464,2609.09233,2609.27900,2609.32635,2608.25277,2610.21113,2609.22114,2606.27416,2606.31174,2511.15755,2606.28362,2604.12262,2609.26121,2512.09543&amp;start=0&amp;max_results=19</title>
+  <updated>2026-11-15T14:53:29Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=&amp;start=0&amp;max_results=19&amp;id_list=2608.23395,2610.07261,2609.23790,2603.22651,2611.16526,2411.07464,2609.09233,2609.27900,2609.32635,2608.25277,2610.21113,2609.22114,2606.27416,2606.31174,2511.15755,2606.28362,2604.12262,2609.26121,2512.09543" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>19</opensearch:itemsPerPage>
+  <opensearch:totalResults>19</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2606.27416v1</id>
+    <title>Glite ARF: Verifier-Driven Research with Parallel LLM Coding Agents</title>
+    <updated>2026-06-25T17:52:26Z</updated>
+    <link href="https://arxiv.org/abs/2606.27416v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2606.27416v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>LLM coding agents make it tempting to automate empirical research by delegating experiments to them directly, but naive delegation does not scale to large projects: low-rate instruction lapses compound into broken, irreproducible artefacts. To address this problem, we present Glite ARF, an open-source Python framework for running many LLM coding agents in parallel on a research repository without sacrificing reproducibility or auditability. The framework defines a three-role stack: a human researcher chooses which hypotheses to test, coding agents (Claude Code, Codex CLI) implement individual tasks under a fixed structure, and deterministic Python verifier scripts enforce task isolation, immutability of completed work, a corrections overlay, and a materialised project overview. We call this verifier-driven research: the rules of the research process live in code that fails loudly when violated, not in prose that agents are merely asked to follow. Using Glite ARF, we developed our submission to the BEA 2026 vocabulary-difficulty shared task, placing first in the closed track and second in the open track on all three target languages (Spanish, German, Mandarin) and reducing the official baseline RMSE by 29.9% (closed) and 35.9% (open). The campaign comprised 273 tracked tasks (146 experiment runs) across 129 feature sets, run by up to twelve parallel agents orchestrated from a single laptop - with some model training on rented A100s - at approximately \$450 in LLM API spend (\$498 total third-party cost), and structured per-fold provenance let us catch and strip four target-leaking feature sets, correcting an implausible 0.609 RMSE to 0.802. Across three campaigns in three domains, the framework's structural machinery adds only about 1% of wall-clock time. Framework and a public demo project accompany this paper.</summary>
+    <category term="cs.MA" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-06-25T17:52:26Z</published>
+    <arxiv:comment>13 pages, 6 figures, 7 tables. Open-source framework (Apache-2.0) and a public demo project at https://github.com/GliteTech/glite-arf and https://github.com/GliteTech/research-ace-cefr</arxiv:comment>
+    <arxiv:primary_category term="cs.MA"/>
+    <author>
+      <name>Vassili Philippov</name>
+    </author>
+    <author>
+      <name>Pavel Katunin</name>
+    </author>
+    <author>
+      <name>Dmitry Andreev</name>
+    </author>
+    <author>
+      <name>Igor Ostanin</name>
+    </author>
+    <author>
+      <name>Anton Nikolaev</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2608.23395v1</id>
+    <title>Right-Sizing LLM-Agent Decomposition in VAT Determination: A Pilot Controlled Sweep</title>
+    <updated>2026-08-24T15:40:15Z</updated>
+    <link href="https://arxiv.org/abs/2608.23395v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2608.23395v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Recent LLM-agent systems make conflicting design bets: decompose work across many narrow agents, or use one strong tool-using agent. This pilot studies that choice on bounded cross-border VAT determination with reverse charge, where every case has an oracle label and each intermediate decision is independently scoreable. We hold the activity surface fixed (subtasks, tools, I/O schemas, validation checks, orchestrator, base model, and merge policy) and vary only the assignment of subtasks to workers across four orchestrated configurations, from one wide worker to five narrow ones, against S0, a tuned no-orchestrator single agent, with a deterministic rule engine as oracle. The program spans 4,400 runs: a 40-case, five-repeat main sweep, matched-token arms separating prompt-budget from agent-count effects, and three failure-injection arms, all judged against pre-registered falsification criteria. The two intermediate configurations lead on accuracy (0.830, against endpoints at 0.720 and 0.770) but miss the pre-stated bar against the fine endpoint, so the intermediate-optimum hypothesis remains unsupported at pilot scale. The single agent does not Pareto-dominate the orchestrated set. The matched-token criterion fires: the budget-matched single agent lands 6.5 points below the leader, but the interval includes zero, so any advantage is consistent with a prompt-budget explanation. Under injection, availability faults are absorbed at every granularity, with wide-scope restart over-recovering its baseline by +0.160, while one schema-conforming hallucinated record degrades every configuration and inverts the ordering, hitting fragmented configurations hardest. The contribution is a bounded, preregistered pilot heuristic for right-sizing decomposition (place one partition boundary at the dependency-layer midpoint), released with oracle, dataset, harness, raw traces, and analysis pipeline.</summary>
+    <category term="cs.MA" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-08-24T15:40:15Z</published>
+    <arxiv:comment>29 pages, 4 figures. Code, data, and traces: https://github.com/pedro-santos-eng/Right-sizing-LLM-agent-decomposition-in-VAT-determination</arxiv:comment>
+    <arxiv:primary_category term="cs.MA"/>
+    <author>
+      <name>Pedro Santos</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2608.25277v1</id>
+    <title>Routed Graph Handoff: Adaptive Format Selection for Multi-Agent LLM Delegation</title>
+    <updated>2026-08-26T01:24:34Z</updated>
+    <link href="https://arxiv.org/abs/2608.25277v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2608.25277v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Multi-agent LLM systems coordinate through natural-language messages that consume 40--60\% of their token budget. Replacing these with structured graphs reduces cost but fails on tasks requiring adaptive reasoning. We propose \textbf{Routed Graph Handoff}, where a lightweight LLM router (155 tokens, 0.15\% overhead) selects between a typed dependency graph and natural language for each delegation. On four benchmarks (1,050+ trajectories), the routed system matches or exceeds NL-only on every task: \textbf{+12.7\,pp} on $τ$-retail at 3.2$\times$ compression ($p{&lt;}0.01$), \textbf{+8.7\,pp} on BrowseComp at 2.2$\times$ compression ($p{&lt;}0.05$), and parity on BFCL and AppWorld. Without the router, graph-only delegation regresses 14.6\,pp on AppWorld; the router eliminates this at near-zero cost. A graph-aware executor prompt is required: the same schema without interpretation guidance yields no gain. An oracle analysis reveals 8.6\,pp of additional headroom, motivating execution-time adaptive routing as future work.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-08-26T01:24:34Z</published>
+    <arxiv:comment>Accepted in EMNLP 2026</arxiv:comment>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Pratyay Banerjee</name>
+    </author>
+    <author>
+      <name>Ankit Chadha</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2610.07261v1</id>
+    <title>Verifying Coordination in Parallel Coding Agents: NP-Bench and a Scheduling Planner</title>
+    <updated>2026-10-05T19:02:27Z</updated>
+    <link href="https://arxiv.org/abs/2610.07261v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2610.07261v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>A team of coding agents can look fine agent by agent yet fail as a team: each passes its own tests while the merged result is broken, and single-agent evaluation never catches it. As teams run several LLM coding agents in parallel on one codebase, the agents collide: two rewrite the same function, one codes against a contract a teammate just changed, and integration fails after the work is done. Most coordination tools react (watch for a conflict, then warn), but at agent speed the warning arrives after the wasted edit. We recast the problem as scheduling: take each work item's declared scope, partition the work into disjoint scopes, and order merges along the producer-&gt;consumer graph, all up front. We build this planner into Nerveplane and evaluate it with NP-Bench, an environment-grounded three-arm benchmark (no coordination; reactive detection; proactive planning) that verifies integration off a real git merge, both in a deterministic simulation and with live agents. The planner lifts clean-integration from 1/9 to 9/9 scenarios and cuts merge conflicts from 13 to 0, with a gap that grows in the number of agents. On a live breaking contract change it rescues an outcome both baselines miss on every seed: the clean-integration rate rises from 0 (no coordination and reactive detection) to 1.0 on a frontier model and 0.6 on a small one, while agents respect assigned scopes (0/5 leakage). A cross-session memory drops the repeated-mistake rate from 1.00 to 0.00 on strong and weak models alike. We also report a negative result: routing facts to agents does not rescue long-context accuracy at window-fitting scales; its value is cost and capacity, not attention. Across two capability tiers and two vendors, the benefit did not shrink as models got stronger, because it comes from how work is allocated, not model reasoning.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-10-05T19:02:27Z</published>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Sumanyu Muku</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2610.21113v1</id>
+    <title>SSR: Structural Signal Retriever for Scalable Agent Discovery in LLM-Orchestrated Multi-Agent Systems</title>
+    <updated>2026-10-15T02:16:12Z</updated>
+    <link href="https://arxiv.org/abs/2610.21113v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2610.21113v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Large-scale multi-agent ecosystems require mechanisms for discovering suitable agents without exposing entire registries to a large language model (LLM) orchestrator. The challenge is not only to retrieve relevant Agent Cards from a growing registry, but also to maintain a compact candidate context, since each additional candidate increases prompt size, inference cost, latency, and the risk of exceeding the model context window. We formulate this problem as candidate-context scalability and propose the Structural Signal Retriever (SSR), our deterministic and training-free retrieval method designed for Agent Card discovery. SSR derives structural lexical signals from capability-bearing Agent Card fields, weights them using inverse document frequency (IDF), and uses an Inverted Signal Index (ISI) for selective candidate scoring. We evaluate SSR using a synthetic agent benchmark, a public MS MARCO adaptation, and end-to-end LLM orchestration. At 1,000 agents, SSR reduces LLM input by 98.8% and orchestration latency by 70.9% relative to full-catalog orchestration. On MS MARCO, IDF improves retrieval effectiveness within the structural representation, while the ISI preserves retrieval effectiveness and reduces explicitly scored passages by 96.8%. End-to-end experiments show that candidate pre-selection maintains a compact candidate context as registry size grows and avoids the operational failures observed with full-catalog orchestration. These results support SSR as an Agent-Card-native, traceable retrieval mechanism for candidate-context scalability.</summary>
+    <category term="cs.MA" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.IR" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-10-15T02:16:12Z</published>
+    <arxiv:primary_category term="cs.MA"/>
+    <author>
+      <name>Giancarlo Maldonado Cárdenas</name>
+    </author>
+    <author>
+      <name>Carlos A. Astudillo</name>
+    </author>
+    <author>
+      <name>Nelson L. S. da Fonseca</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2411.07464v2</id>
+    <title>BudgetMLAgent: A Cost-Effective LLM Multi-Agent system for Automating Machine Learning Tasks</title>
+    <updated>2025-01-08T07:25:55Z</updated>
+    <link href="https://arxiv.org/abs/2411.07464v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2411.07464v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Large Language Models (LLMs) excel in diverse applications including generation of code snippets, but often struggle with generating code for complex Machine Learning (ML) tasks. Although existing LLM single-agent based systems give varying performance depending on the task complexity, they purely rely on larger and expensive models such as GPT-4. Our investigation reveals that no-cost and low-cost models such as Gemini-Pro, Mixtral and CodeLlama perform far worse than GPT-4 in a single-agent setting. With the motivation of developing a cost-efficient LLM based solution for solving ML tasks, we propose an LLM Multi-Agent based system which leverages combination of experts using profiling, efficient retrieval of past observations, LLM cascades, and ask-the-expert calls. Through empirical analysis on ML engineering tasks in the MLAgentBench benchmark, we demonstrate the effectiveness of our system, using no-cost models, namely Gemini as the base LLM, paired with GPT-4 in cascade and expert to serve occasional ask-the-expert calls for planning. With 94.2\% reduction in the cost (from \$0.931 per run cost averaged over all tasks for GPT-4 single agent system to \$0.054), our system is able to yield better average success rate of 32.95\% as compared to GPT-4 single-agent system yielding 22.72\% success rate averaged over all the tasks of MLAgentBench.</summary>
+    <category term="cs.MA" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2024-11-12T00:57:30Z</published>
+    <arxiv:comment>Presented at AIMLSystems '24</arxiv:comment>
+    <arxiv:primary_category term="cs.MA"/>
+    <author>
+      <name>Shubham Gandhi</name>
+    </author>
+    <author>
+      <name>Manasi Patwardhan</name>
+    </author>
+    <author>
+      <name>Lovekesh Vig</name>
+    </author>
+    <author>
+      <name>Gautam Shroff</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2512.09543v2</id>
+    <title>SWEnergy: An Empirical Study on Energy Efficiency in Agentic Issue Resolution Frameworks with SLMs</title>
+    <updated>2025-12-11T11:33:34Z</updated>
+    <link href="https://arxiv.org/abs/2512.09543v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2512.09543v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Context. LLM-based autonomous agents in software engineering rely on large, proprietary models, limiting local deployment. This has spurred interest in Small Language Models (SLMs), but their practical effectiveness and efficiency within complex agentic frameworks for automated issue resolution remain poorly understood.
+  Goal. We investigate the performance, energy efficiency, and resource consumption of four leading agentic issue resolution frameworks when deliberately constrained to using SLMs. We aim to assess the viability of these systems for this task in resource-limited settings and characterize the resulting trade-offs.
+  Method. We conduct a controlled evaluation of four leading agentic frameworks (SWE-Agent, OpenHands, Mini SWE Agent, AutoCodeRover) using two SLMs (Gemma-3 4B, Qwen-3 1.7B) on the SWE-bench Verified Mini benchmark. On fixed hardware, we measure energy, duration, token usage, and memory over 150 runs per configuration.
+  Results. We find that framework architecture is the primary driver of energy consumption. The most energy-intensive framework, AutoCodeRover (Gemma), consumed 9.4x more energy on average than the least energy-intensive, OpenHands (Gemma). However, this energy is largely wasted. Task resolution rates were near-zero, demonstrating that current frameworks, when paired with SLMs, consume significant energy on unproductive reasoning loops. The SLM's limited reasoning was the bottleneck for success, but the framework's design was the bottleneck for efficiency.
+  Conclusions. Current agentic frameworks, designed for powerful LLMs, fail to operate efficiently with SLMs. We find that framework architecture is the primary driver of energy consumption, but this energy is largely wasted due to the SLMs' limited reasoning. Viable low-energy solutions require shifting from passive orchestration to architectures that actively manage SLM weaknesses.</summary>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-12-10T11:28:48Z</published>
+    <arxiv:comment>8 pages, 5 figures, 1 table. Accepted to AGENT 2026 (ICSE 2026 workshop)</arxiv:comment>
+    <arxiv:primary_category term="cs.SE"/>
+    <arxiv:journal_ref>Proceedings of the 2026 International Workshop on Agentic Engineering (AGENT 2026), ACM, 2026, pp. 104-111</arxiv:journal_ref>
+    <author>
+      <name>Arihant Tripathy</name>
+    </author>
+    <author>
+      <name>Ch Pavan Harshit</name>
+    </author>
+    <author>
+      <name>Karthik Vaidhyanathan</name>
+    </author>
+    <arxiv:doi>10.1145/3786167.3788406</arxiv:doi>
+    <link rel="related" href="https://doi.org/10.1145/3786167.3788406" title="doi"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2511.15755v3</id>
+    <title>Multi-Agent LLM Orchestration Achieves Deterministic, High-Quality Decision Support for Incident Response</title>
+    <updated>2026-08-31T21:37:59Z</updated>
+    <link href="https://arxiv.org/abs/2511.15755v3" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2511.15755v3" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Large language models (LLMs) promise to accelerate incident response in production systems, yet single-agent approaches generate vague, unusable recommendations. We present MyAntFarm.ai, a reproducible containerized framework demonstrating that multi-agent orchestration fundamentally transforms LLM-based incident response quality. Through 348 controlled trials comparing single-agent copilot versus multi-agent systems on identical incident scenarios, we find that multi-agent orchestration achieves 100% actionable recommendation rate versus 1.7% for single-agent approaches, an 80 times improvement in action specificity and 140 times improvement in solution correctness. Critically, multi-agent systems exhibit zero quality variance across all trials, enabling production SLA commitments impossible with inconsistent single-agent outputs. Both architectures achieve similar comprehension latency (approx.40s), establishing that the architectural value lies in deterministic quality, not speed. We introduce Decision Quality (DQ), a novel metric capturing validity, specificity, and correctness properties essential for operational deployment that existing LLM metrics do not address. These findings reframe multi-agent orchestration from a performance optimization to a production-readiness requirement for LLM-based incident response. All code, Docker configurations, and trial data are publicly available for reproduction.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-11-19T06:06:11Z</published>
+    <arxiv:comment>Withdrawn by the author. A code audit found the multi-agent arm's action list is a source constant, not model output, and the scorer reads only that field. All Decision Quality results, and the zero-variance and actionability claims derived from them, are withdrawn. The implementation also differs from Sec. III. Latency data are unaffected. A redesigned study is in preparation</arxiv:comment>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Philip Drammeh</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2609.23790v1</id>
+    <title>Total Cost of Agency: Exact Attribution of Memory Injection Cost in Multi-Agent LLM Workflows</title>
+    <updated>2026-09-20T18:23:47Z</updated>
+    <link href="https://arxiv.org/abs/2609.23790v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2609.23790v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Every node in a multi-agent large language model (LLM) workflow retrieves context from memory and injects it into its prompt, where those injected tokens are billed as input tokens at the same per-token price as the system prompt and the user query. Production observability tools report total token cost but do not separate the tokens a node generates from the tokens it is handed, so this component of the bill is invisible to the teams paying it. We introduce the Total Cost of Agency (TCA), a decomposition of multi-agent workflow cost into base prompt, inference, memory injection, miss penalty and context-accumulation components, and an exact attribution method: a two-pass, non-billable token count that measures injected tokens directly rather than estimating them from word-count proxies. On a 200-task enterprise benchmark executed against real model APIs, memory injection accounts for 13.6 percent of the variable cost a compile-time optimizer can act on, about 12 percent of the full billed cost, and its share rises from a structural zero at workflow depth one to 27.6 percent at depth six. Injected tokens grow linearly with depth over the measured range (R^2 = 0.9974, depths two through six); a quadratic fit yields a negative leading coefficient, so the data do not exhibit convex growth at these depths. We show the component is controllable at fixed model tier: reducing the retrieval window capacity from 32 to 2 entries lowers injected tokens by 28.7 percent with an accuracy change within seed-level variation. We report in full that our graph-rewriting transforms are approximately cost-neutral in isolation, that two of the five decomposition terms are zero by construction in this harness, and that total workflow cost is dominated by model tier assignment, which we hold fixed and treat as prior work. Prompt caching is not evaluated; all figures are for the uncached case.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.MA" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.PF" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-09-20T18:23:47Z</published>
+    <arxiv:comment>8 pages, 3 figures, 6 tables. Code, data, and evaluation harness in github: https://github.com/vsingh45/tca-compiler</arxiv:comment>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Vivek Kumar Singh</name>
+    </author>
+    <author>
+      <name>Preeti Priyam</name>
+    </author>
+    <author>
+      <name>Gautam Bhowmick</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2604.12262v1</id>
+    <title>CascadeDebate: Multi-Agent Deliberation for Cost-Aware LLM Cascades</title>
+    <updated>2026-04-14T04:26:39Z</updated>
+    <link href="https://arxiv.org/abs/2604.12262v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2604.12262v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Cascaded LLM systems coordinate models of varying sizes with human experts to balance accuracy, cost, and abstention under uncertainty. However, single-model tiers at each stage often struggle with ambiguous queries, triggering premature escalations to costlier models or experts due to under-confidence and inefficient compute scaling. CascadeDebate addresses this gap by inserting multi-agent deliberation directly at each tier's escalation boundary. Confidence-based routers activate lightweight agent ensembles only for uncertain cases, enabling consensus-driven resolution of ambiguities internally without invoking higher-cost upgrades. Our unified architecture alternates single-model inference with selective multi-agent deliberation across model scales, culminating in human experts as the final fallback. This design scales test-time compute dynamically according to query difficulty. Across five benchmarks spanning science, medicine, and general knowledge, CascadeDebate outperforms strong single-model cascades and standalone multi-agent systems by up to 26.75 percent. An online threshold optimizer proves essential, boosting accuracy by 20.98 to 52.33 percent relative improvement over fixed policies and enabling elastic adaptation to real-world distributions.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-04-14T04:26:39Z</published>
+    <arxiv:comment>12 pages, 6 figures, 4 tables, 1 algorithm</arxiv:comment>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Raeyoung Chang</name>
+    </author>
+    <author>
+      <name>Dongwook Kwon</name>
+    </author>
+    <author>
+      <name>Jisoo Lee</name>
+    </author>
+    <author>
+      <name>Nikhil Verma</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2603.22651v1</id>
+    <title>Benchmarking Multi-Agent LLM Architectures for Financial Document Processing: A Comparative Study of Orchestration Patterns, Cost-Accuracy Tradeoffs and Production Scaling Strategies</title>
+    <updated>2026-03-24T00:02:47Z</updated>
+    <link href="https://arxiv.org/abs/2603.22651v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2603.22651v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>The adoption of large language models (LLMs) for structured information extraction from financial documents has accelerated rapidly, yet production deployments face fundamental architectural decisions with limited empirical guidance. We present a systematic benchmark comparing four multi-agent orchestration architectures: sequential pipeline, parallel fan-out with merge, hierarchical supervisor-worker and reflexive self-correcting loop. These are evaluated across five frontier and open-weight LLMs on a corpus of 10,000 SEC filings (10-K, 10-Q and 8-K forms). Our evaluation spans 25 extraction field types covering governance structures, executive compensation and financial metrics, measured along five axes: field-level F1, document-level accuracy, end-to-end latency, cost per document and token efficiency. We find that reflexive architectures achieve the highest field-level F1 (0.943) but at 2.3x the cost of sequential baselines, while hierarchical architectures occupy the most favorable position on the cost-accuracy Pareto frontier (F1 0.921 at 1.4x cost). We further present ablation studies on semantic caching, model routing and adaptive retry strategies, demonstrating that hybrid configurations can recover 89\% of the reflexive architecture's accuracy gains at only 1.15x baseline cost. Our scaling analysis from 1K to 100K documents per day reveals non-obvious throughput-accuracy degradation curves that inform capacity planning. These findings provide actionable guidance for practitioners deploying multi-agent LLM systems in regulated financial environments.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-03-24T00:02:47Z</published>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Siddhant Kulkarni</name>
+    </author>
+    <author>
+      <name>Yukta Kulkarni</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2609.32635v1</id>
+    <title>Trust the Brand, Lose Control: How Identity Hijacks LLM Agent Orchestration</title>
+    <updated>2026-09-26T13:53:33Z</updated>
+    <link href="https://arxiv.org/abs/2609.32635v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2609.32635v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>LLM agents now execute tasks end to end with permission to change real systems and increasingly orchestrate subagents that differ in capability and cost. Prior work treats the choice of subagent as an optimization problem. Yet the orchestrator makes this choice from the identities that subagents display, and an attacker can spoof them. Displayed identity thus decides operational authority, meaning who is trusted to check the work and who is allowed to change it. As a result, a risky subagent can keep authority over execution even after other evidence contradicts it. We introduce TrustFork, an LLM agent safety benchmark with 1,890 tasks and 27,826 valid trajectories across 16 agent systems. These systems run eight orchestrators under the OpenCode, OpenClaw, and Pi harnesses. In each task, one subagent carries a risky goal while the other three stay aligned with the user, so contradicting evidence can exist. A task can also change the identity a subagent displays without changing the model behind it, which lets us trace a shift in authority to the label. Our analysis shows that even when another subagent contradicts the risky response, the orchestrator still acts on it in 72.0% of cases on average, most often in the systems with the least terminal harm. Swapping the family labels nearly triples how often the orchestrator obtains the risky response. A safer response is available in 84.0% of tasks, yet it decides the outcome in only 25.0%. The harness also decides which responses reach the orchestrator. Among three runtime defenses, hiding identity cues helps most consistently, while verifying before action helps only when the harness returns enough evidence. TrustFork shows that production agent orchestration must bind authority to evidence before execution causes harm. Our project is in https://henrymao2004.github.io/agent-orchestration-safety/.</summary>
+    <category term="cs.CR" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-09-26T13:53:33Z</published>
+    <arxiv:primary_category term="cs.CR"/>
+    <author>
+      <name>Xutao Mao</name>
+    </author>
+    <author>
+      <name>Rui Qian</name>
+    </author>
+    <author>
+      <name>Linghan Chen</name>
+    </author>
+    <author>
+      <name>Yudong Gao</name>
+    </author>
+    <author>
+      <name>Junchi Liao</name>
+    </author>
+    <author>
+      <name>Jiulin Cai</name>
+    </author>
+    <author>
+      <name>Jinman Zhao</name>
+    </author>
+    <author>
+      <name>Cong Wang</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2609.26121v1</id>
+    <title>DTOC: Dynamic Tool Output Compression for Adaptive Context Management in AI Agents</title>
+    <updated>2026-08-06T12:06:36Z</updated>
+    <link href="https://arxiv.org/abs/2609.26121v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2609.26121v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>As agent capabilities have grown, practical limitations increasingly stem from constrained context windows rather than model capacity. Common strategies, such as truncation, heuristic aging, and lossy summarization, may discard useful information or introduce hallucination risk. To address these challenges, we propose Dynamic Tool Output Compression (DTOC), a framework for scalable context management in LLM-based agents that models context updates as explicit and reversible operations within the agent reasoning loop. DTOC retains full tool outputs in external memory while inserting compact placeholders into the active context, enabling selective reconstruction when needed. We formalize the DTOC mechanism, integrate it into a ReAct-style agent architecture, and provide a production-oriented implementation supporting on-demand restoration of compressed outputs. Experiments on DeepSWE reveal model-dependent effects: for responsive models (Sonnet 4.6, GPT-5.4), DTOC reduces input tokens (10.3 and 12.7%) and agent steps (2.4 and 32.3%), while increasing solve rates (2.5 and 1.5 times higher) and lowering cost per solved task (3 and 3.5 times lower cost per solved task). For the other models results are more mixed, with GPT-5.5 doubling solve rate and halving cost, but no impact on solve rate and negative impact on cost for the other models. Ablation results show reversibility is critical: disable-only compression variants degraded performance, while full DTOC recovered baseline accuracy at substantially lower context cost. These findings indicate that explicit, reversible context management can improve the efficiency of long-horizon agent reasoning without degrading task performance.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.MA" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-08-06T12:06:36Z</published>
+    <arxiv:comment>Accepted for 29th International Conference on Discovery Science, October 5-9, 2026, Mainz, Germany</arxiv:comment>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Abhay Chaturvedi</name>
+    </author>
+    <author>
+      <name>Shreya Bhattacharya</name>
+    </author>
+    <author>
+      <name>Rashmika Gopalkrishnan</name>
+    </author>
+    <author>
+      <name>Peter van der Putten</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2609.27900v1</id>
+    <title>Delegated Misalignment: How Multi-Agent Structures Amplify LLM Safety Risks</title>
+    <updated>2026-08-26T03:49:37Z</updated>
+    <link href="https://arxiv.org/abs/2609.27900v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2609.27900v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Large language models (LLMs) are increasingly deployed in multi-agent systems where a principal agent decomposes tasks and delegates them to subordinate agents that may invoke external tools. Safety alignment, however, is still evaluated almost exclusively under a single-agent threat model, treating safety as a property of the individual LLM. We show that this assumption breaks down: \emph{individual safety alignment fails to transfer to multi-agent settings}. Two failure mechanisms emerge under delegation: \emph{responsibility diffusion} on the principal side and \emph{role-bias compliance} on the subordinate side, jointly converting language-level refusal into actionable harm. We refer to this phenomenon as \textit{delegated misalignment} and study it through a three-condition protocol across 6 frontier LLMs on 49 hazardous tasks. Delegation amplifies end-to-end harm substantially: DeepSeek-V3.2's full-execution rate rises from 30.6\% to 77.6\% once delegation is introduced, and the same model behaves very differently across roles (GPT-5: 22.5\% as a single agent vs.\ 61.2\% as a subordinate). Ablations further show that standard single-layer defenses each fail on their own and can even backfire. We call on the community to move beyond per-model alignment and toward composite safety mechanisms before multi-agent LLM systems are deployed at scale.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-08-26T03:49:37Z</published>
+    <arxiv:comment>EMNLP 2026</arxiv:comment>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Zonghao Ying</name>
+    </author>
+    <author>
+      <name>Jiaqi Yan</name>
+    </author>
+    <author>
+      <name>Huize Luo</name>
+    </author>
+    <author>
+      <name>Quanchen Zou</name>
+    </author>
+    <author>
+      <name>Aishan Liu</name>
+    </author>
+    <author>
+      <name>Xianglong Liu</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2611.16526v1</id>
+    <title>Lost in Delegation: Studying the Effectiveness of Task Orchestration in Generative Search</title>
+    <updated>2026-11-12T09:25:33Z</updated>
+    <link href="https://arxiv.org/abs/2611.16526v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2611.16526v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>LLMs have quickly evolved from models used in isolation to agentic systems that delegate tasks to external tools and other LLMs to solve complex assignments. This agentic augmentation has led to impressive capability gains. However, when and how delegation improves performance remains poorly understood. For example, it is unclear whether delegation helps when tasks involve post-cutoff information that the orchestrating LLM cannot reliably resolve from its own knowledge. In this work, we use purpose-built datasets with pre- and post-cutoff splits to compare various delegation modes. We find that delegation provides no consistent accuracy improvement over non-delegated setups, with effects varying across models and tasks. When tasks involve knowledge unavailable to the orchestrator, delegation can substantially degrade accuracy, while direct tool use with the same LLM performs much better. Our analysis identifies distorted delegated queries, inefficient tool use, and failures to preserve and use information between agents as recurring failure modes. These findings suggest that effective orchestration requires both well-calibrated delegation decisions and effective exchange of information between agents.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-11-12T09:25:33Z</published>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Tamara Stojanovska</name>
+    </author>
+    <author>
+      <name>Elisabeth Kirsten</name>
+    </author>
+    <author>
+      <name>Leon Swazinna</name>
+    </author>
+    <author>
+      <name>Muhammad Bilal Zafar</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2609.22114v1</id>
+    <title>An Empirical Cost Attribution of Context-Compression Gateways in Multi-Turn Coding Agents</title>
+    <updated>2026-08-19T07:43:01Z</updated>
+    <link href="https://arxiv.org/abs/2609.22114v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2609.22114v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Context compression is widely proposed as a way to cut the token bill of LLM coding agents, and public benchmarks report that aggressive compression preserves task-solving quality. These two facts do not imply the third one commonly assumed: that compressing file reads saves money in a real multi-turn agent. We instrument a production compression gateway (Paritok) between coding agents (Claude Code, Codex) and frontier LLMs (Claude Sonnet, GPT-5), and decompose the token bill of real sessions into three independent levers: tool-schema filtering, content compression of file reads and tool output, and history summarization. Measured in isolation under controlled A/B runs, the three save at fundamentally different rates. Tool-schema filtering removes a fixed block every turn, roughly 21K-57K tokens on a typical turn; it is linear in the turn count N and the only unambiguously and reproducibly positive lever. Content compression saves only about 2% of the cache-priced prefix per turn, but compressed reads accumulate in history and are re-sent on every later turn, so its cumulative saving grows quadratically, about 3350*N^2 tokens (measured), overtaking the fixed tool-filter saving within roughly 6 turns until the context window caps it. A non-destructive gateway lets the agent pull original bytes back on demand; each recall re-sends exactly the one segment just compressed away, so its cost is fixed and bounded rather than a multiplicative blowup, and heavy recall spends the accumulated saving back one segment at a time. Finally, a strong single-shot compression benchmark - 86.5% of SWE-bench quality retained at a 25.7% compression rate, achieved by the model this gateway deploys (Paritok-4B, reported separately) - is orthogonal to multi-turn agent cost and must not be cited as a cost-saving argument. We distill the results into an actionable recipe for where token-saving effort pays off.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.PF" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-08-19T07:43:01Z</published>
+    <arxiv:comment>10 pages, 1 figure, 4 tables</arxiv:comment>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Luzhuo Chen</name>
+    </author>
+    <author>
+      <name>Jiayu Shi</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2606.31174v2</id>
+    <title>ClawArena-Team: Benchmarking Subagent Orchestration and Dynamic Workflows in Language-Model Agents</title>
+    <updated>2026-07-02T07:39:52Z</updated>
+    <link href="https://arxiv.org/abs/2606.31174v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2606.31174v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Production large language-model (LLM) agents are increasingly deployed not as lone problem-solvers but as managers: a main model creates specialized subagents, delegates work, and orchestrates their parallel, asynchronous returns through dynamic workflows. Whether one model can actually run such a team is largely unmeasured: existing benchmarks score a policy's own task-solving or a fixed multi-agent system's emergent behavior, but none isolate the management ability of the single LLM acting as leader. We introduce ClawArena-Team, a benchmark of 41 multi-turn, multimodal, multi-directory scenarios spanning 258 evaluation rounds and 72 staged updates that measures this management ability. The main agent is deliberately constrained: it natively perceives only text and directly accesses only part of the workspace. It commands a fixed, locally served subagent pool, so score differences reflect management skill, not raw capability. All scoring is execution-based with no LLM judge: an overall score -- the Subagent-Management Score (SMS) -- multiplies task correctness by a least-privilege and modality-routing factor. Across twelve proprietary, community-hosted, and self-hosted models, experiments show that the management bottleneck is privilege granting rather than perception (no model exceeds 50% workspace-permission precision); that cost and management quality are decoupled (API cost spans over 100 times while the overall score spans under 4 times, with the cheapest open models on the Pareto frontier); and that most leaderboard scores cluster within a 9.9-point band while orchestration behaviors diverge by more than an order of magnitude. Code is available at https://github.com/aiming-lab/ClawArena.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-06-30T06:06:08Z</published>
+    <arxiv:comment>24 pages, 10 figures, website: https://www.clawarena.cc/</arxiv:comment>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Kaiwen Xiong</name>
+    </author>
+    <author>
+      <name>Haonian Ji</name>
+    </author>
+    <author>
+      <name>Shi Qiu</name>
+    </author>
+    <author>
+      <name>Zeyu Zheng</name>
+    </author>
+    <author>
+      <name>Cihang Xie</name>
+    </author>
+    <author>
+      <name>Xinyu Ye</name>
+    </author>
+    <author>
+      <name>Huaxiu Yao</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2606.28362v1</id>
+    <title>LUMEN: Cost-Transparent Multi-Agent Pipeline for Automated Systematic Review and Meta-Analysis</title>
+    <updated>2026-03-29T09:02:10Z</updated>
+    <link href="https://arxiv.org/abs/2606.28362v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2606.28362v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Systematic reviews and meta-analyses (SR/MA) remain the gold standard for evidence synthesis, yet completing one typically requires 67 weeks and substantial expert effort. Recent large language model (LLM) systems have demonstrated strong performance on individual SR phases - screening (otto-SR: 96.7% sensitivity), extraction (Gartlehner et al.: 91.0% accuracy), and search (TrialMind: 0.83 recall) - but no study has reported what it actually costs to run an end-to-end pipeline, how cost distributes across phases, or how architectural choices affect the cost-quality trade-off. We present LUMEN, an open-source multi-agent pipeline that automates six SR/MA phases using 11 specialized LLM agents with deliberate model routing. We evaluate LUMEN on seven datasets: five self-conducted domain reviews (psychiatry, psychology, surgery, vaccinology, cardiology) and two SYNERGY screening benchmarks. Across 13 ground-truth-comparable outcomes, LUMEN achieves 100% directional agreement with published meta-analyses, with effect sizes within 1% for homogeneous study designs. The primary contribution is the first empirical cost and operational characterization of such a pipeline: a complete review costs 19 to 29 USD (median 22.65 USD), with title-abstract screening and data extraction together dominating expenditure. A three-arm extraction ablation reveals a phase-dependent architecture reversal: multi-agent design hurts screening but is essential for extraction, producing 5.7x more poolable analyses than single-model alternatives while eliminating clinically dangerous direction errors. A two-dataset screening benchmark demonstrates that model ranking is domain-dependent and not transferable across review topics. All code and cost logs are publicly available.</summary>
+    <category term="cs.IR" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CY" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.DL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-03-29T09:02:10Z</published>
+    <arxiv:comment>15 pages, 5 figures. Open-source implementation and cost logs available</arxiv:comment>
+    <arxiv:primary_category term="cs.IR"/>
+    <author>
+      <name>Yen-Hsun Huang</name>
+      <arxiv:affiliation>Department of Education, Taipei Veterans General Hospital, Taipei, Taiwan</arxiv:affiliation>
+    </author>
+    <author>
+      <name>Yu-Shiou Lin</name>
+      <arxiv:affiliation>Department of Psychiatry, Taipei Veterans General Hospital, Taipei, Taiwan</arxiv:affiliation>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2609.09233v1</id>
+    <title>Subagents vs Agent Skills: Executing Reusable Knowledge for Long-Horizon Agentic Tasks</title>
+    <updated>2026-09-07T20:14:11Z</updated>
+    <link href="https://arxiv.org/abs/2609.09233v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2609.09233v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>How can language model agents effectively leverage libraries of reusable knowledge to solve long-horizon tasks? Recent work has increasingly focused on agent skills: reusable capabilities represented as skill packages, i.e., multi-file bundles containing instructions, scripts, and other resources that help agents perform specific tasks. Agent skills are typically executed by loading their skill instructions into an agent's context and relying on the agent to follow them. As task horizons grow, however, this approach becomes increasingly brittle, because reasoning quality degrades as more information accumulates in the context window. We investigate an alternative approach in which skill packages are instead invoked as subagents. Rather than loading skill instructions into the main context, subagent execution spawns fresh context windows dedicated to solving individual subtasks. We show that subagent execution outperforms agent-skill execution when skill packages expose clear input-output contracts and their instructions encode the procedural knowledge needed to fulfill those contracts. The tradeoff is additional communication overhead, as extra tokens are required to coordinate between the main agent and its subagents. Our results show that the benefit of reusable knowledge depends not only on its content, but also on how it is organized and invoked.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-09-07T20:14:11Z</published>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Wasu Top Piriyakulkij</name>
+    </author>
+    <author>
+      <name>Rachel Lawrence</name>
+    </author>
+    <author>
+      <name>Alicia Curth</name>
+    </author>
+    <author>
+      <name>Sushrut Karmalkar</name>
+    </author>
+    <author>
+      <name>Niranjani Prasad</name>
+    </author>
+  </entry>
+</feed>

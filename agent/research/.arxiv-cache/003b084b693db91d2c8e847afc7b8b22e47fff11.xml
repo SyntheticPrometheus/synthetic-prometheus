@@ -1,0 +1,248 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/mUS/OQywFjWKJoVvVG0f116XMlc</id>
+  <title>arXiv Query: search_query=all:"deep research"&amp;id_list=&amp;start=0&amp;max_results=6</title>
+  <updated>2026-11-15T16:14:31Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=all:%22deep+research%22&amp;start=0&amp;max_results=6&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>6</opensearch:itemsPerPage>
+  <opensearch:totalResults>486</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2512.03887v2</id>
+    <title>A Hierarchical Tree-based approach for creating Configurable and Static Deep Research Agent (Static-DRA)</title>
+    <updated>2025-12-04T05:41:20Z</updated>
+    <link href="https://arxiv.org/abs/2512.03887v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2512.03887v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>The advancement in Large Language Models has driven the creation of complex agentic systems, such as Deep Research Agents (DRAs), to overcome the limitations of static Retrieval Augmented Generation (RAG) pipelines in handling complex, multi-turn research tasks. This paper introduces the Static Deep Research Agent (Static-DRA), a novel solution built upon a configurable and hierarchical Tree-based static workflow.
+  The core contribution is the integration of two user-tunable parameters, Depth and Breadth, which provide granular control over the research intensity. This design allows end-users to consciously balance the desired quality and comprehensiveness of the research report against the associated computational cost of Large Language Model (LLM) interactions. The agent's architecture, comprising Supervisor, Independent, and Worker agents, facilitates effective multi-hop information retrieval and parallel sub-topic investigation.
+  We evaluate the Static-DRA against the established DeepResearch Bench using the RACE (Reference-based Adaptive Criteria-driven Evaluation) framework. Configured with a depth of 2 and a breadth of 5, and powered by the gemini-2.5-pro model, the agent achieved an overall score of 34.72. Our experiments validate that increasing the configured Depth and Breadth parameters results in a more in-depth research process and a correspondingly higher evaluation score. The Static-DRA offers a pragmatic and resource-aware solution, empowering users with transparent control over the deep research process. The entire source code, outputs and benchmark results are open-sourced at https://github.com/SauravP97/Static-Deep-Research/</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-12-03T15:37:13Z</published>
+    <arxiv:comment>16 pages, 6 figures, 4 tables. Code available at: https://github.com/SauravP97/Static-Deep-Research</arxiv:comment>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Saurav Prateek</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2509.13312v3</id>
+    <title>WebWeaver: Structuring Web-Scale Evidence with Dynamic Outlines for Open-Ended Deep Research</title>
+    <updated>2025-10-07T11:47:57Z</updated>
+    <link href="https://arxiv.org/abs/2509.13312v3" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2509.13312v3" rel="related" type="application/pdf" title="pdf"/>
+    <summary>This paper tackles \textbf{open-ended deep research (OEDR)}, a complex challenge where AI agents must synthesize vast web-scale information into insightful reports. Current approaches are plagued by dual-fold limitations: static research pipelines that decouple planning from evidence acquisition and monolithic generation paradigms that include redundant, irrelevant evidence, suffering from hallucination issues and low citation accuracy. To address these challenges, we introduce \textbf{WebWeaver}, a novel dual-agent framework that emulates the human research process. The planner operates in a dynamic cycle, iteratively interleaving evidence acquisition with outline optimization to produce a comprehensive, citation-grounded outline linking to a memory bank of evidence. The writer then executes a hierarchical retrieval and writing process, composing the report section by section. By performing targeted retrieval of only the necessary evidence from the memory bank via citations for each part, it effectively mitigates long-context issues and citation hallucinations. Our framework establishes a new state-of-the-art across major OEDR benchmarks, including DeepResearch Bench, DeepConsult, and DeepResearchGym. These results validate our human-centric, iterative methodology, demonstrating that adaptive planning and focused synthesis are crucial for producing comprehensive, trusted, and well-structured reports.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-09-16T17:57:21Z</published>
+    <arxiv:comment>An agent system for open-ended deep research</arxiv:comment>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Zijian Li</name>
+    </author>
+    <author>
+      <name>Xin Guan</name>
+    </author>
+    <author>
+      <name>Bo Zhang</name>
+    </author>
+    <author>
+      <name>Shen Huang</name>
+    </author>
+    <author>
+      <name>Houquan Zhou</name>
+    </author>
+    <author>
+      <name>Shaopeng Lai</name>
+    </author>
+    <author>
+      <name>Ming Yan</name>
+    </author>
+    <author>
+      <name>Yong Jiang</name>
+    </author>
+    <author>
+      <name>Pengjun Xie</name>
+    </author>
+    <author>
+      <name>Fei Huang</name>
+    </author>
+    <author>
+      <name>Jun Zhang</name>
+    </author>
+    <author>
+      <name>Jingren Zhou</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2605.21482v1</id>
+    <title>DeepWeb-Bench: A Deep Research Benchmark Demanding Massive Cross-Source Evidence and Long-Horizon Derivation</title>
+    <updated>2026-05-20T17:59:03Z</updated>
+    <link href="https://arxiv.org/abs/2605.21482v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2605.21482v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Deep research, in which an agent searches the open web, collects evidence, and derives an answer through extended reasoning, is a prominent use case for frontier language models. Frontier deep research products score high on existing benchmarks, making it difficult to distinguish their capabilities from current evaluation data alone. We introduce DeepWeb-Bench, a deep research benchmark that is substantially harder than existing benchmarks for the current frontier. Difficulty comes from three properties of the data itself: each task requires massive evidence collection, cross-source reconciliation, and long-horizon multi-step derivation. We represent these three sources of difficulty as four capability families (Retrieval, Derivation, Reasoning, and Calibration) and report results sliced by family. Every reference answer is accompanied by a source-provenance record with four disclosure levels and cross-source checks where available, making scores easier to audit against the underlying evidence. We evaluate DeepWeb-Bench on nine frontier models and report three findings: (1) retrieval is not the bottleneck, as retrieval failures account for only 12-14% of errors while derivation and calibration failures account for over 70%; (2) strong and weak models fail in qualitatively different ways, with strong models' errors dominated by incomplete derivation and weak models' by hallucinated precision; and (3) models exhibit genuine specialization across domains, with cross-model agreement of only rho = 0.61 and per-case disagreement reaching 18.8 percentage points. The public benchmark release includes the data, rubrics, and evaluation code.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-05-20T17:59:03Z</published>
+    <arxiv:comment>Work in Progress. 27 pages, 10 figures, 4 tables. Project page: https://sixiongxie1001-dot.github.io/deep-research-benchmark2.0</arxiv:comment>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Sixiong Xie</name>
+    </author>
+    <author>
+      <name>Zhuofan Shi</name>
+    </author>
+    <author>
+      <name>Haiyang Shen</name>
+    </author>
+    <author>
+      <name>Jiuzheng Wang</name>
+    </author>
+    <author>
+      <name>Siqi Zhong</name>
+    </author>
+    <author>
+      <name>Mugeng Liu</name>
+    </author>
+    <author>
+      <name>Chongyang Pan</name>
+    </author>
+    <author>
+      <name>Peilun Jia</name>
+    </author>
+    <author>
+      <name>Baoqing Sun</name>
+    </author>
+    <author>
+      <name>Xiang Jing</name>
+    </author>
+    <author>
+      <name>Yun Ma</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2601.12369v6</id>
+    <title>TaxoBench: Can Deep Research Agents Retrieve and Organize? Evaluating the Synthesis Gap with Expert Taxonomies</title>
+    <updated>2026-10-22T14:45:02Z</updated>
+    <link href="https://arxiv.org/abs/2601.12369v6" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2601.12369v6" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Deep Research Agents increasingly automate survey writing, yet existing benchmarks do not jointly test whether they retrieve the papers experts consider essential and organize those papers into paper-grounded taxonomies. We introduce TaxoBench, a benchmark built from 72 highly cited LLM surveys, 3,815 cited papers, and their expert-authored taxonomies. TaxoBench evaluates systems in two settings: Deep Research mode measures end-to-end retrieval and organization from a topic, while Bottom-Up mode provides the expert paper set and isolates organization. We evaluate leaf-level assignments with ARI and V-Measure and hierarchy-level structure with US-TED, US-NTED, and Sem-Path. Across 7 Deep Research Agents and 16 LLM configurations, the best agent retrieves only 20.92% of expert-cited papers, and none of 70 standard Bottom-Up runs reaches the experts' average depth of 4.86. A controlled probe shows that models which match this depth do so by fragmenting the taxonomy, reducing alignment with the expert reference. We further find that raw Sem-Path remains near a no-organization floor even when a newer model generation gains 3.68 pp ARI; after depth matching, humans lead on all 10 matched surveys by 13.27 pp. These results identify retrieval and hierarchical organization as separate bottlenecks and show why hierarchy metrics must be calibrated before they are used to compare models.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-01-18T11:57:09Z</published>
+    <arxiv:comment>62 pages. This version adds a re-test of three current Deep Research agents (App. L.10) and corrects the Qwen row of Table 2</arxiv:comment>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Ming Zhang</name>
+    </author>
+    <author>
+      <name>Jiabao Zhuang</name>
+    </author>
+    <author>
+      <name>Wenqing Jing</name>
+    </author>
+    <author>
+      <name>Kexin Tan</name>
+    </author>
+    <author>
+      <name>Ziyu Kong</name>
+    </author>
+    <author>
+      <name>Jingyi Deng</name>
+    </author>
+    <author>
+      <name>Yujiong Shen</name>
+    </author>
+    <author>
+      <name>Yuhui Wang</name>
+    </author>
+    <author>
+      <name>Zhenghao Xiang</name>
+    </author>
+    <author>
+      <name>Qiyuan Peng</name>
+    </author>
+    <author>
+      <name>Mingqi Wu</name>
+    </author>
+    <author>
+      <name>Long Ma</name>
+    </author>
+    <author>
+      <name>Zhangyue Yin</name>
+    </author>
+    <author>
+      <name>Shihan Dou</name>
+    </author>
+    <author>
+      <name>Maxm Pan</name>
+    </author>
+    <author>
+      <name>Tao Gui</name>
+    </author>
+    <author>
+      <name>Qi Zhang</name>
+    </author>
+    <author>
+      <name>Xuanjing Huang</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2603.28361v1</id>
+    <title>Deep Research of Deep Research: From Transformer to Agent, From AI to AI for Science</title>
+    <updated>2026-03-30T12:29:47Z</updated>
+    <link href="https://arxiv.org/abs/2603.28361v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2603.28361v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>With the advancement of large language models (LLMs) in their knowledge base and reasoning capabilities, their interactive modalities have evolved from pure text to multimodality and further to agentic tool use. Consequently, their applications have broadened from question answering to AI assistants and now to general-purpose agents. Deep research (DR) represents a prototypical vertical application for general-purpose agents, which represents an ideal approach for intelligent information processing and assisting humans in discovering and solving problems, with the goal of reaching or even surpassing the level of top human scientists. This paper provides a deep research of deep research. We articulate a clear and precise definition of deep research and unify perspectives from industry's deep research and academia's AI for Science (AI4S) within a developmental framework. We position LLMs and Stable Diffusion as the twin pillars of generative AI, and lay out a roadmap evolving from the Transformer to agents. We examine the progress of AI4S across various disciplines. We identify the predominant paradigms of human-AI interaction and prevailing system architectures, and discuss the major challenges and fundamental research issues that remain. AI supports scientific innovation, and science also can contribute to AI growth (Science for AI, S4AI). We hope this paper can help bridge the gap between the AI and AI4S communities.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.MA" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-03-30T12:29:47Z</published>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Yipeng Yu</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2507.05495v2</id>
+    <title>Deep Research Comparator: A Platform For Fine-grained Human Annotations of Deep Research Agents</title>
+    <updated>2025-12-23T16:43:12Z</updated>
+    <link href="https://arxiv.org/abs/2507.05495v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2507.05495v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Effectively evaluating deep research agents that autonomously search the web, analyze information, and generate reports remains a major challenge, particularly when it comes to assessing long reports and giving detailed feedback on their intermediate steps. To address these gaps, we introduce Deep Research Comparator, a platform that offers a holistic framework for deep research agent hosting, side-by-side comparison, fine-grained human feedback collection, and ranking calculation. Given a user query, our platform displays the final reports from two different agents along with their intermediate steps during generation. Annotators can evaluate the overall quality of final reports based on side-by-side comparison, and also provide detailed feedback separately by assessing intermediate steps or specific text spans within the final report. Furthermore, we develop Simple Deepresearch, an end-to-end agent scaffold. This scaffold serves as a baseline that facilitates the easy integration of various large language models to transform them into deep research agents for evaluation. To demonstrate the platform's utility for deep research agent development, we have collected real user preference data from 17 annotators on three deep research agents. A demo video of our platform can be found at https://www.youtube.com/watch?v=g4d2dnbdseg.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-07-07T21:35:09Z</published>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Prahaladh Chandrahasan</name>
+    </author>
+    <author>
+      <name>Jiahe Jin</name>
+    </author>
+    <author>
+      <name>Zhihan Zhang</name>
+    </author>
+    <author>
+      <name>Tevin Wang</name>
+    </author>
+    <author>
+      <name>Andy Tang</name>
+    </author>
+    <author>
+      <name>Lucy Mo</name>
+    </author>
+    <author>
+      <name>Morteza Ziyadi</name>
+    </author>
+    <author>
+      <name>Leonardo F. R. Ribeiro</name>
+    </author>
+    <author>
+      <name>Zimeng Qiu</name>
+    </author>
+    <author>
+      <name>Markus Dreyer</name>
+    </author>
+    <author>
+      <name>Akari Asai</name>
+    </author>
+    <author>
+      <name>Chenyan Xiong</name>
+    </author>
+  </entry>
+</feed>

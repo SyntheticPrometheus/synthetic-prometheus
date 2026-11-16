@@ -1,0 +1,44 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/msJDVLa2z+XsibGymYvAOkOLcvg</id>
+  <title>arXiv Query: search_query=&amp;id_list=2510.01003&amp;start=0&amp;max_results=1</title>
+  <updated>2026-11-15T16:02:43Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=&amp;start=0&amp;max_results=1&amp;id_list=2510.01003" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>1</opensearch:itemsPerPage>
+  <opensearch:totalResults>1</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2510.01003v2</id>
+    <title>Improving Code Localization with Repository Memory</title>
+    <updated>2026-02-06T21:47:16Z</updated>
+    <link href="https://arxiv.org/abs/2510.01003v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2510.01003v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Code localization is a fundamental challenge in repository-level software engineering tasks such as bug fixing. While existing methods equip language agents with comprehensive tools/interfaces to fetch information from the repository, they overlook the critical aspect of memory, where each instance is typically handled from scratch assuming no prior repository knowledge. In contrast, human developers naturally build long-term repository memory, such as the functionality of key modules and associations between various bug types and their likely fix locations. In this work, we augment language agents with such memory by leveraging a repository's commit history -- a rich yet underutilized resource that chronicles the codebase's evolution. We introduce tools that allow the agent to retrieve from a non-parametric memory encompassing recent historical commits and linked issues, as well as functionality summaries of actively evolving parts of the codebase identified via commit patterns. We demonstrate that augmenting such a memory can significantly improve LocAgent, a state-of-the-art localization framework, on both SWE-bench-verified and the more recent SWE-bench-live benchmarks. Our research contributes towards developing agents that can accumulate and leverage past experience for long-horizon tasks, more closely emulating the expertise of human developers.</summary>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-10-01T15:10:15Z</published>
+    <arxiv:comment>ICLR 2026</arxiv:comment>
+    <arxiv:primary_category term="cs.SE"/>
+    <author>
+      <name>Boshi Wang</name>
+    </author>
+    <author>
+      <name>Weijian Xu</name>
+    </author>
+    <author>
+      <name>Yunsheng Li</name>
+    </author>
+    <author>
+      <name>Mei Gao</name>
+    </author>
+    <author>
+      <name>Yujia Xie</name>
+    </author>
+    <author>
+      <name>Huan Sun</name>
+    </author>
+    <author>
+      <name>Dongdong Chen</name>
+    </author>
+  </entry>
+</feed>

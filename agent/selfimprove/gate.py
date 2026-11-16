@@ -32,9 +32,9 @@ def main():
     ap.add_argument("--min-delta", type=int, default=None)
     ap.add_argument("--k", type=int, default=None)
     ap.add_argument("--skip-audit", action="store_true")
-    ap.add_argument("--cost-win-frac", type=float, default=0.0,
+    ap.add_argument("--cost-win-frac", type=float, default=None,
                     help="accept an equal-pass candidate that cuts output tokens by at least this "
-                         "fraction (delegation arms; default 0 = off)")
+                         "fraction; default comes from policy.json gate.cost_win_frac, 0 = off")
     a = ap.parse_args()
     import json as _json
     pol_path = Path(__file__).resolve().parent / "policy.json"
@@ -43,6 +43,8 @@ def main():
         a.min_delta = pol.get("min_delta", 2)
     if a.k is None:
         a.k = pol.get("min_reps", 3)
+    if a.cost_win_frac is None:
+        a.cost_win_frac = pol.get("cost_win_frac", 0.0)
     b, c = load(a.base), load(a.cand)
     if not a.skip_audit:
         import subprocess as _sp
@@ -93,7 +95,7 @@ def main():
         tb, tc = b.get("tokens_out", 0), c.get("tokens_out", 0)
         if tb and tc:
             frac = 1 - tc / tb
-            print(f"cost: out-tokens {tb} -> {tc} ({frac:+.1%})  wall {b.get('wall_s')}s -> {c.get('wall_s')}s")
+            print(f"cost: out-tokens {tb} -> {tc} (-{frac:.1%})  wall {b.get('wall_s')}s -> {c.get('wall_s')}s")
             if frac >= a.cost_win_frac:
                 print(f"ACCEPT_COST: equal pass, {frac:.0%} fewer output tokens "
                       f"(threshold {a.cost_win_frac:.0%}) — measure again next cycle before trusting it")

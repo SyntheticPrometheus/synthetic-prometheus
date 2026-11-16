@@ -11,12 +11,16 @@ Each check exists because something went wrong once (see INCIDENTS.md):
   ledger       selfimprove/maintain.py --check --research --lineage must pass
   memory       every research/*.md must be cited by a memory row
   resources    enough RAM and disk to run a loop without OOM-killing the session
+  graph        the percolation model of the machine must not get more fragile than its baseline
+  frontmatter  every skill/agent/prompt frontmatter must parse as YAML (pi drops what does not)
 """
+import calendar
 import json
 import os
 import re
 import shutil
 import subprocess
+import time
 import sys
 from pathlib import Path
 
@@ -159,15 +163,511 @@ def resources():
     return ok, f"{mem} MB RAM available, {free} GB disk"
 
 
+def graph():
+    """A single resource that takes a fifth of the machine with it should be a named, measured risk
+    rather than something met during an outage.
+
+    `pi-percolate` models every capability (bin/, enabled units, exec obligations, MCP servers) as a
+    node whose required resources must all be up, and percolation is then the ordinary question of
+    what share of that graph still runs *and* can reach itself after f of the resources fail. This
+    gate does not re-derive the model: it fails only when fragility regressed against the recorded
+    baseline or a new unmitigated single point of failure appeared, so it cannot latch on a state
+    nobody intends to fix (the failure mode that made `units` unpassable once).
+    """
+    r = subprocess.run([str(AGENT / "bin" / "pi-percolate"), "check", "--quick"],
+                       capture_output=True, text=True, timeout=180)
+    lines = [l for l in (r.stdout or r.stderr).strip().splitlines() if l.strip()]
+    return r.returncode == 0, (lines[-1] if lines else f"exit {r.returncode}")
+
+
+def units():
+    """A failed unit is a broken capability that nobody looks at again until it is asked for.
+
+    Two system units sat failed for 11h (snapper-boot: no config declared; grub-btrfsd: missing
+    inotify-tools) because nothing in the harness ever read `systemctl --failed`.
+    """
+    # A unit that runs this check cannot be its own evidence: once pi-review failed because
+    # preflight failed because pi-review had failed, the latch was permanent. Harness units are
+    # judged by their own checks (review, timers, publish) instead.
+    harness = {"pi-review.service", "pi-selfimprove.service", "pi-publish.service",
+               "pi-preflight.service", "pi-agenda.service"}
+    bad = []
+    for scope in (["--system"], ["--user"]):
+        r = subprocess.run(["systemctl", *scope, "--failed", "--no-legend", "--plain"],
+                           capture_output=True, text=True)
+        bad += [l.split()[0].lstrip("\u25cf\u00d7*") for l in r.stdout.splitlines()
+                if l.strip() and l.split()[0].lstrip("\u25cf\u00d7*") not in harness]
+    return (not bad), ("failed: " + ", ".join(bad) if bad else "no failed units")
+
+
+def windows():
+    """A terminal or session opened for a task must be tiled while it is used and gone when it is
+    not. `pi-term` records what it opened; this check fails on an orphan (a pi-* tmux session whose
+    pane is no longer pi) or a target older than the 12 h TTL. It never closes anything — `pi-term
+    --reap` is the mutating command, on the 6 h agenda row.
+    """
+    r = subprocess.run([str(AGENT / "bin" / "pi-term"), "--list", "--json"],
+                       capture_output=True, text=True, timeout=60)
+    if r.returncode != 0:
+        return False, (r.stderr.strip().splitlines() or ["pi-term --list failed"])[-1]
+    d = json.loads(r.stdout or "{}")
+    rows = d.get("rows") or []
+    open_rows = [x for x in rows if x.get("state") == "open"]
+    stale = [x for x in rows if x.get("state") == "stale"]
+    if d.get("orphans"):
+        return False, f"{d['orphans']} orphan pi-term target(s) — run `pi-term --reap`"
+    if stale:
+        return False, f"{len(stale)} pi-term target(s) older than TTL — run `pi-term --reap`"
+    wm = wm_singleton()
+    if wm:
+        return False, wm
+    off = pergola_offscreen()
+    if off:
+        return False, off
+    return True, f"{len(open_rows)} open pi-term target(s), 0 orphans, one WM"
+
+
+def pergola_offscreen() -> str | None:
+    """A window that exists in pergola's tree but sits outside the work area is invisible.
+
+    Measured 2026-11-15: the camera was framed on one pane, so three of four terminals were laid
+    out at negative coordinates — `pi-tile status` called them `shown`, a screenshot showed one,
+    and the owner's desktop looked like it had lost three windows. `pergola everything` restores
+    the whole tree; this check notices the state, exactly as the WM-singleton check notices a
+    displaced window manager.
+    """
+    tool = Path.home() / ".local" / "bin" / "pergola"
+    if not tool.exists():
+        return None
+    try:
+        r = subprocess.run([str(tool), "rects"], capture_output=True, text=True, timeout=20)
+    except Exception:
+        return None
+    if r.returncode != 0 or not r.stdout.strip():
+        return None
+    work = subprocess.run(["xprop", "-root", "_NET_WORKAREA"], capture_output=True, text=True,
+                          timeout=10).stdout
+    nums = re.findall(r"-?\d+", work.split("=")[-1]) if "=" in work else []
+    if len(nums) < 4:
+        return None
+    wx, wy, ww, wh = (int(n) for n in nums[:4])
+    outside = []
+    for line in r.stdout.splitlines():
+        parts = line.split()
+        if len(parts) < 5:
+            continue
+        try:
+            x, y, w, h = (int(v) for v in parts[1:5])
+        except ValueError:
+            continue
+        if x + w <= wx or y + h <= wy or x >= wx + ww or y >= wy + wh:
+            outside.append(parts[0])
+    if outside:
+        return (f"{len(outside)} window(s) outside the work area ({', '.join(outside[:3])}) — the "
+                f"pergola camera is framed into a pane; `pergola everything`")
+    return None
+
+
+def normalise_display(d: str | None) -> str | None:
+    d = (d or "").strip()
+    return d.split(".")[0] if d else None
+
+
+def process_display(pid: int, argv: str) -> str | None:
+    """The display a process is really on: an explicit `--display` wins, else its environment."""
+    m = re.search(r"--display[= ](\S+)", argv or "")
+    if m:
+        return normalise_display(m.group(1))
+    try:
+        raw = Path(f"/proc/{pid}/environ").read_bytes().decode("utf-8", "replace")
+    except OSError:
+        return None
+    for kv in raw.split("\0"):
+        if kv.startswith("DISPLAY="):
+            return normalise_display(kv[8:])
+    return None
+
+
+def wms_on_display(rows: list[tuple[int, str]], target: str) -> list[tuple[int, str]]:
+    """Window managers that are on `target`, not on a test display.
+
+    Measured 2026-11-15: the first version of this check counted every xfwm4 whose command line
+    lacked `--display` as being on :0, so two leaked test managers (`DISPLAY=:78`, `:79`) failed the
+    guard on a healthy desktop. The display has to come from the process itself: `--display` if
+    given, otherwise the DISPLAY in its environment.
+    """
+    out = []
+    for pid, argv in rows:
+        if process_display(pid, argv) == target:
+            out.append((pid, argv))
+    return out
+
+
+def wm_singleton() -> str | None:
+    """Exactly one window manager may own a display, or windows get managed by one and drawn by none.
+
+    2026-11-15: a previous session left `xfwm4 --compositor=off` running beside the real WM on :0;
+    the displaced WM still answered `_NET_SUPPORTING_WM_CHECK`, pergola still reported every window
+    as `shown` at a correct rect, and screenshots came back with whole terminals missing. Nothing
+    noticed for 18 h. One `xfwm4 --replace` gives a clean single owner; this check notices instead.
+    """
+    target = normalise_display(os.environ.get("PI_WM_DISPLAY") or os.environ.get("DISPLAY") or ":0")
+    if not target or not Path("/tmp/.X11-unix").is_dir():
+        return None
+    r = subprocess.run(["pgrep", "-af", "^xfwm4 "], capture_output=True, text=True)
+    rows = []
+    for line in r.stdout.splitlines():
+        parts = line.split(None, 1)
+        if len(parts) == 2 and parts[0].isdigit():
+            rows.append((int(parts[0]), parts[1]))
+    ours = wms_on_display(rows, target)
+    if len(ours) > 1:
+        detail = "; ".join(f"pid {pid} ({argv[:34]})" for pid, argv in ours)
+        return (f"{len(ours)} window managers on {target} ({detail}) — restart with one "
+                f"`xfwm4 --replace`")
+    return None
+
+
+def swap_snapshot_guard():
+    """An active btrfs swapfile inside a snapshotted subvolume fails every snapshot with ETXTBSY.
+
+    The 4 GB OOM backstop was created at /swap/swapfile inside @; snapper's timeline service then
+    failed hourly for 6 h ("create snapshot failed, errno:26") while every other check was green.
+    The fix is a nested subvolume: /swap is now a subvolume, so @ snapshots do not recurse into it.
+    This check walks each snapper SUBVOLUME and fails if a file-backed swap sits inside it without
+    an intervening subvolume.
+    """
+    r = subprocess.run(["swapon", "--show=NAME", "--noheadings"], capture_output=True, text=True)
+    files = [x.strip() for x in r.stdout.splitlines() if x.strip().startswith("/")]
+    if not files:
+        return True, "no file-backed swap"
+    confs = []
+    for c in Path("/etc/snapper/configs").glob("*"):
+        for line in c.read_text(errors="ignore").splitlines():
+            if line.startswith("SUBVOLUME="):
+                confs.append((c.name, line.split("=", 1)[1].strip().strip('"')))
+    bad = []
+    for f in files:
+        cur = Path(f).parent
+        protected = False
+        while True:
+            if subprocess.run(["sudo", "-n", "btrfs", "subvolume", "show", str(cur)],
+                              capture_output=True).returncode == 0:
+                protected = True
+                break
+            if cur == cur.parent or cur == Path("/"):
+                break
+            cur = cur.parent
+        if protected:
+            continue
+        for name, sub in confs:
+            if str(Path(f)).startswith(sub.rstrip("/") + "/"):
+                bad.append(f"{f} inside snapper:{name} ({sub}) — wrap it in a nested subvolume")
+    return (not bad), ("; ".join(bad) if bad else f"{len(files)} file swap(s) outside snapshotted subvolumes")
+
+
+def memory_guard():
+    """Swap beyond zram, and a cap on the local model: a global OOM killed the session once."""
+    swaps = [l.split()[0] for l in open("/proc/swaps").read().splitlines()[1:] if l.strip()]
+    disk = [s for s in swaps if not s.startswith("/dev/zram")]
+    mx = subprocess.run(["systemctl", "--user", "show", "-p", "MemoryMax", "--value",
+                         "llama-router.service"], capture_output=True, text=True).stdout.strip()
+    capped = mx not in ("", "infinity")
+    return (bool(disk) and capped), (
+        f"swap {'+'.join(s.split('/')[-1] for s in swaps) or 'none'}"
+        f"{' (no disk backstop)' if not disk else ''}; llama-router MemoryMax={mx or 'unset'}")
+
+
+def laya_vml():
+    """torch's bundled MKL dispatched an AVX-512 cos kernel on this AVX-only CPU and SIGILLed twice.
+
+    The workaround is MKL_ENABLE_INSTRUCTIONS=SSE4_2 (mcp.json + bin/layaq). This check does not
+    prove that dispatch choice, but it fails the run if the flag is missing or the exact VML call
+    (rotary tables: 8192x32 float cos/sin) crashes in the laya venv.
+    """
+    flag = "MKL_ENABLE_INSTRUCTIONS"
+    missing = []
+    for f in (AGENT / "mcp.json", AGENT / "bin" / "layaq"):
+        if flag not in f.read_text(errors="replace"):
+            missing.append(f.name)
+    if missing:
+        return False, f"{flag} guard absent from {', '.join(missing)}"
+    py = AGENT / "laya" / ".venv" / "bin" / "python"
+    code = "import torch;torch.set_num_threads(2);p=torch.arange(8192.).float();i=torch.randn(32)*.01;" \
+           "f=torch.outer(p,i);print(float((f.cos()+f.sin()).sum()))"
+    env = dict(os.environ, MKL_ENABLE_INSTRUCTIONS="SSE4_2")
+    r = subprocess.run([str(py), "-c", code], capture_output=True, text=True, env=env, timeout=300)
+    if r.returncode != 0:
+        return False, (f"SIGILL (rc={r.returncode}) " + r.stderr.strip().splitlines()[-1]) if r.stderr else f"rc={r.returncode}"
+    return True, "MKL pinned to SSE4_2, rotary-table cos/sin clean"
+
+
+def commit_guard():
+    """The pre-commit secret guard must be installed and share pi-publish's shape list."""
+    hook = AGENT / ".git" / "hooks" / "pre-commit"
+    guard = AGENT / "bin" / "pi-commit-guard.py"
+    if not guard.exists():
+        return False, "bin/pi-commit-guard.py missing"
+    if not hook.exists() or "pi-commit-guard" not in hook.read_text(errors="replace"):
+        return False, "pre-commit hook not installed (bin/pi-commit-guard.py --install)"
+    pub = (AGENT / "bin" / "pi-publish").read_text(errors="replace")
+    gd = guard.read_text(errors="replace")
+    rows = [l.strip() for l in pub.splitlines() if l.strip().startswith("(r\"")]
+    stale = [r for r in rows if r not in gd]
+    if stale:
+        return False, f"{len(stale)} secret shape(s) in pi-publish absent from the guard's fallback"
+    return True, "pre-commit hook installed, shapes in sync"
+
+
+def review_fresh():
+    """The reflection pass must actually be happening (bin/pi-review, weekly timer)."""
+    rv = AGENT / "selfimprove" / "review.md"
+    if not rv.exists():
+        return False, "no selfimprove/review.md (run bin/pi-review)"
+    age = (time.time() - rv.stat().st_mtime) / 86400
+    if age > 10:
+        return False, f"last review {age:.1f}d ago — the weekly reflection has stopped running"
+    return True, f"last review {age:.1f}d ago"
+
+
+
+def frontmatter():
+    """Every skill, agent and prompt frontmatter must parse the way pi parses it.
+
+    pi skips a resource whose frontmatter fails to parse and only prints a startup warning line,
+    so a colon-then-space inside a plain scalar (which YAML reads as a nested mapping) quietly
+    removed a skill from the prompt for hours. See INCIDENTS.md.
+    """
+    r = subprocess.run([str(AGENT / "bin" / "pi-fmcheck")], capture_output=True, text=True, timeout=180)
+    out = (r.stdout or "").strip().splitlines()
+    if r.returncode != 0:
+        bad = [l for l in out if l.startswith("FAIL")]
+        return False, "; ".join(bad[:3]) or (r.stderr.strip().splitlines() or ["frontmatter check failed"])[-1]
+    return True, out[0].replace("OK  ", "") if out else "ok"
+
+
+def skills():
+    """The vendored skill pack must be structurally sound and have no unregistered local edits.
+
+    Upstream moving on is not a failure (drift is reported as a warning below), but a merge left
+    half-resolved, a frontmatter broken by an edit, or an edit missing from LOCAL-CHANGES.md is:
+    that is how a self-improvement change silently disappears on the next update.
+    """
+    r = subprocess.run([str(AGENT / "bin" / "pi-skills"), "verify"], capture_output=True, text=True, timeout=180)
+    out = (r.stdout or "").strip().splitlines()
+    bad = [l for l in out if l.startswith("FAIL")]
+    if r.returncode != 0:
+        return False, "; ".join(bad[:3]) or (r.stderr.strip().splitlines() or ["verify failed"])[-1]
+    return True, out[0].replace("OK  ", "") if out else "ok"
+
+
+def repomap():
+    """The code-intelligence tool must still parse, rank and serve MCP.
+
+    A tool that silently stops extracting (a changed regex, a renamed dir) is the frontmatter
+    failure again: nothing errors, the map just gets quietly worse. selftest.py runs on a
+    throwaway fixture, so this never depends on which repos exist on the machine.
+    """
+    exe = AGENT / "skills" / "repomap" / "scripts" / "selftest.py"
+    if not exe.exists():
+        return False, "skills/repomap/scripts/selftest.py missing"
+    r = subprocess.run([sys.executable, str(exe), "--quiet"], capture_output=True, text=True, timeout=180)
+    if r.returncode != 0:
+        bad = [l for l in (r.stderr or "").strip().splitlines() if l.startswith("FAIL")]
+        return False, "; ".join(bad[:3]) or "repomap selftest failed"
+    idx = subprocess.run([str(AGENT / "bin" / "pi-repomap"), "index", str(AGENT)],
+                         capture_output=True, text=True, timeout=180)
+    if idx.returncode != 0:
+        return False, (idx.stderr or idx.stdout).strip().splitlines()[-1:] or "index failed"
+    files = next((l.split()[1] for l in idx.stdout.splitlines() if l.startswith("files")), "?")
+    return True, f"selftest green, {files} files indexed"
+
+
+def web():
+    """The offline half of the web tool must parse pages, cache and serve MCP.
+
+    Network reachability is not a gate (a source being down is the internet's problem), but a
+    parser that stops matching is mine and is silent — it returns "no results" and looks like an
+    empty search. selftest.py runs on saved fixtures, so this needs no network.
+    """
+    exe = AGENT / "skills" / "web" / "scripts" / "selftest.py"
+    if not exe.exists():
+        return False, "skills/web/scripts/selftest.py missing"
+    r = subprocess.run([sys.executable, str(exe), "--quiet"], capture_output=True, text=True, timeout=180)
+    if r.returncode != 0:
+        bad = [l for l in (r.stderr or "").strip().splitlines() if l.startswith("FAIL")]
+        return False, "; ".join(bad[:3]) or "pi-web selftest failed"
+    return True, "selftest green (parsers, extractor, cache, limiter, robots, MCP)"
+
+
+def text_channel():
+    """The owner's text channel must be alive: a silent poller is a message the owner thinks was read.
+
+    2026-11-15: two of the owner's first messages were swallowed when the poller's task write hit a
+    locked agenda DB (see INCIDENTS.md). This is the check that makes that class visible: parked
+    messages, consecutive poll failures, or a poller that has not run for 45 minutes all fail.
+    """
+    tool = AGENT / "bin" / "pi-text"
+    if not tool.exists():
+        return False, "bin/pi-text missing"
+    r = subprocess.run([str(tool), "check"], capture_output=True, text=True, timeout=60)
+    detail = "; ".join(l.removeprefix("pi-text: ") for l in
+                        (r.stdout + r.stderr).splitlines() if l.strip())[:200]
+    return r.returncode == 0, detail or "ok"
+
+
+def claims():
+    """Parallel sessions must not own the same path, and the registry must be readable.
+
+    Five sessions can be live in one tree at once (measured 2026-11-15). The commit guard enforces
+    ownership per path; this check is the whole-machine view: overlapping reservations fail, leases
+    of dead processes are reaped, and unleased sessions that are actively editing are reported so
+    contention is visible instead of discovered through a lost edit.
+    """
+    tool = AGENT / "bin" / "pi-claim"
+    if not tool.exists():
+        return False, "bin/pi-claim missing"
+    r = subprocess.run([str(tool), "conflicts"], capture_output=True, text=True, timeout=60)
+    if r.returncode != 0:
+        return False, "; ".join(l for l in (r.stdout + r.stderr).splitlines() if l.strip())[:200]
+    s = subprocess.run([str(tool), "sessions"], capture_output=True, text=True, timeout=60)
+    live = s.stdout.count("tree ")
+    leaked = 0
+    rp = tool.parent.parent / "claims"
+    for f in rp.glob("*.json") if rp.is_dir() else []:
+        try:
+            json.loads(f.read_text())
+        except ValueError:
+            leaked += 1
+    if leaked:
+        return False, f"{leaked} unreadable lease file(s) in {rp}"
+    return True, f"{live} live lease(s), no overlapping reservations"
+
+
+def delegation():
+    """The delegation loop must close: a policy of record, computable flow, and a bounded share of
+    dispatches nobody ever judged. A ledger full of unverified rows cannot support a KEEP/DROP rule;
+    expiring stale rows is honest, leaving them unverified forever is not.
+    """
+    pol = AGENT / "delegation" / "policy.md"
+    if not pol.exists() or "v3" not in pol.read_text()[:200]:
+        return False, "delegation/policy.md missing or not v3"
+    r = subprocess.run([str(AGENT / "bin" / "pi-delegate"), "flow", "--days", "30", "--json"],
+                       capture_output=True, text=True, timeout=60)
+    if r.returncode != 0:
+        return False, (r.stderr.strip().splitlines() or ["flow failed"])[-1]
+    d = json.loads(r.stdout)
+    n = d.get("dispatches") or 0
+    if n == 0:
+        return True, "no dispatches in 30d"
+    unv = d.get("unverified_stale") or 0
+    share = unv / n
+    detail = (f"{n} dispatches, yield {d.get('first_pass_yield')}, "
+              f"${d.get('cost_per_verified_pass')}/pass, {unv} stale-unverified ({share:.0%})")
+    if share > 0.3:
+        return False, detail + " — close with `pi-delegate verdict` or `expire`"
+    return True, detail
+
+
 def main():
     quiet = "--quiet" in sys.argv
+    check("review", review_fresh)
+    check("commit-guard", commit_guard)
     check("secrets", secrets)
     check("license", license)
     check("judge", judge)
     check("ledger", ledger)
+    check("delegation", delegation)
+    check("windows", windows)
+    check("swap", swap_snapshot_guard)
     check("credentials", credentials)
     check("snapshot", snapshot)
     check("resources", resources)
+    check("graph", graph)
+    check("units", units)
+    check("memory", memory_guard)
+    check("laya-vml", laya_vml)
+    check("frontmatter", frontmatter)
+    check("skills", skills)
+    check("repomap", repomap)
+    check("web", web)
+    check("claims", claims)
+    check("text", text_channel)
+    # non-fatal: mail transport is a capability, not a publish gate — but silent expiry is how the
+    # Google login wall hurt the first time, so say it out loud every run
+    try:
+        r = subprocess.run([str(AGENT / "bin" / "pi-mail"), "check"], capture_output=True, text=True, timeout=60)
+        mail = (r.stdout or r.stderr).strip().splitlines()[0] if (r.stdout or r.stderr).strip() else "no output"
+        if r.returncode != 0:
+            mail = "EXPIRED — " + mail
+    except Exception as e:
+        mail = f"unavailable: {e}"
+    print(f"warn mail      {mail}")
+    # non-fatal: the earning rail. Token rot, gate changes and an ignored queue are all silent
+    # otherwise — and an unworked queue is money I decided not to take.
+    try:
+        q = subprocess.run([str(AGENT / "bin" / "pi-frantic"), "queue"], capture_output=True, text=True, timeout=60)
+        queued = len([l for l in q.stdout.splitlines() if l.strip()])
+        s = subprocess.run([str(AGENT / "bin" / "pi-frantic"), "status"], capture_output=True, text=True, timeout=60)
+        line = next((l for l in s.stdout.splitlines() if l.startswith("gate")), "status unavailable")
+        gain = next((l for l in s.stdout.splitlines() if l.startswith("earnings")), "")
+        print(f"warn frantic   {line.strip()}; {gain.strip()}; queue={queued}")
+        if s.returncode != 0:
+            print("warn frantic   TOKEN/API BROKEN — fix before the rail rots")
+    except Exception as e:
+        print(f"warn frantic   unavailable: {e}")
+    # non-fatal: upstream moved past the pin. Not a failure — an unread update is how a lesson
+    # gets silently overwritten, so the weekly review must see it.
+    try:
+        r = subprocess.run([str(AGENT / "bin" / "pi-skills"), "status"], capture_output=True, text=True, timeout=180)
+        lines = r.stdout.splitlines()
+        up = next((l for l in lines if l.startswith("upstream")), "")
+        pred = next((l for l in lines if l.startswith("PREDICT")), "")
+        unreg = [l for l in lines if l.startswith("UNREG")]
+        drift = "no new commits" not in up
+        msg = f"{up.strip()}" + (f"; {pred.strip()}" if pred else "") + (f"; {unreg[0].strip()}" if unreg else "")
+        print(("warn skills    " if drift else "ok   skills-up ") + (msg or "unavailable"))
+    except Exception as e:
+        print(f"warn skills    drift check unavailable: {e}")
+    # non-fatal: the internet matrix. A source that silently stops answering looks exactly like a
+    # search with no results, so the last `pi-web doctor` run is reported every time.
+    try:
+        hp = Path.home() / ".cache" / "pi-web" / "health.json"
+        if not hp.exists():
+            print("warn web       no doctor run recorded — run bin/pi-web doctor")
+        else:
+            h = json.loads(hp.read_text())
+            age = (time.time() - calendar.timegm(time.strptime(h["checked"], "%Y-%m-%dT%H:%M:%SZ"))) / 86400
+            rows = h.get("rows", [])
+            good = [r["name"] for r in rows if r.get("ok")]
+            bad = [r["name"] for r in rows if not r.get("ok")]
+            stale = " STALE (run bin/pi-web doctor)" if age > 7 else ""
+            print(f"warn web       {len(good)}/{len(rows)} sources ok, doctor {age:.1f}d ago{stale}"
+                  + (f"; down: {', '.join(bad)}" if bad else ""))
+    except Exception as e:
+        print(f"warn web       health unreadable: {e}")
+    # non-fatal: offline readiness. Independence is a capability, and capabilities rot silently — a
+    # stopped router or a broken venv means "no cloud" quietly became "no work". Checked weekly.
+    try:
+        import json as _json, urllib.request
+        with urllib.request.urlopen("http://127.0.0.1:9931/health", timeout=5) as fh:
+            up = _json.loads(fh.read()).get("status") == "ok"
+        with urllib.request.urlopen("http://127.0.0.1:9931/v1/models", timeout=5) as fh:
+            gguf = len(_json.loads(fh.read())["data"])
+        laya = subprocess.run([str(AGENT / "laya/.venv/bin/python"), "-c", "import laya"],
+                              capture_output=True, timeout=180).returncode == 0
+        reports = sorted((AGENT / "local").glob("audit-*.md"))
+        if reports:
+            age = int((time.time() - reports[-1].stat().st_mtime) / 86400)
+            freshness = f"audit {age}d old" + (" (stale: timer?)" if age > 9 else "")
+        else:
+            freshness = "no audit report yet"
+        good = up and gguf > 0 and laya and (not reports or age <= 9)
+        print(("ok   local     " if good else "warn local     ") +
+              f"router {'up' if up else 'DOWN'}, {gguf} GGUF, laya {'ok' if laya else 'BROKEN'}, "
+              f"{freshness}")
+    except Exception as e:
+        print(f"warn local     offline path unavailable: {e}")
     failed = [r for r in results if not r[1]]
     for name, ok, detail in results:
         if not quiet or not ok:

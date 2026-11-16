@@ -1,7 +1,7 @@
 import asyncio, json, time
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-ENV={"LAYA_DEVICE":"cpu","LAYA_MODELS":"english","LAYA_THREADS":"4","LAYA_PRELOAD":"1","PATH":"/usr/bin:/bin","HOME":"$HOME"}
+ENV={"LAYA_DEVICE":"cpu","LAYA_MODELS":"english","LAYA_THREADS":"4","LAYA_PRELOAD":"1","MKL_ENABLE_INSTRUCTIONS":"SSE4_2","PATH":"/usr/bin:/bin","HOME":"$HOME"}
 Q={"department":{"type":"choice","instructions":"Which department should handle this?",
      "criteria":{"billing":"invoices, payments, refunds","technical":"bugs, outages, system errors","other":"everything else"}},
    "urgency":{"type":"score","instructions":"How urgent is this?","criteria":["not urgent","soon","blocking"]},

@@ -1,59 +1,420 @@
-#!/usr/bin/env bash
-# pi-term — open a *new* interactive pi chat, in a new terminal window or a detached tmux session.
-#
-#   pi-term                          new terminal, new chat in $PWD
-#   pi-term --cwd ~/proj "task..."   new terminal, chat seeded with a task
-#   pi-term --tmux [--name slug] ... detached tmux session (ssh-safe, survives the window)
-#   pi-term --bg ...                 alias for --tmux
-#
-# Why: some work is better handed to a *separate* interactive session (a long refactor, a
-# second opinion, a parallel exploration) than serialised into this one. The session file is
-# per-directory, so each terminal keeps its own history; use --continue to resume.
-set -euo pipefail
+#!/usr/bin/env python3
+"""pi-term — open a *new* interactive pi chat (or any command) in a tiled terminal window,
+or a detached tmux session, and close it when the work is done.
 
-CWD="$PWD"
-NAME=""
-MODE="terminal"
-ARGS=()
-PI_ARGS=()
+  pi-term                          new terminal, new chat in $PWD
+  pi-term --cwd ~/proj "task..."   new terminal, chat seeded with a task
+  pi-term --tile "task..."         tile the desktop after the window maps (default when DISPLAY)
+  pi-term --no-tile                leave the layout alone
+  pi-term --exec "cargo test"      run a command instead of pi (a build/watch window)
+  pi-term --tmux [--name slug] ... detached tmux session (ssh-safe, survives the window)
+  pi-term --keep                   keep the terminal/session after the command exits
+  pi-term --list [--json]          what is open, how old, and whether its target still exists
+  pi-term --reap [--ttl MIN]       close sessions/windows whose work is gone or older than TTL
+  pi-term --close <id|title|session|window>
 
-while [ $# -gt 0 ]; do
-  case "$1" in
-    --cwd)   CWD="$(cd "$2" && pwd)"; shift 2 ;;
-    --name)  NAME="$2"; shift 2 ;;
-    --tmux)  MODE="tmux"; shift ;;
-    --bg)    MODE="tmux"; shift ;;
-    --model) PI_ARGS+=("--model" "$2"); shift 2 ;;
-    -h|--help) sed -n '2,8p' "$0" | sed 's/^# \?//'; exit 0 ;;
-    --)      shift; ARGS+=("$@"); break ;;
-    *)       ARGS+=("$1"); shift ;;
-  esac
-done
+Why: some work belongs in a *separate* interactive session (a long refactor, a second opinion, a
+parallel exploration) or a visible window (a build, a watch). A window you open is a window you
+place and a window you close: this script tiles it after it maps, records it in a small registry,
+and reaps it when the process is gone or the TTL expires. The desktop contract is in
+skills/windows/SKILL.md; the delegation contract is in delegation/policy.md §7b.
 
-slug() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' | sed 's/^-//; s/-$//' | cut -c1-32; }
+Every open also appends one `pi-delegate record` row (mode="window", agent="window:<slug>", the
+prompt as its task, cost 0) so a window is measurable evidence rather than an assumption: it prints
+`ledger: window:<slug> sha=<sha>`, and that sha is what `pi-delegate verdict pass|fail --sha` closes.
+Close/reap never writes a second dispatch row; `--no-ledger` opts one window out.
+"""
+from __future__ import annotations
 
-TITLE="${NAME:-$(basename "$CWD")}"
-[ ${#ARGS[@]} -gt 0 ] && TITLE="$TITLE: $(slug "${ARGS[0]}")"
+import argparse
+import json
+import os
+import re
+import shlex
+import shutil
+import subprocess
+import sys
+import time
+from pathlib import Path
 
-if [ "$MODE" = "tmux" ]; then
-  SESSION="pi-$(slug "$TITLE")-$(date +%H%M%S)"
-  tmux new-session -d -s "$SESSION" -c "$CWD" \
-    "pi ${PI_ARGS[*]:-} ${ARGS[*]:-}; echo; echo '[pi-term] session ended — press Enter to close'; read -r _"
-  echo "tmux session: $SESSION  (attach: tmux attach -t $SESSION)"
-  exit 0
-fi
+AGENT = Path(os.environ.get("PI_AGENT_DIR") or Path.home() / ".pi" / "agent")
+STATE = Path.home() / ".local" / "state" / "pi-win"
+REGISTRY = STATE / "terms.jsonl"
+DEFAULT_TTL_MIN = 12 * 60
 
-TERM_BIN="$(command -v xfce4-terminal || command -v x-terminal-emulator || command -v foot || command -v kitty || true)"
-if [ -z "$TERM_BIN" ]; then
-  echo "pi-term: no terminal emulator found; use --tmux" >&2
-  exit 1
-fi
 
-case "$TERM_BIN" in
-  *xfce4-terminal)
-    setsid nohup "$TERM_BIN" --title="pi: $TITLE" --working-directory="$CWD" \
-      --command="pi ${PI_ARGS[*]:-} ${ARGS[*]:-}" >/dev/null 2>&1 & ;;
-  *)
-    setsid nohup "$TERM_BIN" -e pi "${PI_ARGS[@]}" "${ARGS[@]}" >/dev/null 2>&1 & ;;
-esac
-echo "opened terminal: pi: $TITLE (cwd $CWD)"
+def now() -> float:
+    return round(time.time(), 3)
+
+
+def slug(s: str) -> str:
+    s = re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-")
+    return s[:32] or "pi"
+
+
+def record_window(tid: str, title: str, cwd: str, task: str) -> str | None:
+    """Append one pi-delegate ledger row for this window, so it is judgeable like a dispatch.
+
+    A window is a delegation with a human in the loop (policy §6b): it gets the same row shape, the
+    same `task_sha` verdict key and its own cells in `pi-delegate flow`. A logging failure must never
+    fail the open (the window is real either way), so this swallows and returns None.
+    """
+    rec = AGENT / "bin" / "pi-delegate"
+    if os.environ.get("PI_TERM_NO_LEDGER") or not rec.exists():
+        return None
+    argv = [sys.executable, str(rec), "record", "--agent", f"window:{slug(title)}",
+            "--task", task, "--cwd", cwd, "--win-id", tid, "--json"]
+    try:
+        r = subprocess.run(argv, capture_output=True, text=True, timeout=20)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if r.returncode != 0:
+        print(f"pi-term: ledger row not written: {(r.stderr or '').strip()[:200]}", file=sys.stderr)
+        return None
+    try:
+        return json.loads(r.stdout).get("sha")
+    except (json.JSONDecodeError, AttributeError):
+        return None
+
+
+def append(row: dict) -> None:
+    STATE.mkdir(parents=True, exist_ok=True)
+    with REGISTRY.open("a") as fh:
+        fh.write(json.dumps(row) + "\n")
+
+
+def rows() -> list[dict]:
+    if not REGISTRY.exists():
+        return []
+    out = []
+    for line in REGISTRY.read_text().splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            out.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue
+    return out
+
+
+def latest() -> dict[str, dict]:
+    """One record per id: the open event, updated by the last close event."""
+    rec: dict[str, dict] = {}
+    for r in rows():
+        rid = r.get("id")
+        if not rid:
+            continue
+        if r.get("event") == "open":
+            rec[rid] = dict(r, state="open", closed_ts=None)
+        elif rid in rec:
+            rec[rid]["state"] = "closed"
+            rec[rid]["closed_ts"] = r.get("ts")
+            rec[rid]["reason"] = r.get("reason", "")
+    return rec
+
+
+# MARK: X / tmux facts
+
+def run(argv: list[str], timeout: float = 10.0) -> subprocess.CompletedProcess:
+    return subprocess.run(argv, capture_output=True, text=True, timeout=timeout)
+
+
+def role_window(role: str) -> str | None:
+    """Find the X window whose WM_WINDOW_ROLE is `role`; None if it is not mapped."""
+    if not os.environ.get("DISPLAY"):
+        return None
+    r = run(["xprop", "-root", "_NET_CLIENT_LIST"])
+    if r.returncode != 0:
+        return None
+    for wid in re.findall(r"0x[0-9a-fA-F]+", r.stdout):
+        p = run(["xprop", "-id", wid, "WM_WINDOW_ROLE"])
+        if p.returncode == 0 and role in p.stdout:
+            return wid
+    return None
+
+
+def wait_role(role: str, seconds: float = 10.0) -> str | None:
+    deadline = time.time() + seconds
+    while time.time() < deadline:
+        wid = role_window(role)
+        if wid:
+            return wid
+        time.sleep(0.15)
+    return None
+
+
+def tmux_sessions() -> dict[str, dict]:
+    r = run(["tmux", "list-sessions", "-F",
+             "#{session_name}\t#{session_created}\t#{pane_current_command}"])
+    out: dict[str, dict] = {}
+    if r.returncode != 0:
+        return out
+    for line in r.stdout.splitlines():
+        parts = line.split("\t")
+        if len(parts) >= 3:
+            out[parts[0]] = {"created": int(parts[1] or 0), "command": parts[2]}
+    return out
+
+
+def tmux_alive(name: str) -> bool:
+    return run(["tmux", "has-session", "-t", name]).returncode == 0
+
+
+def close_target(rec: dict, reason: str) -> bool:
+    """Close the window or session recorded for one row; return True if something was closed."""
+    if rec.get("mode") == "tmux" and rec.get("session"):
+        if tmux_alive(rec["session"]):
+            run(["tmux", "kill-session", "-t", rec["session"]])
+    else:
+        wid = role_window(rec.get("role", "")) or rec.get("window")
+        if wid:
+            run(["wmctrl", "-ic", wid])
+    append({"ts": now(), "event": "closed", "id": rec["id"], "reason": reason})
+    return True
+
+
+def tile(quiet: bool) -> tuple[bool, str]:
+    """Tile every managed window after the new one maps. pi-tile is the primitive (skills/windows)."""
+    if not os.environ.get("DISPLAY"):
+        return False, "no DISPLAY"
+    tile_bin = AGENT / "bin" / "pi-tile"
+    if not tile_bin.exists():
+        return False, "pi-tile missing"
+    r = run([str(tile_bin), "--quiet"], timeout=30)
+    if r.returncode == 0:
+        return True, "tiled"
+    if r.returncode == 3:
+        # a terminal snaps to WM_NORMAL_HINTS increments: tiled, a few px short of the rect
+        return True, "tiled (size snap)"
+    if r.returncode == 4:
+        return False, "pergola not answering"
+    tail = (r.stderr or r.stdout).strip().splitlines()
+    return False, tail[-1] if tail else f"tile exit {r.returncode}"
+
+
+# MARK: commands
+
+def cmd_open(args) -> int:
+    cwd = str(Path(args.cwd).expanduser().resolve())
+    title = args.name or Path(cwd).name
+    prompt = " ".join(args.prompt).strip()
+    if prompt:
+        title = f"{title}: {slug(prompt)}"
+    tid = f"t-{int(time.time())}-{os.urandom(2).hex()}"
+    role = f"pi-term-{tid}"
+
+    if args.exec_cmd:
+        argv = [os.path.expandvars(os.path.expanduser(t))
+                for t in shlex.split(args.exec_cmd)]
+        exe = argv[0]
+        found = shutil.which(exe) if os.sep not in exe else (
+            os.path.isfile(exe) and os.access(exe, os.X_OK))
+        if not found:
+            # never let a terminal show 'Failed to execute child' instead of saying why
+            print(f"pi-term: --exec: not an executable: {exe}", file=sys.stderr)
+            return 2
+    else:
+        argv = [os.environ.get("PI_BIN") or "pi", *args.pi_args]
+        if prompt:
+            argv.append(prompt)
+
+    if args.tmux:
+        session = f"pi-{slug(title)}-{time.strftime('%H%M%S')}-{tid[-4:]}"
+        cmd = shlex.join(argv)
+        if args.keep:
+            cmd += "; echo; echo '[pi-term] session ended — press Enter to close'; read -r _"
+        r = run(["tmux", "new-session", "-d", "-s", session, "-c", cwd, cmd])
+        if r.returncode != 0:
+            print(f"pi-term: tmux failed: {r.stderr.strip()}", file=sys.stderr)
+            return 1
+        lsha = None if args.no_ledger else record_window(
+            tid, title, cwd, prompt or f"tmux session in {cwd}")
+        append({"ts": now(), "event": "open", "id": tid, "mode": "tmux", "title": title,
+                "cwd": cwd, "session": session, "keep": bool(args.keep), "cmd": shlex.join(argv),
+                "ledger_sha": lsha})
+        if not args.quiet:
+            print(f"tmux session: {session}  (attach: tmux attach -t {session})")
+            if lsha:
+                print(f"ledger: window:{slug(title)} sha={lsha}")
+        return 0
+
+    term = next((p for p in ("xfce4-terminal", "x-terminal-emulator", "foot", "kitty")
+                 if shutil.which(p)), None)
+    if not term:
+        print("pi-term: no terminal emulator found; use --tmux", file=sys.stderr)
+        return 1
+    command = shlex.join(argv)
+    if term == "xfce4-terminal":
+        launch = [term, f"--title=pi: {title}", f"--role={role}",
+                  f"--working-directory={cwd}", f"--command={command}"]
+    else:
+        launch = [term, "-e", *argv]
+    env = dict(os.environ)
+    try:
+        subprocess.Popen(launch, cwd=cwd, env=env, start_new_session=True,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                         stdin=subprocess.DEVNULL)
+    except OSError as exc:
+        print(f"pi-term: launch failed: {exc}", file=sys.stderr)
+        return 1
+
+    wid = wait_role(role, 12.0) if term == "xfce4-terminal" else None
+    tiled, note = (False, "no window id")
+    if wid:
+        if args.tile:
+            tiled, note = tile(args.quiet)
+        run(["wmctrl", "-ia", wid])
+    lsha = None if args.no_ledger else record_window(
+        tid, title, cwd,
+        prompt or (f"exec: {args.exec_cmd}" if args.exec_cmd else f"interactive chat in {cwd}"))
+    append({"ts": now(), "event": "open", "id": tid, "mode": "terminal", "title": title,
+            "cwd": cwd, "window": wid, "role": role, "keep": bool(args.keep),
+            "cmd": shlex.join(argv), "tiled": tiled, "ledger_sha": lsha})
+    if not args.quiet:
+        where = f"window {wid}" if wid else "window not found (title match may be needed)"
+        print(f"opened terminal: pi: {title} ({where}, {note})")
+        if lsha:
+            print(f"ledger: window:{slug(title)} sha={lsha}")
+    return 0
+
+
+def reconcile(rec: dict[str, dict], ttl_min: int, do_reap: bool, quiet: bool) -> dict:
+    """Compare the registry to reality; optionally close what is gone/expired.
+
+    `orphans` counts rows whose target no longer exists but which were never marked closed, plus
+    tmux `pi-*` sessions whose pane is no longer pi. Those are the leftovers the protocol forbids.
+    """
+    live = tmux_sessions()
+    orphans = 0
+    now_ts = time.time()
+    out = []
+    for rid, row in rec.items():
+        if row["state"] != "open":
+            continue
+        age_min = (now_ts - float(row.get("ts") or now_ts)) / 60.0
+        if row.get("mode") == "tmux":
+            exists = row.get("session") in live
+            pane = (live.get(row.get("session")) or {}).get("command")
+            # a tmux session still alive after pi exited is a leftover shell — the orphan class
+            dead_pane = exists and pane not in ("pi", "node") and not row.get("keep")
+        else:
+            exists = role_window(row.get("role", "")) is not None
+            dead_pane = False
+        expired = ttl_min > 0 and age_min > ttl_min
+        state = "open"
+        if not exists:
+            # the terminal closes itself when the command exits: absence is normal closure,
+            # not an orphan. Record it so the registry stops claiming it is open.
+            append({"ts": now(), "event": "closed", "id": rid, "reason": "target gone"})
+            state = "closed"
+        elif dead_pane:
+            state = "orphan"
+            orphans += 1
+            if do_reap:
+                close_target(row, "pane no longer pi")
+                state = "closed"
+        elif expired and do_reap:
+            close_target(row, f"ttl {ttl_min}m")
+            state = "closed"
+        elif expired:
+            state = "stale"
+        out.append({"id": rid, "mode": row.get("mode"), "title": row.get("title"),
+                    "cwd": row.get("cwd"), "window": row.get("window"),
+                    "session": row.get("session"), "age_min": round(age_min, 1),
+                    "state": state})
+    # dead tmux sessions created by pi-term (pane fell back to a shell) are always safe to close
+    for name, info in live.items():
+        if name.startswith("pi-") and info["command"] not in ("pi", "node"):
+            known = any(r.get("session") == name and r["state"] == "open" for r in rec.values())
+            if not known:
+                orphans += 1
+                if do_reap:
+                    run(["tmux", "kill-session", "-t", name])
+    return {"rows": out, "orphans": orphans}
+
+
+def cmd_list(args) -> int:
+    rec = latest()
+    res = reconcile(rec, args.ttl, do_reap=False, quiet=args.quiet)
+    if args.json:
+        print(json.dumps(res, indent=1))
+        return 0
+    if not res["rows"]:
+        print("no pi-term windows or sessions recorded")
+        return 0
+    print(f"{'id':<22} {'mode':<8} {'age':>7}  {'state':<7} title / target")
+    for r in sorted(res["rows"], key=lambda x: x["age_min"]):
+        target = r.get("window") or r.get("session") or "-"
+        print(f"{r['id']:<22} {r['mode']:<8} {r['age_min']:>6.1f}m {r['state']:<7} "
+              f"{r['title']} ({target})")
+    if res["orphans"]:
+        print(f"\n{res['orphans']} orphan(s) — run `pi-term --reap`")
+    return 0
+
+
+def cmd_reap(args) -> int:
+    rec = latest()
+    res = reconcile(rec, args.ttl, do_reap=True, quiet=args.quiet)
+    if args.json:
+        print(json.dumps(res, indent=1))
+    elif not args.quiet:
+        closed = sum(1 for r in res["rows"] if r["state"] == "closed")
+        print(f"reaped {closed} target(s); {res['orphans']} orphan(s) seen")
+    return 0
+
+
+def cmd_close(args) -> int:
+    rec = latest()
+    target = args.target
+    hits = []
+    for rid, r in rec.items():
+        if r["state"] != "open":
+            continue
+        if target in (rid, r.get("session"), r.get("window")) or target.lower() in (r.get("title") or "").lower():
+            hits.append(r)
+    if not hits:
+        print(f"pi-term: no open target matches {target!r}", file=sys.stderr)
+        return 1
+    for r in hits:
+        close_target(r, "closed by request")
+        if not args.quiet:
+            print(f"closed {r['id']} ({r['title']})")
+    return 0
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(prog="pi-term", description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--cwd", default=os.getcwd())
+    ap.add_argument("--name")
+    ap.add_argument("--tmux", "--bg", dest="tmux", action="store_true")
+    ap.add_argument("--model")
+    ap.add_argument("--exec", dest="exec_cmd", metavar="CMD")
+    ap.add_argument("--tile", dest="tile", action="store_true", default=True)
+    ap.add_argument("--no-tile", dest="tile", action="store_false")
+    ap.add_argument("--keep", action="store_true",
+                    help="keep the terminal/session after the command exits (default: close)")
+    ap.add_argument("--ttl", type=int, default=DEFAULT_TTL_MIN, help="reap after N minutes")
+    ap.add_argument("--list", action="store_true")
+    ap.add_argument("--reap", action="store_true")
+    ap.add_argument("--close", metavar="TARGET")
+    ap.add_argument("--json", action="store_true")
+    ap.add_argument("--quiet", action="store_true")
+    ap.add_argument("--no-ledger", action="store_true",
+                    help="do not append a pi-delegate window row (env PI_TERM_NO_LEDGER does the same)")
+    ap.add_argument("prompt", nargs="*")
+    args = ap.parse_args()
+    args.pi_args = ["--model", args.model] if args.model else []
+    if args.list:
+        return cmd_list(args)
+    if args.reap:
+        return cmd_reap(args)
+    if args.close:
+        args.target = args.close
+        return cmd_close(args)
+    return cmd_open(args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

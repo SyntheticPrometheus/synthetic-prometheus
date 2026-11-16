@@ -8,6 +8,7 @@
         "LAYA_MODELS": "english",
         "LAYA_THREADS": "4",
         "LAYA_PRELOAD": "0",
+        "MKL_ENABLE_INSTRUCTIONS": "SSE4_2",
         "HF_HUB_DISABLE_PROGRESS_BARS": "1",
         "HF_HUB_DISABLE_TELEMETRY": "1"
       },
@@ -15,6 +16,30 @@
         "laya_predict": "direct",
         "laya_predict_batch": "direct",
         "laya_route": "direct"
+      }
+    },
+    "repomap": {
+      "command": "$HOME/.pi/agent/bin/pi-repomap",
+      "args": [
+        "mcp"
+      ],
+      "description": "Ranked codebase map and symbol index: PageRank over definition/reference edges rendered to a token budget. Use to pick which files to read before grepping a large or unfamiliar tree.",
+      "toolExposure": {
+        "repomap": "direct",
+        "symfind": "direct",
+        "outline": "direct"
+      }
+    },
+    "web": {
+      "command": "$HOME/.pi/agent/bin/pi-web",
+      "args": [
+        "mcp"
+      ],
+      "description": "Cached, rate-limited internet access: Marginalia/Wiby search plus technical APIs (hn, wikipedia, stackexchange, mdn, crates, arxiv, crossref), URL-to-markdown reader, JSON shape probe. The engines this host cannot reach are documented and re-probed by `pi-web doctor`.",
+      "toolExposure": {
+        "web_search": "direct",
+        "web_get": "direct",
+        "web_api": "direct"
       }
     }
   }

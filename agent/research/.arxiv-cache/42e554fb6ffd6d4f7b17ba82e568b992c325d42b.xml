@@ -1,0 +1,234 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/KNZZiYa+yH2/Rlt/g0AJ9Yhrz9E</id>
+  <title>arXiv Query: search_query=all:LocAgent&amp;id_list=&amp;start=0&amp;max_results=6</title>
+  <updated>2026-11-15T16:02:38Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=all:LocAgent&amp;start=0&amp;max_results=6&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>6</opensearch:itemsPerPage>
+  <opensearch:totalResults>7</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2503.09089v2</id>
+    <title>LocAgent: Graph-Guided LLM Agents for Code Localization</title>
+    <updated>2025-04-29T14:37:43Z</updated>
+    <link href="https://arxiv.org/abs/2503.09089v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2503.09089v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Code localization--identifying precisely where in a codebase changes need to be made--is a fundamental yet challenging task in software maintenance. Existing approaches struggle to efficiently navigate complex codebases when identifying relevant code sections. The challenge lies in bridging natural language problem descriptions with the appropriate code elements, often requiring reasoning across hierarchical structures and multiple dependencies. We introduce LocAgent, a framework that addresses code localization through graph-based representation. By parsing codebases into directed heterogeneous graphs, LocAgent creates a lightweight representation that captures code structures (files, classes, functions) and their dependencies (imports, invocations, inheritance), enabling LLM agents to effectively search and locate relevant entities through powerful multi-hop reasoning. Experimental results on real-world benchmarks demonstrate that our approach significantly enhances accuracy in code localization. Notably, our method with the fine-tuned Qwen-2.5-Coder-Instruct-32B model achieves comparable results to SOTA proprietary models at greatly reduced cost (approximately 86% reduction), reaching up to 92.7% accuracy on file-level localization while improving downstream GitHub issue resolution success rates by 12% for multiple attempts (Pass@10). Our code is available at https://github.com/gersteinlab/LocAgent.</summary>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-03-12T05:55:01Z</published>
+    <arxiv:primary_category term="cs.SE"/>
+    <author>
+      <name>Zhaoling Chen</name>
+    </author>
+    <author>
+      <name>Xiangru Tang</name>
+    </author>
+    <author>
+      <name>Gangda Deng</name>
+    </author>
+    <author>
+      <name>Fang Wu</name>
+    </author>
+    <author>
+      <name>Jialong Wu</name>
+    </author>
+    <author>
+      <name>Zhiwei Jiang</name>
+    </author>
+    <author>
+      <name>Viktor Prasanna</name>
+    </author>
+    <author>
+      <name>Arman Cohan</name>
+    </author>
+    <author>
+      <name>Xingyao Wang</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2510.01003v2</id>
+    <title>Improving Code Localization with Repository Memory</title>
+    <updated>2026-02-06T21:47:16Z</updated>
+    <link href="https://arxiv.org/abs/2510.01003v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2510.01003v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Code localization is a fundamental challenge in repository-level software engineering tasks such as bug fixing. While existing methods equip language agents with comprehensive tools/interfaces to fetch information from the repository, they overlook the critical aspect of memory, where each instance is typically handled from scratch assuming no prior repository knowledge. In contrast, human developers naturally build long-term repository memory, such as the functionality of key modules and associations between various bug types and their likely fix locations. In this work, we augment language agents with such memory by leveraging a repository's commit history -- a rich yet underutilized resource that chronicles the codebase's evolution. We introduce tools that allow the agent to retrieve from a non-parametric memory encompassing recent historical commits and linked issues, as well as functionality summaries of actively evolving parts of the codebase identified via commit patterns. We demonstrate that augmenting such a memory can significantly improve LocAgent, a state-of-the-art localization framework, on both SWE-bench-verified and the more recent SWE-bench-live benchmarks. Our research contributes towards developing agents that can accumulate and leverage past experience for long-horizon tasks, more closely emulating the expertise of human developers.</summary>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-10-01T15:10:15Z</published>
+    <arxiv:comment>ICLR 2026</arxiv:comment>
+    <arxiv:primary_category term="cs.SE"/>
+    <author>
+      <name>Boshi Wang</name>
+    </author>
+    <author>
+      <name>Weijian Xu</name>
+    </author>
+    <author>
+      <name>Yunsheng Li</name>
+    </author>
+    <author>
+      <name>Mei Gao</name>
+    </author>
+    <author>
+      <name>Yujia Xie</name>
+    </author>
+    <author>
+      <name>Huan Sun</name>
+    </author>
+    <author>
+      <name>Dongdong Chen</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2602.19407v1</id>
+    <title>Multi-CoLoR: Context-Aware Localization and Reasoning across Multi-Language Codebases</title>
+    <updated>2026-02-23T00:54:59Z</updated>
+    <link href="https://arxiv.org/abs/2602.19407v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2602.19407v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Large language models demonstrate strong capabilities in code generation but struggle to navigate complex, multi-language repositories to locate relevant code. Effective code localization requires understanding both organizational context (e.g., historical issue-fix patterns) and structural relationships within heterogeneous codebases. Existing methods either (i) focus narrowly on single-language benchmarks, (ii) retrieve code across languages via shallow textual similarity, or (iii) assume no prior context. We present Multi-CoLoR, a framework for Context-aware Localization and Reasoning across Multi-Language codebases, which integrates organizational knowledge retrieval with graph-based reasoning to traverse complex software ecosystems. Multi-CoLoR operates in two stages: (i) a similar issue context (SIC) module retrieves semantically and organizationally related historical issues to prune the search space, and (ii) a code graph traversal agent (an extended version of LocAgent, a state-of-the-art localization framework) performs structural reasoning within C++ and QML codebases. Evaluations on a real-world enterprise dataset show that incorporating SIC reduces the search space and improves localization accuracy, and graph-based reasoning generalizes effectively beyond Python-only repositories. Combined, Multi-CoLoR improves Acc@5 over both lexical and graph-based baselines while reducing tool calls on an AMD codebase.</summary>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-02-23T00:54:59Z</published>
+    <arxiv:comment>This paper has been accepted for publication at the 33rd IEEE International Conference on Software Analysis, Evolution and Reengineering (SANER 2026)</arxiv:comment>
+    <arxiv:primary_category term="cs.SE"/>
+    <author>
+      <name>Indira Vats</name>
+    </author>
+    <author>
+      <name>Sanjukta De</name>
+    </author>
+    <author>
+      <name>Subhayan Roy</name>
+    </author>
+    <author>
+      <name>Saurabh Bodhe</name>
+    </author>
+    <author>
+      <name>Lejin Varghese</name>
+    </author>
+    <author>
+      <name>Max Kiehn</name>
+    </author>
+    <author>
+      <name>Yonas Bedasso</name>
+    </author>
+    <author>
+      <name>Marsha Chechik</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2610.36894v1</id>
+    <title>ASNER: Software Architecture Recovery with Adaptive Semantic Neighborhoods and Evidence-Grounded Refinement</title>
+    <updated>2026-10-27T09:28:59Z</updated>
+    <link href="https://arxiv.org/abs/2610.36894v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2610.36894v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Automated software architecture recovery provides architectural context for software engineering and repository-level LLM agents. Existing methods combine structural and semantic signals, but functional relatedness does not necessarily imply shared architectural responsibility. Fixed thresholds or Top-K neighborhoods also ignore repository scale and local similarity distributions, introducing errors that propagate through clustering. Unconstrained LLM refinement may further alter correct assignments without sufficient evidence. We propose ASNER (Adaptive Semantic Neighborhoods and Evidence-Grounded Refinement for Software Architecture Recovery), based on responsibility-aware, project-adaptive relation modeling and evidence-grounded boundary verification. ASNER derives structured file responsibilities with an LLM, constructs semantic neighborhoods that adapt to repository scale and local similarity distributions, and augments a static dependency graph with selected semantic relations and weak directory cues. Community detection recovers the component backbone. A Responsibility-Ownership-Aware (ROA) Agent then examines uncertain boundary files using project-level responsibilities and traceable code evidence, changing assignments only when supported. Experiments on 12 open-source projects spanning C, C++, Java, and Python show that ASNER achieves the best macro-average on all five metrics on the common benchmark, improving ARI and c2c@66 over GAER-GAT by 19.5% and 32.9%, respectively. A downstream evaluation shows that ASNER-guided LocAgent improves file-, module-, and function-level code localization, demonstrating the value of its architectural context for repository-level software engineering tasks.</summary>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-10-27T09:28:59Z</published>
+    <arxiv:primary_category term="cs.SE"/>
+    <author>
+      <name>Wenhao Wang</name>
+    </author>
+    <author>
+      <name>Zhi Jin</name>
+    </author>
+    <author>
+      <name>Jia Li</name>
+    </author>
+    <author>
+      <name>Dongming Jin</name>
+    </author>
+    <author>
+      <name>Heng Tian</name>
+    </author>
+    <author>
+      <name>Yingtao Fang</name>
+    </author>
+    <author>
+      <name>Wenguang Ye</name>
+    </author>
+    <author>
+      <name>Tiankuo Zhao</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2607.25431v2</id>
+    <title>CodeNib: A Multi-View Data System for Serving Repository Context to Coding Agents</title>
+    <updated>2026-09-28T22:44:22Z</updated>
+    <link href="https://arxiv.org/abs/2607.25431v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2607.25431v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>An incremental code index can complete every update without error and still return the wrong graph half the time. Coding agents depend on such reused views for search and navigation, yet the systems that supply them never measure where a precomputed answer may stand in for the trusted route: localization agents rebuild a graph per task, tool servers query a live language server per request, and code-intelligence databases serve developers, not agents.
+  CodeNib is a multi-view data system that makes that measurement possible. It is the first to compile lexical, dense, and structural views of one commit behind a single manifest and source-address contract, so that a lexical hit, a graph occurrence, and a dense block can be checked against each other and against a rebuild or a live server, and it serves search, navigation, and bounded context to agents through one cost-visible runtime.
+  The comparisons overturn three assumptions. Execution status is not correctness: symbol-level repair completes on every held-out change but reproduces the rebuild on 13 of 24, so the runtime admits it per repository, while vector reuse is exact on 27 of 30 held-out changes at 40$\times$ and static definitions match the live server on 86\% of requests at a 1.2\,s ready point. Shorter answers finish more tasks: behind LocAgent, CodeNib's views let the agent finish 78 of 90 runs against 65 at lower cost, and selected context policies use 50--87\% fewer tokens than grep/read across five models. And context pays most when it is taken back: on 200 SWE-bench Verified tasks, handing the agent CodeNib's candidates and retiring them after its first source read resolves 79 issues, the most of five context policies, against 66 for on-demand exploration and 56 for Aider's repository map.</summary>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-07-28T08:25:30Z</published>
+    <arxiv:primary_category term="cs.SE"/>
+    <author>
+      <name>Zhongming Yu</name>
+    </author>
+    <author>
+      <name>Hengjia Yu</name>
+    </author>
+    <author>
+      <name>Boqin Yuan</name>
+    </author>
+    <author>
+      <name>Shuting Zhao</name>
+    </author>
+    <author>
+      <name>Yizhao Chen</name>
+    </author>
+    <author>
+      <name>Aryan Dokania</name>
+    </author>
+    <author>
+      <name>Mihir Jagtap</name>
+    </author>
+    <author>
+      <name>Jiayu Chang</name>
+    </author>
+    <author>
+      <name>Yitong Ma</name>
+    </author>
+    <author>
+      <name>Yash Jayswal</name>
+    </author>
+    <author>
+      <name>Wentao Ni</name>
+    </author>
+    <author>
+      <name>Hejia Zhang</name>
+    </author>
+    <author>
+      <name>Zhaoling Chen</name>
+    </author>
+    <author>
+      <name>Gangda Deng</name>
+    </author>
+    <author>
+      <name>Jishen Zhao</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2310.07448v1</id>
+    <title>Faster Location in Combinatorial Interaction Testing</title>
+    <updated>2023-10-11T12:50:18Z</updated>
+    <link href="https://arxiv.org/abs/2310.07448v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2310.07448v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Factors within a large-scale software system that simultaneously interact and strongly impact the system's response under a configuration are often difficult to identify. Although screening such a system for the existence of such interactions is important, determining their location is more useful for system engineers. Combinatorial interaction testing (CIT) concerns creation of test suites that nonadaptively either detect or locate the desired interactions, each of at most a specified size or show that no such set exists. Under the assumption that there are at most a given number of such interactions causing such a response, locating arrays (LAs) guarantee unique location for every such set of interactions and an algorithm to deal with outliers and nondeterministic behavior from real systems, we additionally require the LAs to have a "separation" between these collections. State-of-the-art approaches generate LAs that can locate at most one interaction of size at most three, due to the massive number of interaction combinations for larger parameters if no constraints are given. This paper presents LocAG, a two-stage algorithm that generates (unconstrained) LAs using a simple, but powerful partitioning strategy of these combinations. In particular, we are able to generate LAs with more factors, with any desired separation, and greater interaction size than existing approaches.</summary>
+    <category term="cs.DM" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="math.CO" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2023-10-11T12:50:18Z</published>
+    <arxiv:primary_category term="cs.DM"/>
+    <author>
+      <name>Ryan E. Dougherty</name>
+    </author>
+    <author>
+      <name>Dylan N. Green</name>
+    </author>
+    <author>
+      <name>Grace M. Kim</name>
+    </author>
+  </entry>
+</feed>

@@ -1,0 +1,297 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/3wZzp/AMNdWoCMx5LKpKFpFf+us</id>
+  <title>arXiv Query: search_query=all:orchestration AND all:agent AND all:LLM&amp;id_list=&amp;start=0&amp;max_results=12</title>
+  <updated>2026-11-15T14:52:13Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=all:orchestration+AND+(all:agent+AND+all:LLM)&amp;start=0&amp;max_results=12&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>12</opensearch:itemsPerPage>
+  <opensearch:totalResults>1340</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2502.09809v1</id>
+    <title>AgentGuard: Repurposing Agentic Orchestrator for Safety Evaluation of Tool Orchestration</title>
+    <updated>2025-02-13T23:00:33Z</updated>
+    <link href="https://arxiv.org/abs/2502.09809v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2502.09809v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>The integration of tool use into large language models (LLMs) enables agentic systems with real-world impact. In the meantime, unlike standalone LLMs, compromised agents can execute malicious workflows with more consequential impact, signified by their tool-use capability. We propose AgentGuard, a framework to autonomously discover and validate unsafe tool-use workflows, followed by generating safety constraints to confine the behaviors of agents, achieving the baseline of safety guarantee at deployment. AgentGuard leverages the LLM orchestrator's innate capabilities - knowledge of tool functionalities, scalable and realistic workflow generation, and tool execution privileges - to act as its own safety evaluator. The framework operates through four phases: identifying unsafe workflows, validating them in real-world execution, generating safety constraints, and validating constraint efficacy. The output, an evaluation report with unsafe workflows, test cases, and validated constraints, enables multiple security applications. We empirically demonstrate AgentGuard's feasibility with experiments. With this exploratory work, we hope to inspire the establishment of standardized testing and hardening procedures for LLM agents to enhance their trustworthiness in real-world applications.</summary>
+    <category term="cs.CR" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-02-13T23:00:33Z</published>
+    <arxiv:comment>Project report of AgentGuard in LLM Agent MOOC Hackathon hosted by UC Berkeley in 2024</arxiv:comment>
+    <arxiv:primary_category term="cs.CR"/>
+    <author>
+      <name>Jizhou Chen</name>
+    </author>
+    <author>
+      <name>Samuel Lee Cong</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2608.25992v2</id>
+    <title>ProgRouter: Online Progress-Guided Orchestration for Multi-Agent LLM Workflows under Quality-Cost Tradeoffs</title>
+    <updated>2026-08-30T20:09:33Z</updated>
+    <link href="https://arxiv.org/abs/2608.25992v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2608.25992v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Multi-agent large language model (LLM) workflows have emerged as a powerful paradigm for solving complex, open-ended tasks through collaborative reasoning among specialized LLM agents, but they incur substantial operating costs due to repeated LLM invocations and long-horizon context accumulation. Existing cascade routing methods make one-shot, query-level decisions and cannot adapt to the dynamic, state-dependent nature of multi-step workflows, in which the right LLM at each step depends on evolving task progress, remaining task difficulty, and cost-efficiency requirements. We present ProgRouter, an online progress-guided routing framework that adaptively selects LLM agents across workflow steps to preserve task-solving quality while adhering to time and cost budgets. ProgRouter introduces a multi-view task progress scorer that combines coarse workflow outcome regimes with fine-grained signals on subtask completion, progress trends, and workflow state quality. Then, a dual-path task progress predictor and an adaptive meta-gating mechanism estimate the progress gain for each candidate routed LLM. ProgRouter makes online step-wise routing decisions that balance progress gain, task time budgets, and long-term operating cost efficiency. Experiments on HumanEval Plus, MBPP, MATH-500, and ASQA, spanning agentic code generation, mathematical reasoning, and retrieval-augmented long-form question answering, demonstrate that ProgRouter reduces the operating cost relative to key baselines while maintaining strong task-solving performance.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.MA" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-08-26T16:42:02Z</published>
+    <arxiv:comment>Accepted in Findings of the Association for Computational Linguistics: EMNLP 2026. Index Terms: Collaborative agentic workflows, LLM agent orchestration, Quality-cost trade-off, Task progress prediction, Online decision-making</arxiv:comment>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Songyuan Li</name>
+    </author>
+    <author>
+      <name>Ahmed M. Abdelmoniem</name>
+    </author>
+    <author>
+      <name>Shiqiang Wang</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2508.08322v1</id>
+    <title>Context Engineering for Multi-Agent LLM Code Assistants Using Elicit, NotebookLM, ChatGPT, and Claude Code</title>
+    <updated>2025-08-09T14:45:53Z</updated>
+    <link href="https://arxiv.org/abs/2508.08322v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2508.08322v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Large Language Models (LLMs) have shown promise in automating code generation and software engineering tasks, yet they often struggle with complex, multi-file projects due to context limitations and knowledge gaps. We propose a novel context engineering workflow that combines multiple AI components: an Intent Translator (GPT-5) for clarifying user requirements, an Elicit-powered semantic literature retrieval for injecting domain knowledge, NotebookLM-based document synthesis for contextual understanding, and a Claude Code multi-agent system for code generation and validation. Our integrated approach leverages intent clarification, retrieval-augmented generation, and specialized sub-agents orchestrated via Claude's agent framework. We demonstrate that this method significantly improves the accuracy and reliability of code assistants in real-world repositories, yielding higher single-shot success rates and better adherence to project context than baseline single-agent approaches. Qualitative results on a large Next.js codebase show the multi-agent system effectively plans, edits, and tests complex features with minimal human intervention. We compare our system with recent frameworks like CodePlan, MASAI, and HyperAgent, highlighting how targeted context injection and agent role decomposition lead to state-of-the-art performance. Finally, we discuss the implications for deploying LLM-based coding assistants in production, along with lessons learned on context management and future research directions.</summary>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-08-09T14:45:53Z</published>
+    <arxiv:comment>15 pages, 5 figures, research paper on multi-agent LLM systems for code generation</arxiv:comment>
+    <arxiv:primary_category term="cs.SE"/>
+    <author>
+      <name>Muhammad Haseeb</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2511.15755v3</id>
+    <title>Multi-Agent LLM Orchestration Achieves Deterministic, High-Quality Decision Support for Incident Response</title>
+    <updated>2026-08-31T21:37:59Z</updated>
+    <link href="https://arxiv.org/abs/2511.15755v3" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2511.15755v3" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Large language models (LLMs) promise to accelerate incident response in production systems, yet single-agent approaches generate vague, unusable recommendations. We present MyAntFarm.ai, a reproducible containerized framework demonstrating that multi-agent orchestration fundamentally transforms LLM-based incident response quality. Through 348 controlled trials comparing single-agent copilot versus multi-agent systems on identical incident scenarios, we find that multi-agent orchestration achieves 100% actionable recommendation rate versus 1.7% for single-agent approaches, an 80 times improvement in action specificity and 140 times improvement in solution correctness. Critically, multi-agent systems exhibit zero quality variance across all trials, enabling production SLA commitments impossible with inconsistent single-agent outputs. Both architectures achieve similar comprehension latency (approx.40s), establishing that the architectural value lies in deterministic quality, not speed. We introduce Decision Quality (DQ), a novel metric capturing validity, specificity, and correctness properties essential for operational deployment that existing LLM metrics do not address. These findings reframe multi-agent orchestration from a performance optimization to a production-readiness requirement for LLM-based incident response. All code, Docker configurations, and trial data are publicly available for reproduction.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-11-19T06:06:11Z</published>
+    <arxiv:comment>Withdrawn by the author. A code audit found the multi-agent arm's action list is a source constant, not model output, and the scorer reads only that field. All Decision Quality results, and the zero-variance and actionability claims derived from them, are withdrawn. The implementation also differs from Sec. III. Latency data are unaffected. A redesigned study is in preparation</arxiv:comment>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Philip Drammeh</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2603.19896v2</id>
+    <title>Utility-Guided Agent Orchestration for Efficient LLM Tool Use</title>
+    <updated>2026-09-13T09:22:37Z</updated>
+    <link href="https://arxiv.org/abs/2603.19896v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2603.19896v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Tool-using large language model (LLM) agents often face a fundamental tension between answer quality and execution cost. Fixed workflows are stable but inflexible, while free-form multi-step reasoning methods such as ReAct may improve task performance at the expense of excessive tool calls, longer trajectories, higher token consumption, and increased latency. In this paper, we study agent orchestration as an explicit decision problem rather than leaving it entirely to prompt-level behavior. We propose a utility-guided orchestration policy that selects among actions such as respond, retrieve, tool call, verify, and stop by balancing estimated gain, step cost, uncertainty, and redundancy. Our goal is not to claim universally best task performance, but to provide a controllable and analyzable policy framework for studying quality-cost trade-offs in tool-using LLM agents. Experiments across direct answering, threshold control, fixed workflows, ReAct, and several policy variants show that explicit orchestration signals substantially affect agent behavior. Additional analyses on cost definitions, workflow fairness, and redundancy control further demonstrate that lightweight utility design can provide a defensible and practical mechanism for agent control.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-03-20T12:29:12Z</published>
+    <arxiv:primary_category term="cs.AI"/>
+    <arxiv:journal_ref>2026 IEEE International Conference on Joint Cloud Computing (JCC), Fukuoka, Japan, 2026, pp. 333-338</arxiv:journal_ref>
+    <author>
+      <name>Boyan Liu</name>
+    </author>
+    <author>
+      <name>Gongming Zhao</name>
+    </author>
+    <author>
+      <name>Hongli Xu</name>
+    </author>
+    <arxiv:doi>10.1109/JCC72984.2026.00053</arxiv:doi>
+    <link rel="related" href="https://doi.org/10.1109/JCC72984.2026.00053" title="doi"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2610.21113v1</id>
+    <title>SSR: Structural Signal Retriever for Scalable Agent Discovery in LLM-Orchestrated Multi-Agent Systems</title>
+    <updated>2026-10-15T02:16:12Z</updated>
+    <link href="https://arxiv.org/abs/2610.21113v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2610.21113v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Large-scale multi-agent ecosystems require mechanisms for discovering suitable agents without exposing entire registries to a large language model (LLM) orchestrator. The challenge is not only to retrieve relevant Agent Cards from a growing registry, but also to maintain a compact candidate context, since each additional candidate increases prompt size, inference cost, latency, and the risk of exceeding the model context window. We formulate this problem as candidate-context scalability and propose the Structural Signal Retriever (SSR), our deterministic and training-free retrieval method designed for Agent Card discovery. SSR derives structural lexical signals from capability-bearing Agent Card fields, weights them using inverse document frequency (IDF), and uses an Inverted Signal Index (ISI) for selective candidate scoring. We evaluate SSR using a synthetic agent benchmark, a public MS MARCO adaptation, and end-to-end LLM orchestration. At 1,000 agents, SSR reduces LLM input by 98.8% and orchestration latency by 70.9% relative to full-catalog orchestration. On MS MARCO, IDF improves retrieval effectiveness within the structural representation, while the ISI preserves retrieval effectiveness and reduces explicitly scored passages by 96.8%. End-to-end experiments show that candidate pre-selection maintains a compact candidate context as registry size grows and avoids the operational failures observed with full-catalog orchestration. These results support SSR as an Agent-Card-native, traceable retrieval mechanism for candidate-context scalability.</summary>
+    <category term="cs.MA" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.IR" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-10-15T02:16:12Z</published>
+    <arxiv:primary_category term="cs.MA"/>
+    <author>
+      <name>Giancarlo Maldonado Cárdenas</name>
+    </author>
+    <author>
+      <name>Carlos A. Astudillo</name>
+    </author>
+    <author>
+      <name>Nelson L. S. da Fonseca</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2512.09543v2</id>
+    <title>SWEnergy: An Empirical Study on Energy Efficiency in Agentic Issue Resolution Frameworks with SLMs</title>
+    <updated>2025-12-11T11:33:34Z</updated>
+    <link href="https://arxiv.org/abs/2512.09543v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2512.09543v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Context. LLM-based autonomous agents in software engineering rely on large, proprietary models, limiting local deployment. This has spurred interest in Small Language Models (SLMs), but their practical effectiveness and efficiency within complex agentic frameworks for automated issue resolution remain poorly understood.
+  Goal. We investigate the performance, energy efficiency, and resource consumption of four leading agentic issue resolution frameworks when deliberately constrained to using SLMs. We aim to assess the viability of these systems for this task in resource-limited settings and characterize the resulting trade-offs.
+  Method. We conduct a controlled evaluation of four leading agentic frameworks (SWE-Agent, OpenHands, Mini SWE Agent, AutoCodeRover) using two SLMs (Gemma-3 4B, Qwen-3 1.7B) on the SWE-bench Verified Mini benchmark. On fixed hardware, we measure energy, duration, token usage, and memory over 150 runs per configuration.
+  Results. We find that framework architecture is the primary driver of energy consumption. The most energy-intensive framework, AutoCodeRover (Gemma), consumed 9.4x more energy on average than the least energy-intensive, OpenHands (Gemma). However, this energy is largely wasted. Task resolution rates were near-zero, demonstrating that current frameworks, when paired with SLMs, consume significant energy on unproductive reasoning loops. The SLM's limited reasoning was the bottleneck for success, but the framework's design was the bottleneck for efficiency.
+  Conclusions. Current agentic frameworks, designed for powerful LLMs, fail to operate efficiently with SLMs. We find that framework architecture is the primary driver of energy consumption, but this energy is largely wasted due to the SLMs' limited reasoning. Viable low-energy solutions require shifting from passive orchestration to architectures that actively manage SLM weaknesses.</summary>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-12-10T11:28:48Z</published>
+    <arxiv:comment>8 pages, 5 figures, 1 table. Accepted to AGENT 2026 (ICSE 2026 workshop)</arxiv:comment>
+    <arxiv:primary_category term="cs.SE"/>
+    <arxiv:journal_ref>Proceedings of the 2026 International Workshop on Agentic Engineering (AGENT 2026), ACM, 2026, pp. 104-111</arxiv:journal_ref>
+    <author>
+      <name>Arihant Tripathy</name>
+    </author>
+    <author>
+      <name>Ch Pavan Harshit</name>
+    </author>
+    <author>
+      <name>Karthik Vaidhyanathan</name>
+    </author>
+    <arxiv:doi>10.1145/3786167.3788406</arxiv:doi>
+    <link rel="related" href="https://doi.org/10.1145/3786167.3788406" title="doi"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2608.23867v1</id>
+    <title>Markets, Not Planners: Decentralized Orchestration of LLM Agents with Private Information</title>
+    <updated>2026-08-24T22:15:37Z</updated>
+    <link href="https://arxiv.org/abs/2608.23867v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2608.23867v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>As LLM agents proliferate, built by different parties and with different capabilities and costs, orchestrating them is more like assembling labor across the economy than a computer calling a subroutine. Existing orchestration is typically centralized, with a single planner assigning every task, but this creates a bottleneck as agent pools grow, requires private information (e.g., agents' execution costs), and can easily be manipulated, such that a single inserted preference nearly doubles a favored agent's task share under a centralized LLM allocator. We introduce AgentLance, a repeated labor market in which agents bid on tasks using their private costs and self-maintained strategy notes, an allocator selects winners from bids and public reputation records, and a VCG-style payment rule rewards cost-aware bidding. Complex tasks are handled by hierarchical delegation: winning agents can decompose work and subcontract it through the same mechanism. Across mathematical reasoning, code generation, knowledge-intensive QA, and agentic tasks, AgentLance matches agents to their specializations, shifts work toward cheaper agents as cost sensitivity rises, and consistently outperforms single-model, centralized-orchestration, and market baselines. Diagnosing market failures, including inaccurate cost self-estimation and sub-optimal bidding, then correcting them in controlled experiments yields further gains, charting a path toward more efficient agent economies.</summary>
+    <category term="cs.MA" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-08-24T22:15:37Z</published>
+    <arxiv:comment>Working paper</arxiv:comment>
+    <arxiv:primary_category term="cs.MA"/>
+    <author>
+      <name>Xiao Liu</name>
+    </author>
+    <author>
+      <name>Haoyang Li</name>
+    </author>
+    <author>
+      <name>Songwei Li</name>
+    </author>
+    <author>
+      <name>Hongbo Fang</name>
+    </author>
+    <author>
+      <name>Fengli Xu</name>
+    </author>
+    <author>
+      <name>Feng Shi</name>
+    </author>
+    <author>
+      <name>James Evans</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2608.23395v1</id>
+    <title>Right-Sizing LLM-Agent Decomposition in VAT Determination: A Pilot Controlled Sweep</title>
+    <updated>2026-08-24T15:40:15Z</updated>
+    <link href="https://arxiv.org/abs/2608.23395v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2608.23395v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Recent LLM-agent systems make conflicting design bets: decompose work across many narrow agents, or use one strong tool-using agent. This pilot studies that choice on bounded cross-border VAT determination with reverse charge, where every case has an oracle label and each intermediate decision is independently scoreable. We hold the activity surface fixed (subtasks, tools, I/O schemas, validation checks, orchestrator, base model, and merge policy) and vary only the assignment of subtasks to workers across four orchestrated configurations, from one wide worker to five narrow ones, against S0, a tuned no-orchestrator single agent, with a deterministic rule engine as oracle. The program spans 4,400 runs: a 40-case, five-repeat main sweep, matched-token arms separating prompt-budget from agent-count effects, and three failure-injection arms, all judged against pre-registered falsification criteria. The two intermediate configurations lead on accuracy (0.830, against endpoints at 0.720 and 0.770) but miss the pre-stated bar against the fine endpoint, so the intermediate-optimum hypothesis remains unsupported at pilot scale. The single agent does not Pareto-dominate the orchestrated set. The matched-token criterion fires: the budget-matched single agent lands 6.5 points below the leader, but the interval includes zero, so any advantage is consistent with a prompt-budget explanation. Under injection, availability faults are absorbed at every granularity, with wide-scope restart over-recovering its baseline by +0.160, while one schema-conforming hallucinated record degrades every configuration and inverts the ordering, hitting fragmented configurations hardest. The contribution is a bounded, preregistered pilot heuristic for right-sizing decomposition (place one partition boundary at the dependency-layer midpoint), released with oracle, dataset, harness, raw traces, and analysis pipeline.</summary>
+    <category term="cs.MA" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-08-24T15:40:15Z</published>
+    <arxiv:comment>29 pages, 4 figures. Code, data, and traces: https://github.com/pedro-santos-eng/Right-sizing-LLM-agent-decomposition-in-VAT-determination</arxiv:comment>
+    <arxiv:primary_category term="cs.MA"/>
+    <author>
+      <name>Pedro Santos</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2609.32635v1</id>
+    <title>Trust the Brand, Lose Control: How Identity Hijacks LLM Agent Orchestration</title>
+    <updated>2026-09-26T13:53:33Z</updated>
+    <link href="https://arxiv.org/abs/2609.32635v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2609.32635v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>LLM agents now execute tasks end to end with permission to change real systems and increasingly orchestrate subagents that differ in capability and cost. Prior work treats the choice of subagent as an optimization problem. Yet the orchestrator makes this choice from the identities that subagents display, and an attacker can spoof them. Displayed identity thus decides operational authority, meaning who is trusted to check the work and who is allowed to change it. As a result, a risky subagent can keep authority over execution even after other evidence contradicts it. We introduce TrustFork, an LLM agent safety benchmark with 1,890 tasks and 27,826 valid trajectories across 16 agent systems. These systems run eight orchestrators under the OpenCode, OpenClaw, and Pi harnesses. In each task, one subagent carries a risky goal while the other three stay aligned with the user, so contradicting evidence can exist. A task can also change the identity a subagent displays without changing the model behind it, which lets us trace a shift in authority to the label. Our analysis shows that even when another subagent contradicts the risky response, the orchestrator still acts on it in 72.0% of cases on average, most often in the systems with the least terminal harm. Swapping the family labels nearly triples how often the orchestrator obtains the risky response. A safer response is available in 84.0% of tasks, yet it decides the outcome in only 25.0%. The harness also decides which responses reach the orchestrator. Among three runtime defenses, hiding identity cues helps most consistently, while verifying before action helps only when the harness returns enough evidence. TrustFork shows that production agent orchestration must bind authority to evidence before execution causes harm. Our project is in https://henrymao2004.github.io/agent-orchestration-safety/.</summary>
+    <category term="cs.CR" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-09-26T13:53:33Z</published>
+    <arxiv:primary_category term="cs.CR"/>
+    <author>
+      <name>Xutao Mao</name>
+    </author>
+    <author>
+      <name>Rui Qian</name>
+    </author>
+    <author>
+      <name>Linghan Chen</name>
+    </author>
+    <author>
+      <name>Yudong Gao</name>
+    </author>
+    <author>
+      <name>Junchi Liao</name>
+    </author>
+    <author>
+      <name>Jiulin Cai</name>
+    </author>
+    <author>
+      <name>Jinman Zhao</name>
+    </author>
+    <author>
+      <name>Cong Wang</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2610.13651v1</id>
+    <title>ToFu: Exploiting and Fuzzing the LLM-Orchestrator-Tool Trust Boundary</title>
+    <updated>2026-10-09T14:27:32Z</updated>
+    <link href="https://arxiv.org/abs/2610.13651v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2610.13651v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Large language models (LLMs) are increasingly deployed as agents that interact with external software through tools, with an orchestration layer translating model outputs into structured tool invocations. This architecture creates an LLM-orchestrator-tool trust boundary where tool semantics may go unenforced and LLM-generated arguments may be incorrectly treated as trusted. We present ToFu, a tool-aware framework that automatically derives semantic security checks for LLM tools from their existing metadata and a CWE-guided sanitizer corpus. ToFu specializes these checks to individual tools and automatically generates fuzzing harnesses and semantic oracles using runtime introspection and outcome sanitization. We evaluated ToFu across 273 MCP servers containing 3405 tools and identified verified bugs corresponding to CWE weakness classes in 343 tools across 118 of the servers. Our findings show that real-world tools frequently fail to enforce their documented input semantics, making it unsafe to treat LLM-generated arguments as trusted.</summary>
+    <category term="cs.CR" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-10-09T14:27:32Z</published>
+    <arxiv:comment>33 pages, 4 figures, 16 tables. Evaluates 273 open-source MCP servers (3405 tools); 253 verified semantic security bugs in 118 servers. Appendices include a case study, a Repeat-After-Me transcript on LangGraph, the full sanitizer corpus, the list of evaluated repositories, and the verbatim LLM prompts</arxiv:comment>
+    <arxiv:primary_category term="cs.CR"/>
+    <author>
+      <name>Md Nazmul Islam Ananto</name>
+    </author>
+    <author>
+      <name>Pierre Prevost-Avenel</name>
+    </author>
+    <author>
+      <name>Colin Smith</name>
+    </author>
+    <author>
+      <name>Kyungtae Kim</name>
+    </author>
+    <author>
+      <name>Taegyu Kim</name>
+    </author>
+    <author>
+      <name>Arslan Khan</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2603.10249v2</id>
+    <title>DUCTILE: Agentic LLM Orchestration of Engineering Analysis in Product Development Practice</title>
+    <updated>2026-03-17T02:22:06Z</updated>
+    <link href="https://arxiv.org/abs/2603.10249v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2603.10249v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Engineering analysis automation in product development relies on rigid interfaces between tools, data formats and documented processes. When these interfaces change, as they routinely do as the product evolves in the engineering ecosystem, the automation support breaks. This paper presents a DUCTILE (Delegated, User-supervised Coordination of Tool- and document-Integrated LLM-Enabled) agentic orchestration, an approach for developing, executing and evaluating LLM-based agentic automation support of engineering analysis tasks. The approach separates adaptive orchestration, performed by the LLM agent, from deterministic execution, performed by verified engineering tools. The agent interprets documented design practices, inspects input data and adapts the processing path, while the engineer supervises and exercises final judgment. DUCTILE is demonstrated on an industrial structural analysis task at an aerospace manufacturer, where the agent handled input deviations in format, units, naming conventions and methodology that would break traditional scripted pipelines. Evaluation against expert-defined acceptance criteria and deployment with practicing engineers confirm that the approach produces correct, methodologically compliant results across 10 repeated independent runs. The paper discusses the paradigm shift and the practical consequences of adopting agentic automation, including unintended effects on the nature of engineering work when removing mundane tasks and creating an exhausting supervisory role.</summary>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.HC" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-03-10T22:00:47Z</published>
+    <arxiv:comment>22 pages, including supplemental material. 9 Figures</arxiv:comment>
+    <arxiv:primary_category term="cs.SE"/>
+    <author>
+      <name>Alejandro Pradas-Gomez</name>
+    </author>
+    <author>
+      <name>Arindam Brahma</name>
+    </author>
+    <author>
+      <name>Ola Isaksson</name>
+    </author>
+  </entry>
+</feed>

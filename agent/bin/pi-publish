@@ -30,6 +30,7 @@ AGENT = HOME / ".pi" / "agent"
 PUB = AGENT / "publish"
 DST = PUB / "repo"
 STATE = PUB / "state.json"
+STATUS = PUB / "status.json"   # last attempt: outcome + reason (never silent)
 REMOTE = "git@github.com:SyntheticPrometheus/synthetic-prometheus.git"
 
 # explicit allowlist, relative to ~/.pi/agent. Nothing else is ever copied.
@@ -38,18 +39,21 @@ ALLOW = [
     "agents", "skills", "prompts", "extensions", "research",
     "bin/mem", "bin/mem.py", "bin/layaq", "bin/pi-attach", "bin/pi-delegate", "bin/pi-term",
     "bin/pi-publish", "bin/pi-github-bootstrap", "bin/pi-preflight", "bin/pi-secret",
+    "bin/pi-review", "bin/pi-commit-guard.py",
     "PUBLISHING.md", "PASSWORDS.md", "RUNBOOK-accounts.md", "INCIDENTS.md",
     "delegation/README.md", "delegation/policy.md",
     "laya/NOTES.md", "laya/bench.py", "laya/mcp_probe.py", "laya/probe2.py",
     "selfimprove/DESIGN.md", "selfimprove/decisions.md", "selfimprove/suite", "selfimprove/arms",
     "selfimprove/audit.py", "selfimprove/gate.py", "selfimprove/maintain.py",
     "selfimprove/policy.json", "selfimprove/propose.py", "selfimprove/run.py",
-    "selfimprove/selftest.py",
+    "selfimprove/selftest.py", "selfimprove/fixtures.py", "selfimprove/review.md",
 ]
 DOTFILES = [
     ".bashrc", ".bash_profile",
     ".config/systemd/user/pi-selfimprove.service",
     ".config/systemd/user/pi-selfimprove.timer",
+    ".config/systemd/user/pi-review.service",
+    ".config/systemd/user/pi-review.timer",
     ".config/autostart/pi-terminal.desktop",
 ]
 EXCLUDE_NAMES = {".git", "__pycache__", "runs", "auth.json", "state.json", ".venv"}
@@ -66,8 +70,34 @@ SECRETS = [
     (r"(?i)(api[_-]?key|secret|password)\s*[:=]\s*['\"][A-Za-z0-9/+=_-]{12,}['\"]", "inline credential"),
 ]
 
+# `TOPIC_SECRET = "pi/text-topic"` names a `pass` entry, not a value: the secret is
+# retrieved by pi-secret at run time. The generic inline-credential pattern cannot
+# tell the two apart, so a `pi/` path gets an exemption — same rule pi-commit-guard
+# applies. Without it the guard's own documentation comment blocks every publish.
+PASS_ENTRY = re.compile(r"""(?i)(api[_-]?key|secret|password)\s*[:=]\s*['\"]pi/[a-z0-9._/-]{2,}['\"]""")
+
+# Raw research caches are large and not snapshot material; the digests beside them are.
+EXCLUDE_REL = {"research/cc"}
+
 DEFAULTS = {"min_changed_files": 3, "min_days": 7, "max_pushes_per_7d": 2, "max_file_kb": 512,
             "max_total_mb": 20, "last_push": 0, "history": []}
+
+
+def record(outcome, reason, changed=0):
+    """Every run leaves a trace, so --status can tell 'waiting' from 'broken'."""
+    try:
+        PUB.mkdir(parents=True, exist_ok=True)
+        STATUS.write_text(json.dumps({"ts": time.time(), "outcome": outcome, "reason": reason,
+                                      "changed": changed}, indent=1) + "\n")
+    except Exception:
+        pass
+
+
+def last_status():
+    try:
+        return json.loads(STATUS.read_text())
+    except Exception:
+        return None
 
 
 def load_state():
@@ -127,6 +157,8 @@ def build_plan():
             continue
         for f in walk(src):
             r = f.relative_to(AGENT)
+            if any(str(r) == d or str(r).startswith(d + "/") for d in EXCLUDE_REL):
+                continue
             pairs.append((f, Path("agent") / r))
     for rel in DOTFILES:
         src = HOME / rel
@@ -150,8 +182,11 @@ def scan(pairs):
             continue
         body = src.read_text(errors="replace")
         for pat, label in SECRETS:
-            if re.search(pat, body):
+            for m in re.finditer(pat, body):
+                if label == "inline credential" and PASS_ENTRY.search(m.group(0)):
+                    continue
                 problems.append(f"{rel}: looks like a {label}")
+                break
         if "auth.json" in str(rel):
             problems.append(f"{rel}: auth file must never be published")
     if total > 20 * 1024 * 1024:
@@ -233,7 +268,7 @@ def git(*args, cwd=None, check=True):
     return subprocess.run(["git", *args], cwd=cwd or DST, capture_output=True, text=True, check=False)
 
 
-def plan(changed, total, problems, state, force=False):
+def plan(changed, total, problems, state, force=False, why=None):
     days = (time.time() - state["last_push"]) / 86400 if state["last_push"] else 999
     windows = [t for t in state["history"] if time.time() - t < 7 * 86400]
     print(f"snapshot: {changed} changed file(s), {total//1024} KB")
@@ -247,11 +282,17 @@ def plan(changed, total, problems, state, force=False):
         print("FORCE: batching rules bypassed")
         return 0
     if len(windows) >= state["max_pushes_per_7d"]:
-        print(f"SKIP: push cap reached ({len(windows)}/{state['max_pushes_per_7d']} in 7d)")
+        msg = f"push cap reached ({len(windows)}/{state['max_pushes_per_7d']} in 7d)"
+        print(f"SKIP: {msg}")
+        if why is not None:
+            why.append(("skip", msg))
         return 0
     if changed < state["min_changed_files"] and days < state["min_days"]:
-        print(f"SKIP: {changed} changed < {state['min_changed_files']} and only {days:.1f}d "
-              f"< {state['min_days']}d since the last push")
+        msg = (f"{changed} changed < {state['min_changed_files']} and only {days:.1f}d "
+               f"< {state['min_days']}d since the last push; next eligible in {state['min_days']-days:.1f}d")
+        print(f"SKIP: {msg}")
+        if why is not None:
+            why.append(("skip", msg))
         return 0
     return 0
 
@@ -271,15 +312,24 @@ def main():
         print(f"rules: {state['min_changed_files']} files or {state['min_days']}d, "
               f"max {state['max_pushes_per_7d']}/7d")
         print(f"repo dir: {DST}")
+        st = last_status()
+        if st:
+            print(f"last attempt: {(time.time()-st['ts'])/86400:.1f}d ago — {st['outcome']}: {st['reason']}")
+        else:
+            print("last attempt: never recorded (run --push or the timer)")
         return 0
 
     pairs = build_plan()
     problems, total = scan(pairs)
     changed = render(pairs) if not problems else 0
-    rc = plan(changed, total, problems, state, a.force)
+    why = []
+    rc = plan(changed, total, problems, state, a.force, why)
+    if rc == 3:
+        record("blocked", "; ".join(problems)[:400], changed)
     if rc or not a.push:
         if not a.push:
             print("plan only (use --push to publish)")
+        record("plan", why[0][1] if why else "plan only", changed)
         return rc
 
     pre = subprocess.run([str(AGENT / "bin" / "pi-preflight"), "--quiet"],
@@ -287,9 +337,11 @@ def main():
     if pre.returncode != 0:
         print("PREFLIGHT FAILED — not publishing:")
         print(pre.stdout.strip()[-800:])
+        record("blocked", "preflight failed: " + pre.stdout.strip().replace("\n", " ")[:300], changed)
         return 5
-    state_ok = plan(changed, total, problems, state, a.force)
+    state_ok = plan(changed, total, problems, state, a.force, why)
     if state_ok or not changed:
+        record("skip", why[0][1] if why else f"nothing changed ({changed} file(s))", changed)
         return state_ok
 
 
@@ -325,6 +377,7 @@ def main():
         print("PUSH FAILED (no credentials or no remote yet):")
         print((out.stderr or out.stdout).strip()[:600])
         print("\nnext: gh auth login   (or add the SSH key and re-run)")
+        record("failed", "push rejected: " + (out.stderr or out.stdout).strip().replace("\n", " ")[:250], changed)
         return 4
     last = PUB / "last"
     if last.exists():
@@ -333,6 +386,7 @@ def main():
     state["last_push"] = time.time()
     state["history"] = [t for t in state["history"] if time.time() - t < 30 * 86400] + [time.time()]
     save_state(state)
+    record("pushed", f"{changed} file(s), {total//1024} KB", changed)
     print("pushed")
     return 0
 

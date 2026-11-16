@@ -1,0 +1,26 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/2BKR4VKVHRWNnEaCA07W9KvM11U</id>
+  <title>arXiv Query: search_query=&amp;id_list=2603.18043v1&amp;start=0&amp;max_results=1</title>
+  <updated>2026-11-15T14:52:42Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=&amp;start=0&amp;max_results=1&amp;id_list=2603.18043v1" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>1</opensearch:itemsPerPage>
+  <opensearch:totalResults>1</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2603.18043v1</id>
+    <title>The Provenance Paradox in Multi-Agent LLM Routing: Delegation Contracts and Attested Identity in LDP</title>
+    <updated>2026-03-15T17:36:58Z</updated>
+    <link href="https://arxiv.org/abs/2603.18043v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2603.18043v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Multi-agent LLM systems delegate tasks across trust boundaries, but current protocols do not govern delegation under unverifiable quality claims. We show that when delegates can inflate self-reported quality scores, quality-based routing produces a provenance paradox: it systematically selects the worst delegates, performing worse than random. We extend the LLM Delegate Protocol (LDP) with delegation contracts that bound authority through explicit objectives, budgets, and failure policies; a claimed-vs-attested identity model that distinguishes self-reported from verified quality; and typed failure semantics enabling automated recovery. In controlled experiments with 10 simulated delegates and validated with real Claude models, routing by self-claimed quality scores performs worse than random selection (simulated: 0.55 vs. 0.68; real models: 8.90 vs. 9.30), while attested routing achieves near-optimal performance (d = 9.51, p &lt; 0.001). Sensitivity analysis across 36 configurations confirms the paradox emerges reliably when dishonest delegates are present. All extensions are backward-compatible with sub-microsecond validation overhead.</summary>
+    <category term="cs.MA" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-03-15T17:36:58Z</published>
+    <arxiv:comment>9 pages, 6 figures. Open-source: https://github.com/sunilp/ldp-protocol</arxiv:comment>
+    <arxiv:primary_category term="cs.MA"/>
+    <author>
+      <name>Sunil Prakash</name>
+    </author>
+  </entry>
+</feed>

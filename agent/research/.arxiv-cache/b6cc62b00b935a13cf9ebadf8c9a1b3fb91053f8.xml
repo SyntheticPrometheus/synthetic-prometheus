@@ -1,0 +1,298 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/DgS7OAIe8Z8fcKlD+y8lRv4NZXo</id>
+  <title>arXiv Query: search_query=all:"task allocation" AND all:agent&amp;id_list=&amp;start=0&amp;max_results=12</title>
+  <updated>2026-11-15T14:52:25Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=all:%22task+allocation%22+AND+all:agent&amp;start=0&amp;max_results=12&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>12</opensearch:itemsPerPage>
+  <opensearch:totalResults>239</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2211.03286v2</id>
+    <title>Learning Task Requirements and Agent Capabilities for Multi-agent Task Allocation</title>
+    <updated>2022-11-08T02:17:40Z</updated>
+    <link href="https://arxiv.org/abs/2211.03286v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2211.03286v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>This paper presents a learning framework to estimate an agent capability and task requirement model for multi-agent task allocation. With a set of team configurations and the corresponding task performances as the training data, linear task constraints can be learned to be embedded in many existing optimization-based task allocation frameworks. Comprehensive computational evaluations are conducted to test the scalability and prediction accuracy of the learning framework with a limited number of team configurations and performance pairs. A ROS and Gazebo-based simulation environment is developed to validate the proposed requirements learning and task allocation framework in practical multi-agent exploration and manipulation tasks. Results show that the learning process for scenarios with 40 tasks and 6 types of agents uses around 12 seconds, ending up with prediction errors in the range of 0.5-2%.</summary>
+    <category term="cs.RO" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.MA" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2022-11-07T03:45:57Z</published>
+    <arxiv:comment>The video and open-source code are at https://brg.engin.umich.edu/publications/learn-multiagent-taskreq/</arxiv:comment>
+    <arxiv:primary_category term="cs.RO"/>
+    <author>
+      <name>Bo Fu</name>
+    </author>
+    <author>
+      <name>William Smith</name>
+    </author>
+    <author>
+      <name>Denise Rizzo</name>
+    </author>
+    <author>
+      <name>Matthew Castanier</name>
+    </author>
+    <author>
+      <name>Maani Ghaffari</name>
+    </author>
+    <author>
+      <name>Kira Barton</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2508.02015v1</id>
+    <title>A Group Consensus-Driven Auction Algorithm for Cooperative Task Allocation Among Heterogeneous Multi-Agents</title>
+    <updated>2025-08-04T03:25:37Z</updated>
+    <link href="https://arxiv.org/abs/2508.02015v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2508.02015v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>In scenarios like automated warehouses, assigning tasks to robots presents a heterogeneous multi-task and multi-agent task allocation problem. However, existing task allocation study ignores the integration of multi-task and multi-attribute agent task allocation with heterogeneous task allocation. In addition, current algorithms are limited by scenario constraints and can incur significant errors in specific contexts. Therefore, this study proposes a distributed heterogeneous multi-task and multi-agent task allocation algorithm with a time window, called group consensus-based heterogeneous auction (GCBHA). Firstly, this method decomposes tasks that exceed the capability of a single Agent into subtasks that can be completed by multiple independent agents. And then groups similar or adjacent tasks through a heuristic clustering method to reduce the time required to reach a consensus. Subsequently, the task groups are allocated to agents that meet the conditions through an auction process. Furthermore, the method evaluates the task path cost distance based on the scenario, which can calculate the task cost more accurately. The experimental results demonstrate that GCBHA performs well in terms of task allocation time and solution quality, with a significant reduction in the error rate between predicted task costs and actual costs.</summary>
+    <category term="cs.MA" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-08-04T03:25:37Z</published>
+    <arxiv:primary_category term="cs.MA"/>
+    <author>
+      <name>Gang Wang</name>
+    </author>
+    <author>
+      <name>Hongfang Han</name>
+    </author>
+    <author>
+      <name>Xiaowei Liu</name>
+    </author>
+    <author>
+      <name>Hanfeng Jiang</name>
+    </author>
+    <author>
+      <name>Ming Zhang</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2102.08307v2</id>
+    <title>Dynamic neighbourhood optimisation for task allocation using multi-agent</title>
+    <updated>2022-05-11T09:46:30Z</updated>
+    <link href="https://arxiv.org/abs/2102.08307v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2102.08307v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>In large-scale systems there are fundamental challenges when centralised techniques are used for task allocation. The number of interactions is limited by resource constraints such as on computation, storage, and network communication. We can increase scalability by implementing the system as a distributed task-allocation system, sharing tasks across many agents. However, this also increases the resource cost of communications and synchronisation, and is difficult to scale.
+  In this paper we present four algorithms to solve these problems. The combination of these algorithms enable each agent to improve their task allocation strategy through reinforcement learning, while changing how much they explore the system in response to how optimal they believe their current strategy is, given their past experience. We focus on distributed agent systems where the agents' behaviours are constrained by resource usage limits, limiting agents to local rather than system-wide knowledge. We evaluate these algorithms in a simulated environment where agents are given a task composed of multiple subtasks that must be allocated to other agents with differing capabilities, to then carry out those tasks. We also simulate real-life system effects such as networking instability. Our solution is shown to solve the task allocation problem to 6.7% of the theoretical optimal within the system configurations considered. It provides 5x better performance recovery over no-knowledge retention approaches when system connectivity is impacted, and is tested against systems up to 100 agents with less than a 9% impact on the algorithms' performance.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2021-02-16T17:49:14Z</published>
+    <arxiv:comment>28 pages</arxiv:comment>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Niall Creech</name>
+    </author>
+    <author>
+      <name>Natalia Criado Pacheco</name>
+    </author>
+    <author>
+      <name>Simon Miles</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2207.08279v1</id>
+    <title>Task Allocation with Load Management in Multi-Agent Teams</title>
+    <updated>2022-07-17T20:17:09Z</updated>
+    <link href="https://arxiv.org/abs/2207.08279v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2207.08279v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>In operations of multi-agent teams ranging from homogeneous robot swarms to heterogeneous human-autonomy teams, unexpected events might occur. While efficiency of operation for multi-agent task allocation problems is the primary objective, it is essential that the decision-making framework is intelligent enough to manage unexpected task load with limited resources. Otherwise, operation effectiveness would drastically plummet with overloaded agents facing unforeseen risks. In this work, we present a decision-making framework for multi-agent teams to learn task allocation with the consideration of load management through decentralized reinforcement learning, where idling is encouraged and unnecessary resource usage is avoided. We illustrate the effect of load management on team performance and explore agent behaviors in example scenarios. Furthermore, a measure of agent importance in collaboration is developed to infer team resilience when facing handling potential overload situations.</summary>
+    <category term="cs.MA" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.RO" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2022-07-17T20:17:09Z</published>
+    <arxiv:comment>8 pages, 5 figures, 2022 IEEE International Conference on Robotics and Automation</arxiv:comment>
+    <arxiv:primary_category term="cs.MA"/>
+    <arxiv:journal_ref>ICRA (2022) 8823-8830</arxiv:journal_ref>
+    <author>
+      <name>Haochen Wu</name>
+    </author>
+    <author>
+      <name>Amin Ghadami</name>
+    </author>
+    <author>
+      <name>Alparslan Emrah Bayrak</name>
+    </author>
+    <author>
+      <name>Jonathon M. Smereka</name>
+    </author>
+    <author>
+      <name>Bogdan I. Epureanu</name>
+    </author>
+    <arxiv:doi>10.1109/ICRA46639.2022.9811374</arxiv:doi>
+    <link rel="related" href="https://doi.org/10.1109/ICRA46639.2022.9811374" title="doi"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2107.00144v1</id>
+    <title>Greedy Decentralized Auction-based Task Allocation for Multi-Agent Systems</title>
+    <updated>2021-06-30T23:06:13Z</updated>
+    <link href="https://arxiv.org/abs/2107.00144v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2107.00144v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>We propose a decentralized auction-based algorithm for the solution of dynamic task allocation problems for spatially distributed multi-agent systems. In our approach, each member of the multi-agent team is assigned to at most one task from a set of spatially distributed tasks, while several agents can be allocated to the same task. The task assignment is dynamic since it is updated at discrete time stages (iterations) to account for the current states of the agents as the latter move towards the tasks assigned to them at the previous stage. Our proposed methods can find applications in problems of resource allocation by intelligent machines such as the delivery of packages by a fleet of unmanned or semi-autonomous aerial vehicles. In our approach, the task allocation accounts for both the cost incurred by the agents for the completion of their assigned tasks (e.g., energy or fuel consumption) and the rewards earned for their completion (which may reflect, for instance, the agents' satisfaction). We propose a Greedy Coalition Auction Algorithm (GCAA) in which the agents possess bid vectors representing their best evaluations of the task utilities. The agents propose bids, deduce an allocation based on their bid vectors and update them after each iteration. The solution estimate of the proposed task allocation algorithm converges after a finite number of iterations which cannot exceed the number of agents. Finally, we use numerical simulations to illustrate the effectiveness of the proposed task allocation algorithm (in terms of performance and computation time) in several scenarios involving multiple agents and tasks distributed over a spatial 2D domain.</summary>
+    <category term="eess.SY" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2021-06-30T23:06:13Z</published>
+    <arxiv:comment>8 pages, conference</arxiv:comment>
+    <arxiv:primary_category term="eess.SY"/>
+    <author>
+      <name>Martin Braquet</name>
+    </author>
+    <author>
+      <name>Efstathios Bakolas</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2306.02278v3</id>
+    <title>Payoff Mechanism Design for Coordination in Multi-Agent Task Allocation Games</title>
+    <updated>2023-09-18T06:09:15Z</updated>
+    <link href="https://arxiv.org/abs/2306.02278v3" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2306.02278v3" rel="related" type="application/pdf" title="pdf"/>
+    <summary>We investigate a multi-agent decision-making problem where a large population of agents is responsible for carrying out a set of assigned tasks. The amount of jobs in each task varies over time governed by a dynamical system model. Each agent needs to select one of the available strategies to take on one or more tasks. Since each strategy allows an agent to perform multiple tasks at a time, possibly at distinct rates, the strategy selection of the agents needs to be coordinated. We formulate the problem using the population game formalism and refer to it as the task allocation game. We discuss the design of a decision-making model that incentivizes the agents to coordinate in the strategy selection process.
+  As key contributions, we propose a method to find a payoff-driven decision-making model, and discuss how the model allows the strategy selection of the agents to be responsive to the amount of remaining jobs in each task while asymptotically attaining the optimal strategies. Leveraging analytical tools from feedback control theory, we derive technical conditions that the model needs to satisfy, which are used to construct a numerical approach to compute the model. We validate our solution through simulations to highlight how the proposed approach coordinates the agents in task allocation games.</summary>
+    <category term="eess.SY" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2023-06-04T06:51:47Z</published>
+    <arxiv:primary_category term="eess.SY"/>
+    <author>
+      <name>Shinkyu Park</name>
+    </author>
+    <author>
+      <name>Julian Barreiro-Gomez</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2311.00222v1</id>
+    <title>Distributed Task Allocation for Self-Interested Agents with Partially Unknown Rewards</title>
+    <updated>2023-11-01T01:47:56Z</updated>
+    <link href="https://arxiv.org/abs/2311.00222v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2311.00222v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>This paper provides a novel solution to a task allocation problem, by which a group of agents decides on the assignment of a discrete set of tasks in a distributed manner. In this setting, heterogeneous agents have individual preferences and associated rewards for doing each task; however, these rewards are only known asymptotically. We start by formulating the assignment problem by means of a combinatorial partition game for known rewards, with no constraints on number of tasks per agent. We relax this into a weight game, which together with the former, are shown to contain the optimal task allocation in the corresponding set of Nash Equilibria (NE). We then propose a projected, best-response, ascending gradient dynamics (PBRAG) that converges to a NE in finite time. This forms the basis of a distributed online version that can deal with a converging sequence of rewards by means of an agreement sub-routine. We present simulations that support our results</summary>
+    <category term="math.OC" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2023-11-01T01:47:56Z</published>
+    <arxiv:comment>8 pages, 3 figures</arxiv:comment>
+    <arxiv:primary_category term="math.OC"/>
+    <author>
+      <name>Nirabhra Mandal</name>
+    </author>
+    <author>
+      <name>Mohammad Khajenejad</name>
+    </author>
+    <author>
+      <name>Sonia Martínez</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2210.03259v1</id>
+    <title>Considerations for Task Allocation in Human-Robot Teams</title>
+    <updated>2022-10-06T23:57:23Z</updated>
+    <link href="https://arxiv.org/abs/2210.03259v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2210.03259v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>In human-robot teams where agents collaborate together, there needs to be a clear allocation of tasks to agents. Task allocation can aid in achieving the presumed benefits of human-robot teams, such as improved team performance. Many task allocation methods have been proposed that include factors such as agent capability, availability, workload, fatigue, and task and domain-specific parameters. In this paper, selected work on task allocation is reviewed. In addition, some areas for continued and further consideration in task allocation are discussed. These areas include level of collaboration, novel tasks, unknown and dynamic agent capabilities, negotiation and fairness, and ethics. Where applicable, we also mention some of our work on task allocation. Through continued efforts and considerations in task allocation, human-robot teaming can be improved.</summary>
+    <category term="cs.RO" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.HC" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2022-10-06T23:57:23Z</published>
+    <arxiv:comment>Presented at AI-HRI symposium as part of AAAI-FSS 2022 (arXiv:2209.14292)</arxiv:comment>
+    <arxiv:primary_category term="cs.RO"/>
+    <author>
+      <name>Arsha Ali</name>
+    </author>
+    <author>
+      <name>Dawn M. Tilbury</name>
+    </author>
+    <author>
+      <name>Lionel P. Robert</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2609.32745v1</id>
+    <title>MORPH: Self-Organising Multi-Robot Task Allocation via Neuroplasticity-Inspired Adaptive Topology</title>
+    <updated>2026-09-26T16:04:44Z</updated>
+    <link href="https://arxiv.org/abs/2609.32745v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2609.32745v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Multi-robot task allocation (MRTA) in dynamic environments faces a fundamental tension: effective coordination requires learned structure, but that structure must adapt when conditions change. Existing methods resolve this by assuming prior task knowledge, a utility function, a cost matrix, or a trained policy making them brittle when deployed without such knowledge or when task distributions shift. We present MORPH(Multi-agent Online Rewiring through Plasticity-guided Hierarchy), a training-free MRTA framework where global allocation quality emerges from 4 local plasticity rules (synaptic, homeostatic, structural, and metaplasticity) applied to a directed pairwise preference matrix updated from runtime co-occurrence and task-completion feedback. MORPH requires no task model, no bid computation, and no offline training; response decisions use learned AGV-to-Picker preferences rather than a fixed proximity rule. Within the Gerkey-Mataric MRTA taxonomy, MORPH is the first method in the single-task, single-robot, instantaneous-assignment class to learn directed pairwise allocation preferences online. Evaluated on the TA-RWARE warehouse benchmark (8-24 agents, 4 maps, 800 steps per episode, 5 seeds), MORPH achieves 110% of all-to-all throughput at N=24 while using only 21% of possible coordination links as an efficiency advantage that grows monotonically with fleet size. Under spatial task distribution shift, MORPH degrades 3x less than proximity-based methods while its learned preferences remain uncorrelated with Manhattan distance. Systematic ablation confirms all four plasticity rules contribute measurably. Two allocation properties emerge without programming: cross-type preference dominance and progressive preference sparsification, mirroring the developmental refinement of biological neural circuits. Learned preferences are driven by task co-occurrence history, not spatial proximity.</summary>
+    <category term="cs.RO" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-09-26T16:04:44Z</published>
+    <arxiv:comment>Full version of the paper published in The 23rd European Conference on Multi-Agent Systems (EUMAS), 2026.The implementation and experiment scripts are available at https://github.com/Cyber-physical-Systems-Lab/morph_v2</arxiv:comment>
+    <arxiv:primary_category term="cs.RO"/>
+    <arxiv:journal_ref>In Multi-Agent Systems, EUMAS 2026, LNCS 16829, Springer, 2026</arxiv:journal_ref>
+    <author>
+      <name>Xuezhi Niu</name>
+    </author>
+    <author>
+      <name>Didem Gürdür Broo</name>
+    </author>
+    <arxiv:doi>10.1007/978-3-032-39395-1_31</arxiv:doi>
+    <link rel="related" href="https://doi.org/10.1007/978-3-032-39395-1_31" title="doi"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2601.22974v1</id>
+    <title>MiTa: A Hierarchical Multi-Agent Collaboration Framework with Memory-integrated and Task Allocation</title>
+    <updated>2026-01-30T13:38:11Z</updated>
+    <link href="https://arxiv.org/abs/2601.22974v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2601.22974v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Recent advances in large language models (LLMs) have substantially accelerated the development of embodied agents. LLM-based multi-agent systems mitigate the inefficiency of single agents in complex tasks. However, they still suffer from issues such as memory inconsistency and agent behavioral conflicts. To address these challenges, we propose MiTa, a hierarchical memory-integrated task allocative framework to enhance collaborative efficiency. MiTa organizes agents into a manager-member hierarchy, where the manager incorporates additional allocation and summary modules that enable (1) global task allocation and (2) episodic memory integration. The allocation module enables the manager to allocate tasks from a global perspective, thereby avoiding potential inter-agent conflicts. The summary module, triggered by task progress updates, performs episodic memory integration by condensing recent collaboration history into a concise summary that preserves long-horizon context. By combining task allocation with episodic memory, MiTa attains a clearer understanding of the task and facilitates globally consistent task distribution. Experimental results confirm that MiTa achieves superior efficiency and adaptability in complex multi-agent cooperation over strong baseline methods.</summary>
+    <category term="cs.ET" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-01-30T13:38:11Z</published>
+    <arxiv:comment>Accepted to 2026 IEEE International Conference on Acoustics, Speech, and Signal Processing (ICASSP 2026)</arxiv:comment>
+    <arxiv:primary_category term="cs.ET"/>
+    <author>
+      <name>XiaoJie Zhang</name>
+    </author>
+    <author>
+      <name>JianHan Wu</name>
+    </author>
+    <author>
+      <name>Xiaoyang Qu</name>
+    </author>
+    <author>
+      <name>Jianzong Wang</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2404.02111v2</id>
+    <title>Risk-Aware Real-Time Task Allocation for Stochastic Multi-Agent Systems under STL Specifications</title>
+    <updated>2024-09-03T12:49:01Z</updated>
+    <link href="https://arxiv.org/abs/2404.02111v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2404.02111v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>This paper addresses the control synthesis of heterogeneous stochastic linear multi-agent systems with real-time allocation of signal temporal logic (STL) specifications. Based on previous work, we decompose specifications into sub-specifications on the individual agent level. To leverage the efficiency of task allocation, a heuristic filter evaluates potential task allocation based on STL robustness, and subsequently, an auctioning algorithm determines the definitive allocation of specifications. Finally, a control strategy is synthesized for each agent-specification pair using tube-based model predictive control (MPC), ensuring provable probabilistic satisfaction. We demonstrate the efficacy of the proposed methods using a multi-shuttle scenario that highlights a promising extension to automated driving applications like vehicle routing.</summary>
+    <category term="eess.SY" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2024-04-02T17:12:53Z</published>
+    <arxiv:comment>7 pages, 5 figures, Accepted for CDC 2024. arXiv admin note: text overlap with arXiv:2402.03165</arxiv:comment>
+    <arxiv:primary_category term="eess.SY"/>
+    <author>
+      <name>Maico H. W. Engelaar</name>
+    </author>
+    <author>
+      <name>Zengjie Zhang</name>
+    </author>
+    <author>
+      <name>Eleftherios E. Vlahakis</name>
+    </author>
+    <author>
+      <name>Dimos V. Dimarogonas</name>
+    </author>
+    <author>
+      <name>Mircea Lazar</name>
+    </author>
+    <author>
+      <name>Sofie Haesaert</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2009.08628v2</id>
+    <title>Decentralized Game-Theoretic Control for Dynamic Task Allocation Problems for Multi-Agent Systems</title>
+    <updated>2020-09-29T20:18:35Z</updated>
+    <link href="https://arxiv.org/abs/2009.08628v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2009.08628v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>We propose a decentralized game-theoretic framework for dynamic task allocation problems for multi-agent systems. In our problem formulation, the agents' utilities depend on both the rewards and the costs associated with the successful completion of the tasks assigned to them. The rewards reflect how likely is for the agents to accomplish their assigned tasks whereas the costs reflect the effort needed to complete these tasks (this effort is determined by the solution of corresponding optimal control problems). The task allocation problem considered herein corresponds to a dynamic game whose solution depends on the states of the agents in contrast with classic static (or single-act) game formulations. We propose a greedy solution approach in which the agents negotiate with each other to find a mutually agreeable (or individually rational) task assignment profile based on evaluations of the task utilities that reflect their current states. We illustrate the main ideas of this work by means of extensive numerical simulations.</summary>
+    <category term="cs.MA" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="eess.SY" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2020-09-18T05:03:00Z</published>
+    <arxiv:comment>8 pages, 3 figures</arxiv:comment>
+    <arxiv:primary_category term="cs.MA"/>
+    <author>
+      <name>Efstathios Bakolas</name>
+    </author>
+    <author>
+      <name>Yoonjae Lee</name>
+    </author>
+    <arxiv:doi>10.23919/ACC50511.2021.9483030</arxiv:doi>
+    <link rel="related" href="https://doi.org/10.23919/ACC50511.2021.9483030" title="doi"/>
+  </entry>
+</feed>

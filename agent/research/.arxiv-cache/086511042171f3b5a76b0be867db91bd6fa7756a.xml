@@ -1,0 +1,81 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/qV6yQshmGIKj8MBjx5C312rmoL4</id>
+  <title>arXiv Query: search_query=all:"repository-level code localization"&amp;id_list=&amp;start=0&amp;max_results=12</title>
+  <updated>2026-11-15T16:02:25Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=all:%22repository-level+code+localization%22&amp;start=0&amp;max_results=12&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>12</opensearch:itemsPerPage>
+  <opensearch:totalResults>2</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2608.29831v1</id>
+    <title>A^2Agent: Action-Aware Reinforcement Learning for Repository-Level Code Localization Agents</title>
+    <updated>2026-08-30T14:53:35Z</updated>
+    <link href="https://arxiv.org/abs/2608.29831v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2608.29831v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Localizing issue-relevant code regions is a critical step in automated software engineering. However, due to their reliance on sparse trajectory-level signals, existing methods cannot identify which per-turn actions are effective and often discover correct code regions during exploration but fail to commit them. To address these limitations, we propose an action-aware reinforcement learning method that combines a per-turn reward sequence rewarding both the discovery and commitment of gold code regions with an action-level advantage estimation scheme that isolates each action's credit by grouping turns sharing the same exploration context. Extensive evaluations show that our method improves the average F1 over the state-of-the-art (SOTA) by 1.58% on SWE-Bench Verified and 8.55% on SWE-Bench Pro, with our 4B model outperforming baselines up to 8x larger. Our code is available at https://github.com/donian00/A2Agent.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-08-30T14:53:35Z</published>
+    <arxiv:comment>Accepted to EMNLP 2026 Main</arxiv:comment>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Doyeon Kim</name>
+    </author>
+    <author>
+      <name>Suyoung Bae</name>
+    </author>
+    <author>
+      <name>Yumin Lee</name>
+    </author>
+    <author>
+      <name>Jee-Hyong Lee</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2603.17829v1</id>
+    <title>CodeScout: An Effective Recipe for Reinforcement Learning of Code Search Agents</title>
+    <updated>2026-03-18T15:25:42Z</updated>
+    <link href="https://arxiv.org/abs/2603.17829v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2603.17829v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>A prerequisite for coding agents to perform tasks on large repositories is code localization - the identification of relevant files, classes, and functions to work on. While repository-level code localization has been performed using embedding-based retrieval approaches such as vector search, recent work has focused on developing agents to localize relevant code either as a standalone precursor to or interleaved with performing actual work. Most prior methods on agentic code search equip the agent with complex, specialized tools, such as repository graphs derived from static analysis. In this paper, we demonstrate that, with an effective reinforcement learning recipe, a coding agent equipped with nothing more than a standard Unix terminal can be trained to achieve strong results. Our experiments on three benchmarks (SWE-Bench Verified, Pro, and Lite) reveal that our models consistently achieve superior or competitive performance over 2-18x larger base and post-trained LLMs and sometimes approach performance provided by closed models like Claude Sonnet, even when using specialized scaffolds. Our work particularly focuses on techniques for re-purposing existing coding agent environments for code search, reward design, and RL optimization. We release the resulting model family, CodeScout, along with all our code and data for the community to build upon.</summary>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-03-18T15:25:42Z</published>
+    <arxiv:primary_category term="cs.SE"/>
+    <author>
+      <name>Lintang Sutawika</name>
+    </author>
+    <author>
+      <name>Aditya Bharat Soni</name>
+    </author>
+    <author>
+      <name>Bharath Sriraam R R</name>
+    </author>
+    <author>
+      <name>Apurva Gandhi</name>
+    </author>
+    <author>
+      <name>Taha Yassine</name>
+    </author>
+    <author>
+      <name>Sanidhya Vijayvargiya</name>
+    </author>
+    <author>
+      <name>Yuchen Li</name>
+    </author>
+    <author>
+      <name>Xuhui Zhou</name>
+    </author>
+    <author>
+      <name>Yilin Zhang</name>
+    </author>
+    <author>
+      <name>Leander Melroy Maben</name>
+    </author>
+    <author>
+      <name>Graham Neubig</name>
+    </author>
+  </entry>
+</feed>

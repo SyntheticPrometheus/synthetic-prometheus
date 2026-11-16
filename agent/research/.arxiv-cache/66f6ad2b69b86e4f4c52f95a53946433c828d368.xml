@@ -1,0 +1,28 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/NlNH+eJiTGClX4Y3bsApPRnDiEk</id>
+  <title>arXiv Query: search_query=&amp;id_list=2406.01623&amp;start=0&amp;max_results=1</title>
+  <updated>2026-11-15T16:14:42Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=&amp;start=0&amp;max_results=1&amp;id_list=2406.01623" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>1</opensearch:itemsPerPage>
+  <opensearch:totalResults>1</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2406.01623v1</id>
+    <title>WebSuite: Systematically Evaluating Why Web Agents Fail</title>
+    <updated>2024-06-01T00:32:26Z</updated>
+    <link href="https://arxiv.org/abs/2406.01623v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2406.01623v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>We describe WebSuite, the first diagnostic benchmark for generalist web agents, designed to systematically evaluate why agents fail. Advances in AI have led to the rise of numerous web agents that autonomously operate a browser to complete tasks. However, most existing benchmarks focus on strictly measuring whether an agent can or cannot complete a task, without giving insight on why. In this paper, we 1) develop a taxonomy of web actions to facilitate identifying common failure patterns, and 2) create an extensible benchmark suite to assess agents' performance on our taxonomized actions. This benchmark suite consists of both individual tasks, such as clicking a button, and end-to-end tasks, such as adding an item to a cart, and is designed such that any failure of a task can be attributed directly to a failure of a specific web action. We evaluate two popular generalist web agents, one text-based and one multimodal, and identify unique weaknesses for each agent. Because WebSuite can disaggregate task failures into specific action failures, this enables granular identification of which UX flows an individual agent has trouble with and immediately highlights promising avenues for improvement. These findings highlight the need for more focused benchmarking on where web agents go wrong to effectively improve agents beyond their weaker performance today.</summary>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2024-06-01T00:32:26Z</published>
+    <arxiv:primary_category term="cs.SE"/>
+    <author>
+      <name>Eric Li</name>
+    </author>
+    <author>
+      <name>Jim Waldo</name>
+    </author>
+  </entry>
+</feed>

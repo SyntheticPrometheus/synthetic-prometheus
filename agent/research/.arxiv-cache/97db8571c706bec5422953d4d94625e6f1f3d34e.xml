@@ -1,0 +1,302 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/pkEnag9f3hnbMbuEA4Qz6RHg4P4</id>
+  <title>arXiv Query: search_query=all:delegation AND all:LLM&amp;id_list=&amp;start=0&amp;max_results=12</title>
+  <updated>2026-11-15T14:52:20Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=all:delegation+AND+all:LLM&amp;start=0&amp;max_results=12&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>12</opensearch:itemsPerPage>
+  <opensearch:totalResults>503</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2603.11011v1</id>
+    <title>Task-Aware Delegation Cues for LLM Agents</title>
+    <updated>2026-03-11T17:35:44Z</updated>
+    <link href="https://arxiv.org/abs/2603.11011v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2603.11011v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>LLM agents increasingly present as conversational collaborators, yet human--agent teamwork remains brittle due to information asymmetry: users lack task-specific reliability cues, and agents rarely surface calibrated uncertainty or rationale. We propose a task-aware collaboration signaling layer that turns offline preference evaluations into online, user-facing primitives for delegation. Using Chatbot Arena pairwise comparisons, we induce an interpretable task taxonomy via semantic clustering, then derive (i) Capability Profiles as task-conditioned win-rate maps and (ii) Coordination-Risk Cues as task-conditioned disagreement (tie-rate) priors. These signals drive a closed-loop delegation protocol that supports common-ground verification, adaptive routing (primary vs.\ primary+auditor), explicit rationale disclosure, and privacy-preserving accountability logs. Two predictive probes validate that task typing carries actionable structure: cluster features improve winner prediction accuracy and reduce difficulty prediction error under stratified 5-fold cross-validation. Overall, our framework reframes delegation from an opaque system default into a visible, negotiable, and auditable collaborative decision, providing a principled design space for adaptive human--agent collaboration grounded in mutual awareness and shared accountability.</summary>
+    <category term="cs.HC" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-03-11T17:35:44Z</published>
+    <arxiv:comment>Accepeted by CHI'26 Workshop on Developing Standards and Documentation For LLM Use as Simulated Research Participants</arxiv:comment>
+    <arxiv:primary_category term="cs.HC"/>
+    <arxiv:journal_ref>CHI 2026</arxiv:journal_ref>
+    <author>
+      <name>Xingrui Gu</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2610.06328v1</id>
+    <title>What Did the AI Take On? Characterizing Cognitive Delegation in LLM Reasoning</title>
+    <updated>2026-10-05T13:39:10Z</updated>
+    <link href="https://arxiv.org/abs/2610.06328v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2610.06328v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Large language models (LLMs) often perform intermediate cognitive work while carrying out users' requests, yet it remains unclear which parts users intended to delegate and how they wanted to remain involved. This matters because consequential choices may go unnoticed, limiting users' ability to steer the process, while reviewing every step would make delegation burdensome. We examined this with 24 LLM users across three knowledge-work tasks, collecting 992 retrospective annotations of reasoning steps. From this, we developed taxonomies of LLM cognitive work, delegation enactment, and desired delegation protocols at the reasoning-step level. Our analysis revealed that participants viewed about half of all steps (48.6%) as AI-initiated, meaning the AI took on work they had not requested. Desired involvement varied with cognitive work and delegation enactment, even when contributions matched participants' intent. We propose design implications and sketches for supporting more deliberate cognitive delegation through flexible protocols and inspectable, revisable AI-initiated decisions.</summary>
+    <category term="cs.HC" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-10-05T13:39:10Z</published>
+    <arxiv:primary_category term="cs.HC"/>
+    <author>
+      <name>Yoonsu Kim</name>
+    </author>
+    <author>
+      <name>Sean Kim</name>
+    </author>
+    <author>
+      <name>Kihoon Son</name>
+    </author>
+    <author>
+      <name>Saelyne Yang</name>
+    </author>
+    <author>
+      <name>Juho Kim</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2610.34317v1</id>
+    <title>Developer Task Delegation to LLMs and the Trust Factor: A Mixed Methods Study</title>
+    <updated>2026-10-25T14:28:10Z</updated>
+    <link href="https://arxiv.org/abs/2610.34317v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2610.34317v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>With the rise of Large Language Models (LLMs), software developers are presented with a powerful new approach: delegating software development tasks to LLMs. Existing studies have explored task delegation for a subset of tasks and factors. Critically, what tasks developers delegate to LLMs, to what extent, and why they delegate them, is not yet well understood. We explore these questions through 22 interviews and a survey with 160 software practitioners. Developers reported employing four modes of task delegation to LLMs: full delegation, partial delegation, self-delegation, and task avoidance. Drawing on our qualitative findings, we discuss the rationales behind these choices and explore how task difficulty, task risk, developer motivation, and trust appear to be associated with software development task delegation to LLMs. Our statistical analysis reveals that trust is a significant factor associated with task delegation to LLMs. Finally, we share actionable implications for human-AI collaboration in software research, and for software practitioners to make the most of their newly found powers of delegation.</summary>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.HC" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-10-25T14:28:10Z</published>
+    <arxiv:comment>Accepted for publication in the Proceedings of the 49th IEEE/ACM International Conference on Software Engineering (ICSE'27)</arxiv:comment>
+    <arxiv:primary_category term="cs.SE"/>
+    <author>
+      <name>Samuel Ferino</name>
+    </author>
+    <author>
+      <name>Rashina Hoda</name>
+    </author>
+    <author>
+      <name>John Grundy</name>
+    </author>
+    <author>
+      <name>Christoph Treude</name>
+    </author>
+    <author>
+      <name>Hashini Gunatilake</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2603.18043v1</id>
+    <title>The Provenance Paradox in Multi-Agent LLM Routing: Delegation Contracts and Attested Identity in LDP</title>
+    <updated>2026-03-15T17:36:58Z</updated>
+    <link href="https://arxiv.org/abs/2603.18043v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2603.18043v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Multi-agent LLM systems delegate tasks across trust boundaries, but current protocols do not govern delegation under unverifiable quality claims. We show that when delegates can inflate self-reported quality scores, quality-based routing produces a provenance paradox: it systematically selects the worst delegates, performing worse than random. We extend the LLM Delegate Protocol (LDP) with delegation contracts that bound authority through explicit objectives, budgets, and failure policies; a claimed-vs-attested identity model that distinguishes self-reported from verified quality; and typed failure semantics enabling automated recovery. In controlled experiments with 10 simulated delegates and validated with real Claude models, routing by self-claimed quality scores performs worse than random selection (simulated: 0.55 vs. 0.68; real models: 8.90 vs. 9.30), while attested routing achieves near-optimal performance (d = 9.51, p &lt; 0.001). Sensitivity analysis across 36 configurations confirms the paradox emerges reliably when dishonest delegates are present. All extensions are backward-compatible with sub-microsecond validation overhead.</summary>
+    <category term="cs.MA" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-03-15T17:36:58Z</published>
+    <arxiv:comment>9 pages, 6 figures. Open-source: https://github.com/sunilp/ldp-protocol</arxiv:comment>
+    <arxiv:primary_category term="cs.MA"/>
+    <author>
+      <name>Sunil Prakash</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2609.27900v1</id>
+    <title>Delegated Misalignment: How Multi-Agent Structures Amplify LLM Safety Risks</title>
+    <updated>2026-08-26T03:49:37Z</updated>
+    <link href="https://arxiv.org/abs/2609.27900v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2609.27900v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Large language models (LLMs) are increasingly deployed in multi-agent systems where a principal agent decomposes tasks and delegates them to subordinate agents that may invoke external tools. Safety alignment, however, is still evaluated almost exclusively under a single-agent threat model, treating safety as a property of the individual LLM. We show that this assumption breaks down: \emph{individual safety alignment fails to transfer to multi-agent settings}. Two failure mechanisms emerge under delegation: \emph{responsibility diffusion} on the principal side and \emph{role-bias compliance} on the subordinate side, jointly converting language-level refusal into actionable harm. We refer to this phenomenon as \textit{delegated misalignment} and study it through a three-condition protocol across 6 frontier LLMs on 49 hazardous tasks. Delegation amplifies end-to-end harm substantially: DeepSeek-V3.2's full-execution rate rises from 30.6\% to 77.6\% once delegation is introduced, and the same model behaves very differently across roles (GPT-5: 22.5\% as a single agent vs.\ 61.2\% as a subordinate). Ablations further show that standard single-layer defenses each fail on their own and can even backfire. We call on the community to move beyond per-model alignment and toward composite safety mechanisms before multi-agent LLM systems are deployed at scale.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-08-26T03:49:37Z</published>
+    <arxiv:comment>EMNLP 2026</arxiv:comment>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Zonghao Ying</name>
+    </author>
+    <author>
+      <name>Jiaqi Yan</name>
+    </author>
+    <author>
+      <name>Huize Luo</name>
+    </author>
+    <author>
+      <name>Quanchen Zou</name>
+    </author>
+    <author>
+      <name>Aishan Liu</name>
+    </author>
+    <author>
+      <name>Xianglong Liu</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2604.15597v1</id>
+    <title>LLMs Corrupt Your Documents When You Delegate</title>
+    <updated>2026-04-17T00:33:32Z</updated>
+    <link href="https://arxiv.org/abs/2604.15597v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2604.15597v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Large Language Models (LLMs) are poised to disrupt knowledge work, with the emergence of delegated work as a new interaction paradigm (e.g., vibe coding). Delegation requires trust - the expectation that the LLM will faithfully execute the task without introducing errors into documents. We introduce DELEGATE-52 to study the readiness of AI systems in delegated workflows. DELEGATE-52 simulates long delegated workflows that require in-depth document editing across 52 professional domains, such as coding, crystallography, and music notation. Our large-scale experiment with 19 LLMs reveals that current models degrade documents during delegation: even frontier models (Gemini 3.1 Pro, Claude 4.6 Opus, GPT 5.4) corrupt an average of 25% of document content by the end of long workflows, with other models failing more severely. Additional experiments reveal that agentic tool use does not improve performance on DELEGATE-52, and that degradation severity is exacerbated by document size, length of interaction, or presence of distractor files. Our analysis shows that current LLMs are unreliable delegates: they introduce sparse but severe errors that silently corrupt documents, compounding over long interaction.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.HC" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-04-17T00:33:32Z</published>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Philippe Laban</name>
+    </author>
+    <author>
+      <name>Tobias Schnabel</name>
+    </author>
+    <author>
+      <name>Jennifer Neville</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2606.08098v3</id>
+    <title>When Does Delegation Beat Majority? A Delegation-Based Aggregator for Multi-Sample LLM Inference</title>
+    <updated>2026-07-12T19:58:26Z</updated>
+    <link href="https://arxiv.org/abs/2606.08098v3" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2606.08098v3" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Majority voting is the default unsupervised aggregator for multi-sample LLM inference, but it discards two signals: within-group answer entropy and between-group reasoning geometry. We aggregate by delegation instead (Propagational Proxy Voting, PPV): each group of samples keeps weight on its own answer in proportion to its entropy-based confidence (When) and routes the rest to peers by reasoning-embedding similarity (Whom); the stationary distribution of the resulting delegation matrix picks the consensus answer. This requires neither gold labels nor training. On MMLU-Pro with 128 samples per question, delegation beats majority by +1.5 pp overall and +2.24 pp on non-trivial questions (McNemar p ~ 1.0e-14, n = 8,099), overturning wrong majorities whose answer cluster is geometrically incoherent while the correct minority is tight. We then characterize exactly when delegation overturns majority: a two-option model gives a closed-form flip condition on each option's confidence and the weight it routes to the other, with a do-no-harm corollary for near-unanimous questions. The condition calls the realized winner on 96.5% of non-trivial questions, and its predicted mass gap tracks the realized gap at r = 0.97. We did not find any other unsupervised ensemble methods that close the oracle gap.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-06-06T10:57:45Z</published>
+    <arxiv:comment>Preprint. 16 pages, 5 figures, 4 tables</arxiv:comment>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Yasushi Sakai</name>
+    </author>
+    <author>
+      <name>Allen Song</name>
+    </author>
+    <author>
+      <name>Kent Larson</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2602.00127v1</id>
+    <title>ALIGN: Aligned Delegation with Performance Guarantees for Multi-Agent LLM Reasoning</title>
+    <updated>2026-01-28T00:29:21Z</updated>
+    <link href="https://arxiv.org/abs/2602.00127v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2602.00127v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>LLMs often underperform on complex reasoning tasks when relying on a single generation-and-selection pipeline. Inference-time ensemble methods can improve performance by sampling diverse reasoning paths or aggregating multiple candidate answers, but they typically treat candidates independently and provide no formal guarantees that ensembling improves reasoning quality. We propose a novel method, Aligned Delegation for Multi-Agent LLM Reasoning (ALIGN), which formulates LLM reasoning as an aligned delegation game. In ALIGN, a principal delegates a task to multiple agents that generate candidate solutions under designed incentives, and then selects among their outputs to produce a final answer. This formulation induces structured interaction among agents while preserving alignment between agent and principal objectives. We establish theoretical guarantees showing that, under a fair comparison with equal access to candidate solutions, ALIGN provably improves expected performance over single-agent generation. Our analysis accommodates correlated candidate answers and relaxes independence assumptions that are commonly used in prior work. Empirical results across a broad range of LLM reasoning benchmarks consistently demonstrate that ALIGN outperforms strong single-agent and ensemble baselines.</summary>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-01-28T00:29:21Z</published>
+    <arxiv:primary_category term="cs.LG"/>
+    <author>
+      <name>Tong Zhu</name>
+    </author>
+    <author>
+      <name>Baiting Chen</name>
+    </author>
+    <author>
+      <name>Jin Zhou</name>
+    </author>
+    <author>
+      <name>Hua Zhou</name>
+    </author>
+    <author>
+      <name>Sriram Sankararaman</name>
+    </author>
+    <author>
+      <name>Xiaowu Dai</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2610.16005v1</id>
+    <title>DelegateGuard: Purpose-Bound Capabilities for Delegated LLM Agent Workflows</title>
+    <updated>2026-10-12T00:12:11Z</updated>
+    <link href="https://arxiv.org/abs/2610.16005v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2610.16005v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>\textbf{(Context)} LLM agents increasingly delegate subtasks while holding authority over sensitive data, creating confused-deputy risks: an injected delegate can exfiltrate data, amplify its authority, or act after revocation. Existing leakage benchmarks expose these failures but do not constrain the authority a delegated agent may exercise. \textbf{(Methods)} We present \system, a reference monitor that converts the initiating user's authorization into attenuable capabilities over purpose, labels, operations, sinks, and delegation depth; every data-moving action is mediated outside the LLM, and revocation cascades through the delegation graph. We formalize a trace-level safety invariant and evaluate it with an adaptive within-authority adversary and four baselines, model-action and multi-turn ecological studies, and conformance and scale checks over deterministic traces and 517{,}401 Enron emails. \textbf{(Results)} \system blocks ungranted-sink exfiltration, authority amplification, revocation replay, purpose gaming, and intra-tool label violations, and dominates static allowlists on the revocation and intra-tool cases (10/10). Two open models proposed attacker-goal actions on 42/45 and 44/45 injected traces, all blocked at execution; a 90-run multi-turn study cut leakage from 0.844 to 0.20 with full task completion, at microsecond per-decision overhead. Proposition~1 characterizes exactly where attenuation-based authorization suffices, a boundary we also reproduce empirically across four observable-sink workflows. \textbf{(Conclusion \&amp; Significance)} Purpose-bound runtime authorization gives delegated LLM workflows a model-independent execution boundary and a precise recipe for composing it with declassification and content monitoring on externally observable sinks.</summary>
+    <category term="cs.CR" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-10-12T00:12:11Z</published>
+    <arxiv:comment>Presented at SecAssure@ESORICS'26</arxiv:comment>
+    <arxiv:primary_category term="cs.CR"/>
+    <author>
+      <name>Phat T. Tran-Truong</name>
+    </author>
+    <author>
+      <name>Ha Vo</name>
+    </author>
+    <author>
+      <name>Nhut Tran</name>
+    </author>
+    <author>
+      <name>Khang Vo</name>
+    </author>
+    <author>
+      <name>Thai-Minh Truong</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2608.25277v1</id>
+    <title>Routed Graph Handoff: Adaptive Format Selection for Multi-Agent LLM Delegation</title>
+    <updated>2026-08-26T01:24:34Z</updated>
+    <link href="https://arxiv.org/abs/2608.25277v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2608.25277v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Multi-agent LLM systems coordinate through natural-language messages that consume 40--60\% of their token budget. Replacing these with structured graphs reduces cost but fails on tasks requiring adaptive reasoning. We propose \textbf{Routed Graph Handoff}, where a lightweight LLM router (155 tokens, 0.15\% overhead) selects between a typed dependency graph and natural language for each delegation. On four benchmarks (1,050+ trajectories), the routed system matches or exceeds NL-only on every task: \textbf{+12.7\,pp} on $τ$-retail at 3.2$\times$ compression ($p{&lt;}0.01$), \textbf{+8.7\,pp} on BrowseComp at 2.2$\times$ compression ($p{&lt;}0.05$), and parity on BFCL and AppWorld. Without the router, graph-only delegation regresses 14.6\,pp on AppWorld; the router eliminates this at near-zero cost. A graph-aware executor prompt is required: the same schema without interpretation guidance yields no gain. An oracle analysis reveals 8.6\,pp of additional headroom, motivating execution-time adaptive routing as future work.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-08-26T01:24:34Z</published>
+    <arxiv:comment>Accepted in EMNLP 2026</arxiv:comment>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Pratyay Banerjee</name>
+    </author>
+    <author>
+      <name>Ankit Chadha</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2607.07097v1</id>
+    <title>Operational Reframing and Approval-Framed Delegation in Multi-Agent LLM Safety</title>
+    <updated>2026-07-08T07:31:37Z</updated>
+    <link href="https://arxiv.org/abs/2607.07097v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2607.07097v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Safety evaluations of multi-agent LLM systems often compare a direct prompt with a planner-executor pipeline and report the difference as a single "pipeline effect." We argue that this aggregate is difficult to interpret because it conflates three mechanisms: harmful intent may be reframed as plausible operational work, the planner may refuse or transform the request, and the executor may act under delegation prompts implying prior approval. To separate these factors, we introduce a five-condition controlled contrast design, evaluated on 30 synthetic harmful scenarios and an exploratory external validation set from four agent-safety benchmarks using LLM-judged compliance.
+  Our results show that aggregate pipeline safety is not a stable architectural property. Operational reframing is the most portable risk signal, increasing compliance for GPT, Gemini, and DeepSeek across both scenario sets, while Claude is comparatively resistant. Planner behavior can offset this risk mainly through refusal; however, when the planner produces executable steps, the executor may become more compliant than under the direct operational baseline. Approval-framed delegation is sensitive to prompt design, model pairing, and scenario source, and a skeptical executor prompt sharply reduces compliance.
+  Raw-direct model rankings can also mispredict deployed planner-executor behavior. Gemini is safest under raw direct prompts in the primary set yet shows the largest amplification with a Claude planner, rising from 8.9 percent to 38.9 percent compliance. GPTs near-zero aggregate pipeline effect instead hides a reframing increase canceled by planner refusal. These findings suggest that multi-agent safety evaluations should report reframing, planner behavior, delegation framing, and model pairing separately before attributing failures to architecture itself.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CR" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.MA" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-07-08T07:31:37Z</published>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Lifei Liu</name>
+    </author>
+    <author>
+      <name>Haoran Yu</name>
+    </author>
+    <author>
+      <name>Xiaochong Jiang</name>
+    </author>
+    <author>
+      <name>Su Wang</name>
+    </author>
+    <author>
+      <name>Pin Qian</name>
+    </author>
+    <author>
+      <name>Yihang Chen</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2611.16526v1</id>
+    <title>Lost in Delegation: Studying the Effectiveness of Task Orchestration in Generative Search</title>
+    <updated>2026-11-12T09:25:33Z</updated>
+    <link href="https://arxiv.org/abs/2611.16526v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2611.16526v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>LLMs have quickly evolved from models used in isolation to agentic systems that delegate tasks to external tools and other LLMs to solve complex assignments. This agentic augmentation has led to impressive capability gains. However, when and how delegation improves performance remains poorly understood. For example, it is unclear whether delegation helps when tasks involve post-cutoff information that the orchestrating LLM cannot reliably resolve from its own knowledge. In this work, we use purpose-built datasets with pre- and post-cutoff splits to compare various delegation modes. We find that delegation provides no consistent accuracy improvement over non-delegated setups, with effects varying across models and tasks. When tasks involve knowledge unavailable to the orchestrator, delegation can substantially degrade accuracy, while direct tool use with the same LLM performs much better. Our analysis identifies distorted delegated queries, inefficient tool use, and failures to preserve and use information between agents as recurring failure modes. These findings suggest that effective orchestration requires both well-calibrated delegation decisions and effective exchange of information between agents.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-11-12T09:25:33Z</published>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Tamara Stojanovska</name>
+    </author>
+    <author>
+      <name>Elisabeth Kirsten</name>
+    </author>
+    <author>
+      <name>Leon Swazinna</name>
+    </author>
+    <author>
+      <name>Muhammad Bilal Zafar</name>
+    </author>
+  </entry>
+</feed>

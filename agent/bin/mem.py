@@ -622,44 +622,92 @@ def cmd_get(a, c):
     return 0
 
 
+def agenda_line() -> str:
+    """One line from the agenda store, so a due item cannot be invisible at session start."""
+    path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "agenda", "agenda.db")
+    if not os.path.exists(path):
+        return ""
+    try:
+        db = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=2)
+        now = time.time()
+        due = db.execute(
+            "select id, next_due from obligations where enabled=1 and next_due<=? order by priority", (now,)
+        ).fetchall()
+        late = db.execute(
+            "select id, due from tasks where status in ('open','doing') and due is not null and due<=?"
+            " order by priority", (now,)
+        ).fetchall()
+        nxt = db.execute(
+            "select id, next_due from obligations where enabled=1 and next_due>? order by next_due limit 1",
+            (now,),
+        ).fetchone()
+        db.close()
+    except Exception:
+        return ""
+    parts = []
+    if due:
+        parts.append(f"{len(due)} due ({', '.join(r[0] for r in due[:3])})")
+    if late:
+        parts.append(f"{len(late)} overdue task(s) ({', '.join('#' + str(r[0]) for r in late[:3])})")
+    if nxt:
+        delta = nxt[1] - now
+        when = f"{delta / 60:.0f}m" if delta < 7200 else f"{delta / 3600:.0f}h"
+        parts.append(f"next {nxt[0]} in {when}")
+    if not parts:
+        return "clear"
+    tail = "" if due or late else " — run `pi-agenda next`"
+    return "; ".join(parts) + tail
+
+
 def cmd_brief(a, c):
-    """session-start working set: pinned core + top lessons/decisions + open PDSA + recent"""
+    """session-start working set: pinned core + top lessons/decisions + recent, in slices.
+
+    Each section gets a fixed share of the budget instead of taking whatever is left, so a growing
+    store degrades the *bottom* of every section rather than silently dropping RECENT entirely.
+    """
     budget = a.budget
+    budget -= 70                      # reserve for the AGENDA + STATS footer
+    slices = [("CORE", 0.30), ("KEY", 0.34), ("RECENT", 0.22), ("PDSA", 0.14)]
     blocks, used = [], 0
-    def add(txt):
+
+    def section(title, rows, fmt, frac):
         nonlocal used
-        cost = est_tokens(txt)
-        if used + cost > budget:
-            return False
-        blocks.append(txt)
-        used += cost
-        return True
+        cap = int(budget * frac)
+        spent, lines = 0, []
+        for r in rows:
+            txt = fmt(r)
+            cost = est_tokens(txt)
+            if spent + cost > cap:
+                continue
+            lines.append(txt)
+            spent += cost
+        if lines:
+            head = f"## {title}"
+            blocks.append(head)
+            used += est_tokens(head)
+            blocks.extend(lines)
+            used += spent
 
     core = c.execute("SELECT * FROM memories WHERE pinned=1 AND archived=0 ORDER BY importance DESC LIMIT 8").fetchall()
-    if core:
-        add("## CORE (pinned)")
-        for r in core:
-            add(f"[#{r['id']}] {r['title'][:150]}: {re.sub(r'\s+',' ',r['body'])[:260]}")
+    section("CORE (pinned)", core,
+            lambda r: f"[#{r['id']}] {r['title'][:150]}: {re.sub(r'\s+', ' ', r['body'])[:260]}", slices[0][1])
     imp = c.execute("""SELECT * FROM memories WHERE archived=0 AND pinned=0 AND kind IN ('lesson','decision','playbook','pref')
         AND valid_to IS NULL AND superseded_by IS NULL
-        ORDER BY importance DESC, ts DESC LIMIT 6""").fetchall()
-    if imp:
-        add("## KEY LESSONS / PREFERENCES")
-        for r in imp:
-            add(f"[#{r['id']}] ({r['kind']}) {r['title'][:120]}: {re.sub(r'\s+',' ',r['body'])[:200]}")
-    rec = c.execute("SELECT * FROM memories WHERE archived=0 ORDER BY ts DESC LIMIT 5").fetchall()
-    if rec:
-        add("## RECENT")
-        for r in rec:
-            add(f"[#{r['id']}] {r['title'][:110]} ({age_days(r['ts']):.0f}d)")
+        ORDER BY importance DESC, ts DESC LIMIT 10""").fetchall()
+    section("KEY LESSONS / PREFERENCES", imp,
+            lambda r: f"[#{r['id']}] ({r['kind']}) {r['title'][:120]}: {re.sub(r'\s+', ' ', r['body'])[:200]}", slices[1][1])
+    rec = c.execute("SELECT * FROM memories WHERE archived=0 ORDER BY ts DESC LIMIT 8").fetchall()
+    section("RECENT", rec, lambda r: f"[#{r['id']}] {r['title'][:110]} ({age_days(r['ts']):.0f}d)", slices[2][1])
     pd = c.execute("SELECT cycle,plan FROM pdsa WHERE status='open' ORDER BY cycle DESC LIMIT 2").fetchall()
-    if pd:
-        add("## OPEN PDSA")
-        for r in pd:
-            add(f"cycle {r['cycle']}: {re.sub(r'\s+',' ',r['plan'] or '')[:180]}")
+    section("OPEN PDSA", pd, lambda r: f"cycle {r['cycle']}: {re.sub(r'\s+', ' ', r['plan'] or '')[:180]}", slices[3][1])
+    line = agenda_line()
+    if line:
+        blocks.append("## AGENDA")
+        blocks.append(line)
+        used += est_tokens(line) + 3
     st = c.execute("SELECT COUNT(*) n, SUM(archived) ar FROM memories").fetchone()
-    add(f"## STATS {st['n']} memories ({st['ar'] or 0} archived), budget ~{used}/{budget} tok")
     print("\n".join(blocks))
+    print(f"## STATS {st['n']} memories ({st['ar'] or 0} archived), budget ~{used + 40}/{a.budget} tok")
     return 0
 
 

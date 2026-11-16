@@ -19,6 +19,8 @@ import sys
 import time
 from pathlib import Path
 
+import fixtures
+
 HERE = Path(__file__).resolve().parent
 SUITE = HERE / "suite" / "suite.json"
 LEDGER = HERE / "ledger.jsonl"
@@ -77,6 +79,7 @@ def mem_available_mb():
 
 def run_task(task, workdir, arm_text, timeout, subagent=False, usage_mode=False):
     workdir.mkdir(parents=True, exist_ok=True)
+    task = fixtures.task(task)          # expand large generated inputs, judge files, verifier
     for name, content in task.get("files", {}).items():
         (workdir / name).parent.mkdir(parents=True, exist_ok=True)
         (workdir / name).write_text(content)

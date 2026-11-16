@@ -1,0 +1,204 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/bhSRqc1RoM46ro5D7aHqm2UDEUk</id>
+  <title>arXiv Query: search_query=all:search-augmented&amp;id_list=&amp;start=0&amp;max_results=6</title>
+  <updated>2026-11-15T16:14:32Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=all:search-augmented&amp;start=0&amp;max_results=6&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>6</opensearch:itemsPerPage>
+  <opensearch:totalResults>3230</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2506.05334v2</id>
+    <title>Search Arena: Analyzing Search-Augmented LLMs</title>
+    <updated>2026-03-02T23:17:18Z</updated>
+    <link href="https://arxiv.org/abs/2506.05334v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2506.05334v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Search-augmented language models combine web search with Large Language Models (LLMs) to improve response groundedness and freshness. However, analyzing these systems remains challenging: existing datasets are limited in scale and narrow in scope, often constrained to static, single-turn, fact-checking questions. In this work, we introduce Search Arena, a crowd-sourced, large-scale, human-preference dataset of over 24,000 paired multi-turn user interactions with search-augmented LLMs. The dataset spans diverse intents and languages, and contains full system traces with around 12,000 human preference votes. Our analysis reveals that user preferences are influenced by the number of citations, even when the cited content does not directly support the attributed claims, uncovering a gap between perceived and actual credibility. Furthermore, user preferences vary across cited sources, revealing that community-driven platforms are generally preferred and static encyclopedic sources are not always appropriate and reliable. To assess performance across different settings, we conduct cross-arena analyses by testing search-augmented LLMs in a general-purpose chat environment and conventional LLMs in search-intensive settings. We find that web search does not degrade and may even improve performance in non-search settings; however, the quality in search settings is significantly affected if solely relying on the model's parametric knowledge. We open-sourced the dataset to support future research. Our dataset and code are available at: https://github.com/lmarena/search-arena.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.IR" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-06-05T17:59:26Z</published>
+    <arxiv:comment>Accepted to ICLR 2026. Code: https://github.com/lmarena/search-arena. Dataset: https://huggingface.co/datasets/lmarena-ai/search-arena-24k</arxiv:comment>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Mihran Miroyan</name>
+    </author>
+    <author>
+      <name>Tsung-Han Wu</name>
+    </author>
+    <author>
+      <name>Logan King</name>
+    </author>
+    <author>
+      <name>Tianle Li</name>
+    </author>
+    <author>
+      <name>Jiayi Pan</name>
+    </author>
+    <author>
+      <name>Xinyan Hu</name>
+    </author>
+    <author>
+      <name>Wei-Lin Chiang</name>
+    </author>
+    <author>
+      <name>Anastasios N. Angelopoulos</name>
+    </author>
+    <author>
+      <name>Trevor Darrell</name>
+    </author>
+    <author>
+      <name>Narges Norouzi</name>
+    </author>
+    <author>
+      <name>Joseph E. Gonzalez</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2504.14689v1</id>
+    <title>Designing AI Systems that Augment Human Performed vs. Demonstrated Critical Thinking</title>
+    <updated>2025-04-20T17:40:28Z</updated>
+    <link href="https://arxiv.org/abs/2504.14689v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2504.14689v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>The recent rapid advancement of LLM-based AI systems has accelerated our search and production of information. While the advantages brought by these systems seemingly improve the performance or efficiency of human activities, they do not necessarily enhance human capabilities. Recent research has started to examine the impact of generative AI on individuals' cognitive abilities, especially critical thinking. Based on definitions of critical thinking across psychology and education, this position paper proposes the distinction between demonstrated and performed critical thinking in the era of generative AI and discusses the implication of this distinction in research and development of AI systems that aim to augment human critical thinking.</summary>
+    <category term="cs.HC" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-04-20T17:40:28Z</published>
+    <arxiv:comment>Presented at the 2025 ACM Workshop on Human-AI Interaction for Augmented Reasoning,</arxiv:comment>
+    <arxiv:primary_category term="cs.HC"/>
+    <arxiv:journal_ref>Proceedings of the 2025 ACM CHI Workshop on Human-AI Interaction for Augmented Reasoning</arxiv:journal_ref>
+    <author>
+      <name>Katelyn Xiaoying Mei</name>
+    </author>
+    <author>
+      <name>Nic Weber</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2302.01690v2</id>
+    <title>See or Hear? Exploring the Effect of Visual and Audio Hints and Gaze-assisted Task Feedback for Visual Search Tasks in Augmented Reality</title>
+    <updated>2023-11-14T09:26:58Z</updated>
+    <link href="https://arxiv.org/abs/2302.01690v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2302.01690v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Augmented reality (AR) is emerging in visual search tasks for increasingly immersive interactions with virtual objects. We propose an AR approach providing visual and audio hints along with gaze-assisted instant post-task feedback for search tasks based on mobile head-mounted display (HMD). The target case was a book-searching task, in which we aimed to explore the effect of the hints together with the task feedback with two hypotheses. H1: Since visual and audio hints can positively affect AR search tasks, the combination outperforms the individuals. H2: The gaze-assisted instant post-task feedback can positively affect AR search tasks. The proof-of-concept was demonstrated by an AR app in HMD and a comprehensive user study (n=96) consisting of two sub-studies, Study I (n=48) without task feedback and Study II (n=48) with task feedback. Following quantitative and qualitative analysis, our results partially verified H1 and completely verified H2, enabling us to conclude that the synthesis of visual and audio hints conditionally improves the AR visual search task efficiency when coupled with task feedback.</summary>
+    <category term="cs.HC" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2023-02-03T12:37:14Z</published>
+    <arxiv:comment>In Proceedings of 2023 IEEE International Symposium on Mixed and Augmented Reality (ISMAR)</arxiv:comment>
+    <arxiv:primary_category term="cs.HC"/>
+    <arxiv:journal_ref>2023 IEEE International Symposium on Mixed and Augmented Reality (ISMAR) (pp. 1113-1122). IEEE</arxiv:journal_ref>
+    <author>
+      <name>Yuchong Zhang</name>
+    </author>
+    <author>
+      <name>Adam Nowak</name>
+    </author>
+    <author>
+      <name>Yueming Xuan</name>
+    </author>
+    <author>
+      <name>Andrzej Romanowski</name>
+    </author>
+    <author>
+      <name>Morten Fjeld</name>
+    </author>
+    <arxiv:doi>10.1109/ISMAR59233.2023.00128</arxiv:doi>
+    <link rel="related" href="https://doi.org/10.1109/ISMAR59233.2023.00128" title="doi"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2601.05503v2</id>
+    <title>Over-Searching in Search-Augmented Large Language Models</title>
+    <updated>2026-03-11T04:17:37Z</updated>
+    <link href="https://arxiv.org/abs/2601.05503v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2601.05503v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Search-augmented large language models (LLMs) excel at knowledge-intensive tasks by integrating external retrieval. However, they often over-search -- unnecessarily invoking search tool even when it does not improve response quality, which leads to computational inefficiency and hallucinations by incorporating irrelevant context. In this work, we conduct a systematic evaluation of over-searching across multiple dimensions, including query types, model categories, retrieval conditions, and multi-turn conversations. Our finding shows: (i) search generally improves answer accuracy on answerable queries but harms abstention on unanswerable ones; (ii) over-searching is more pronounced in complex reasoning models and deep research systems, is exacerbated by noisy retrieval, and compounds across turns in multi-turn conversations; and (iii) the composition of retrieved evidence is crucial, as the presence of negative evidence improves abstention. To quantify over-searching, we introduce Tokens Per Correctness (TPC), an evaluation metric that captures the performance-cost trade-off for search-augmented LLMs. Lastly, we investigate mitigation approaches at both the query and retrieval levels and release the OverSearchQA to foster continued research into efficient search-augmented LLMs.</summary>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-01-09T03:24:46Z</published>
+    <arxiv:comment>Accepted to EACL 2026 Main Conference</arxiv:comment>
+    <arxiv:primary_category term="cs.LG"/>
+    <author>
+      <name>Roy Xie</name>
+    </author>
+    <author>
+      <name>Deepak Gopinath</name>
+    </author>
+    <author>
+      <name>David Qiu</name>
+    </author>
+    <author>
+      <name>Dong Lin</name>
+    </author>
+    <author>
+      <name>Haitian Sun</name>
+    </author>
+    <author>
+      <name>Saloni Potdar</name>
+    </author>
+    <author>
+      <name>Bhuwan Dhingra</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2601.04093v2</id>
+    <title>SearchAttack: Red-Teaming LLMs against Knowledge-to-Action Threats under Online Web Search</title>
+    <updated>2026-02-09T16:11:58Z</updated>
+    <link href="https://arxiv.org/abs/2601.04093v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2601.04093v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Recently, people have suffered from LLM hallucination and have become increasingly aware of the reliability gap of LLMs in open and knowledge-intensive tasks. As a result, they have increasingly turned to search-augmented LLMs to mitigate this issue. However, LLM-driven search also becomes an attractive target for misuse. Once the returned content directly contains targeted, ready-to-use harmful instructions or takeaways for users, it becomes difficult to withdraw or undo such exposure. To investigate LLMs' unsafe search behavior issues, we first propose \textbf{\textit{SearchAttack}} for red-teaming, which (1) rephrases harmful semantics via dense and benign knowledge to evade direct in-context decoding, thus eliciting unsafe information retrieval, (2) stress-tests LLMs' reward-chasing bias by steering them to synthesize unsafe retrieved content. We also curate an emergent, domain-specific illicit activity benchmark for search-based threat assessment, and introduce a fact-checking framework to ground and quantify harm in both offline and online attack settings. Extensive experiments are conducted to red-team the search-augmented LLMs for responsible vulnerability assessment. Empirically, SearchAttack demonstrates strong effectiveness in attacking these systems. We also find that LLMs without web search can still be steered into harmful content output due to their information-seeking stereotypical behaviors.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-01-07T16:59:34Z</published>
+    <arxiv:comment>Misusing LLM-driven search for harmful information-seeking poses serious risks. We characterize its usability and impact through a comprehensive red-teaming and evaluation</arxiv:comment>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Yu Yan</name>
+    </author>
+    <author>
+      <name>Sheng Sun</name>
+    </author>
+    <author>
+      <name>Mingfeng Li</name>
+    </author>
+    <author>
+      <name>Zheming Yang</name>
+    </author>
+    <author>
+      <name>Chiwei Zhu</name>
+    </author>
+    <author>
+      <name>Fei Ma</name>
+    </author>
+    <author>
+      <name>Benfeng Xu</name>
+    </author>
+    <author>
+      <name>Min Liu</name>
+    </author>
+    <author>
+      <name>Qi Li</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2510.14660v1</id>
+    <title>An Efficient Rubric-based Generative Verifier for Search-Augmented LLMs</title>
+    <updated>2025-10-16T13:15:40Z</updated>
+    <link href="https://arxiv.org/abs/2510.14660v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2510.14660v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Search augmentation empowers Large Language Models with retrieval capabilities to overcome the limitations imposed by static parameters. Recently, Reinforcement Learning leverages tailored reward signals as a viable technique to enhance LLMs performing tasks involving search. However, existing reward modeling for search-augmented LLMs faces several limitations. Rule-based rewards, such as Exact Match, are verifiable but fragile to variations in expression and cannot be applied to long-form workloads. In contrast, generative rewards improve robustness, but designing verifiable and stable rewards for long-form workloads in dynamic corpora remains challenging and also incurs high computational costs. In this paper, we propose a unified and verifiable paradigm, "nugget-as-rubric", which treats atomic information points as structured evaluation criteria for different search-augmentation workloads. Short-form tasks correspond to a single rubric, whereas long-form tasks expand to multiple rubrics aligned with the question's information needs. To support long-form settings, we design an automatic rubric construction pipeline based on query rewriting, which can automatically retrieve passages relevant to each question and extract rubrics from them, both from static corpora and from dynamic online web content. Furthermore, we introduce \textbf{Search-Gen-V}, a 4B-parameter efficient generative verifier under our proposed verifiable paradigm, which is trained via the idea of distillation and a two-stage strategy. Experimental results show that Search-Gen-V achieves strong verification accuracy across different workloads, making it a scalable, robust, and efficient verifiable reward constructor for search-augmented LLMs.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.IR" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-10-16T13:15:40Z</published>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Linyue Ma</name>
+    </author>
+    <author>
+      <name>Yilong Xu</name>
+    </author>
+    <author>
+      <name>Xiang Long</name>
+    </author>
+    <author>
+      <name>Zhi Zheng</name>
+    </author>
+  </entry>
+</feed>

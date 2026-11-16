@@ -1,0 +1,353 @@
+#!/usr/bin/env python3
+"""pi-review — the periodic reflection pass over the harness itself.
+
+Metrics catch a system that degrades; only a review catches a system that has quietly stopped
+mattering (rules nobody follows, docs nobody reads, an evaluation that can no longer accept
+anything). This walks the setup, scores each signal, writes `selfimprove/review.md`, and exits 1 if
+any hard signal fails so a timer (or preflight) cannot ignore it.
+
+  pi-review            score every signal, rewrite review.md, print the table
+  pi-review --quiet    only write review.md (timer use)
+  pi-review --json     machine-readable
+
+Signals are computed, never asserted: file counts, ledger rows, budget ratios, unit states, ages.
+The ACTIONS block is derived from the failing/warning signals, so acting on it is mechanical.
+"""
+import argparse
+import json
+import re
+import shutil
+import sqlite3
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+AGENT = Path(__file__).resolve().parent.parent
+SI = AGENT / "selfimprove"
+MEM = AGENT / "memory" / "memory.db"
+REVIEW = SI / "review.md"
+OUT = []
+STATE = {"pass": 0, "warn": 0, "fail": 0}
+
+
+def add(name, verdict, detail, action=None):
+    STATE[verdict] += 1
+    OUT.append({"signal": name, "state": verdict, "detail": detail, "action": action})
+
+
+def sh(*cmd, cwd=AGENT, timeout=120):
+    try:
+        p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout)
+        return p.returncode, p.stdout, p.stderr
+    except Exception as e:
+        return 127, "", str(e)
+
+
+def days(ts):
+    return (time.time() - ts) / 86400 if ts else 9999
+
+
+# ---------------------------------------------------------------- signals
+def s_agents_md():
+    p = AGENT / "AGENTS.md"
+    lines = len(p.read_text().splitlines())
+    missing = []
+    for tok in set(re.findall(r"`([^`\s]+)`", p.read_text())):
+        if tok.startswith(("mem ", "pi-", "git ", "--", "$")) or " " in tok:
+            continue
+        if not re.match(r"^[\w./-]+\.(md|py|json|ts|sh|service|timer)$", tok.strip(".,;:()")):
+            continue
+        t = tok.strip(".,;:()")
+        if t.startswith(("docs/", "examples/")):      # Pi's own documentation, not ours
+            continue
+        cand = [AGENT / t, SI / t, Path.home() / t, Path.home() / ".pi" / "agent" / t]
+        if not any(c.exists() for c in cand):
+            missing.append(t)
+    if missing:
+        add("agents.md", "fail", f"{lines} lines, {len(missing)} referenced path(s) missing: {', '.join(sorted(missing)[:4])}",
+            f"fix or drop the dangling reference(s): {', '.join(sorted(missing)[:4])}")
+    elif lines > 130:
+        add("agents.md", "warn", f"{lines} lines (>130) — over the ~120-line budget; move detail into the doc it points at",
+            "trim AGENTS.md back under ~125 lines")
+    else:
+        add("agents.md", "pass", f"{lines} lines, every referenced path exists")
+
+
+def s_suite():
+    rows = [json.loads(l) for l in (SI / "ledger.jsonl").read_text().splitlines() if l.strip()]
+    if not rows:
+        add("suite", "fail", "no ledger rows", "run selfimprove/run.py --arm arms/base.md")
+        return
+    cur = __import__("hashlib").sha256((SI / "suite" / "suite.json").read_bytes()).hexdigest()
+    same = [r for r in rows if r.get("suite_sha") == cur and r.get("arm") == "base"]
+    last = same[-1] if same else rows[-1]
+    age = days(__import__("datetime").datetime.strptime(last["stamp"], "%Y%m%dT%H%M%S").timestamp())
+    n_tasks = len(json.loads((SI / "suite" / "suite.json").read_text())["tasks"])
+    pr = last["pass_rate"]
+    detail = f"{n_tasks} tasks, last base {last['passed']}/{last['n']} ({pr:.2f}) {age:.1f}d ago"
+    if age > 21:
+        add("suite", "warn", detail + " — stale evidence", "re-run base on the pinned suite")
+    elif pr >= 0.999 and last.get("suite_sha") == cur:
+        add("suite", "warn", detail + " — saturated: gate can accept only non-inferiority on cost",
+            "at ceiling only cost moves: either add a task class base fails, or A/B a cost arm (gate accepts ACCEPT_COST at >=10% fewer output tokens)")
+    else:
+        add("suite", "pass", detail)
+
+
+def s_delegation():
+    led = AGENT / "delegation" / "ledger.jsonl"
+    rows = [json.loads(l) for l in led.read_text().splitlines() if l.strip() and l.strip().startswith("{")]
+    used = {}
+    open_rows = 0
+    for r in rows:
+        used[r.get("agent")] = used.get(r.get("agent"), 0) + 1
+        if not r.get("verdict"):
+            open_rows += 1
+    roster = [p.stem for p in (AGENT / "agents").glob("*.md")]
+    dead = [a for a in roster if a not in used]
+    # fresh rows are still actionable; only rows nobody judged for >7d are a policy blind spot
+    stale = open_rows
+    try:
+        r = subprocess.run([str(AGENT / "bin" / "pi-delegate"), "flow", "--days", "30", "--json"],
+                           capture_output=True, text=True, timeout=60)
+        if r.returncode == 0:
+            stale = json.loads(r.stdout).get("unverified_stale", open_rows)
+    except Exception:
+        pass
+    share = stale / max(1, len(rows))
+    detail = (f"{len(rows)} dispatches, {open_rows} without verdict, {stale} stale (>7d); "
+              f"roster {', '.join(sorted(roster))}")
+    if share > 0.3:
+        add("delegation", "warn", detail + f"; never dispatched: {', '.join(dead) or 'none'}",
+            "close verdicts with `pi-delegate verdict pass|fail`, or the policy learns from partial evidence")
+    elif dead:
+        add("delegation", "warn", detail + f"; never dispatched: {', '.join(dead)}",
+            f"delete or exercise the unused agent(s): {', '.join(dead)}")
+    else:
+        add("delegation", "pass", detail)
+
+
+def s_memory():
+    rc, out, _ = sh(str(AGENT / "bin" / "mem"), "brief")
+    m = re.search(r"budget ~(\d+)/(\d+)", out)
+    rc2, st, _ = sh(str(AGENT / "bin" / "mem"), "stats")
+    live = re.search(r"memories: (\d+) total, (\d+) live", st)
+    digest_age = 9999
+    n_knowledge = None
+    try:
+        c = sqlite3.connect(f"file:{MEM}?mode=ro", uri=True)
+        row = c.execute("SELECT MAX(ts) FROM memories WHERE kind='digest' AND archived=0").fetchone()
+        digest_age = days(row[0]) if row and row[0] else 9999
+        # Digests are derived summaries, not knowledge: counting them against the
+        # 150-live-row ceiling made "mem consolidate --digest" push the setup over
+        # the ceiling it was run to fix (2026-11-15: 143 knowledge + 26 digests).
+        n_knowledge = c.execute(
+            "SELECT COUNT(*) FROM memories WHERE archived=0 AND kind!='digest'").fetchone()[0]
+    except Exception:
+        pass
+    used, budget = (int(m.group(1)), int(m.group(2))) if m else (0, 0)
+    n_live = int(live.group(2)) if live else 0
+    ratio = used / budget if budget else 0
+    detail = (f"brief {used}/{budget} tok ({ratio:.0%}), {n_knowledge if n_knowledge is not None else n_live} "
+              f"knowledge row(s) + {n_live - (n_knowledge or 0)} digest(s), last digest {digest_age:.0f}d ago")
+    if not m or not live:
+        add("memory", "fail", "mem brief/stats did not answer", "bin/mem doctor")
+    elif ratio > 0.92:
+        add("memory", "warn", detail + " — working set is full; new memories will not reach the brief",
+            "mem consolidate --digest, or archive what no longer matters")
+    elif (n_knowledge if n_knowledge is not None else n_live) > 150 or digest_age > 21:
+        add("memory", "warn", detail + " — consolidation due",
+            "mem consolidate --digest (weekly, or past 150 live memories)")
+    else:
+        add("memory", "pass", detail)
+
+
+def s_guards():
+    rc, out, err = sh(str(AGENT / "bin" / "pi-preflight"), "--quiet")
+    if rc != 0:
+        add("guards", "fail", "pi-preflight failing: " + (out + err).strip().replace("\n", "; ")[:200],
+            "fix the failing preflight check before anything else")
+        return
+    inc = (AGENT / "INCIDENTS.md").read_text()
+    entries = [b for b in inc.split("\n## ") if b.strip() and not b.startswith("#")]
+    unguarded = [b.splitlines()[0][:60] for b in entries if "Lives in" not in b]
+    if unguarded:
+        add("guards", "warn", f"{len(unguarded)} incident(s) without a 'Lives in' guard: {unguarded[0]}",
+            "add the executable guard and where it lives to INCIDENTS.md")
+    else:
+        add("guards", "pass", f"preflight green, {len(entries)} incident(s) all carry a guard")
+
+
+def s_timers():
+    rc, out, _ = sh("systemctl", "--user", "list-unit-files", "pi-*", "--no-legend")
+    rows = [l.split() for l in out.splitlines() if l.strip()]
+    timers = [r[0] for r in rows if r[0].endswith(".timer")]
+    disabled = [r[0] for r in rows if r[0].endswith(".timer") and len(r) > 1 and r[1] != "enabled"]
+    if not timers:
+        add("timers", "fail", "no pi-*.timer installed", "install pi-selfimprove / pi-publish / pi-review timers")
+    elif disabled:
+        add("timers", "warn", f"not enabled: {', '.join(disabled)}", f"systemctl --user enable {' '.join(disabled)}")
+    else:
+        add("timers", "pass", f"enabled: {', '.join(sorted(timers))}")
+
+
+def s_skills():
+    bad = []
+    skills = sorted((AGENT / "skills").glob("*/SKILL.md"))
+    for p in skills:
+        head = p.read_text().split("---")[1] if p.read_text().startswith("---") else ""
+        if "name:" not in head or "description:" not in head or len(head) < 80:
+            bad.append(p.parent.name)
+    if bad:
+        add("skills", "fail", f"frontmatter incomplete: {', '.join(bad)}", "fix the SKILL.md frontmatter")
+    else:
+        add("skills", "pass", f"{len(skills)} skill(s) with valid frontmatter")
+
+
+def s_vendor():
+    """Vendored skill packs: an unread upstream update is how a self-improvement edit disappears."""
+    lock = AGENT / "upstream" / "skills.lock.json"
+    if not lock.exists():
+        add("vendor", "pass", "no vendored skill packs")
+        return
+    tool = AGENT / "bin" / "pi-skills"
+    try:
+        r = subprocess.run([str(tool), "verify"], capture_output=True, text=True, timeout=180)
+        if r.returncode != 0:
+            add("vendor", "fail", (r.stdout.strip().splitlines() or ["verify failed"])[0],
+                "run bin/pi-skills verify, then update upstream/LOCAL-CHANGES.md")
+            return
+        st = subprocess.run([str(tool), "status"], capture_output=True, text=True, timeout=180)
+        up = next((l for l in st.stdout.splitlines() if l.startswith("upstream")), "")
+        pinned = next((l for l in st.stdout.splitlines() if l.startswith("pin")), "")
+        if "no new commits" in up:
+            add("vendor", "pass", f"{pinned.split('version')[-1].strip()} pinned, no upstream drift")
+        else:
+            add("vendor", "warn", up.replace("upstream", "").strip() or "upstream moved",
+                "bin/pi-skills update --dry-run, then follow upstream/PROTOCOL.md")
+    except Exception as e:
+        add("vendor", "warn", f"pi-skills unavailable: {e}", "fix bin/pi-skills")
+
+
+def s_publish():
+    st = AGENT / "publish" / "status.json"
+    state = json.loads((AGENT / "publish" / "state.json").read_text())
+    pushes = [t for t in state.get("history", []) if time.time() - t < 7 * 86400]
+    if not (AGENT / "publish" / "enabled").exists():
+        add("publish", "warn", "disabled (no publish/enabled)", "enable when the snapshot should go out")
+        return
+    if not st.exists():
+        add("publish", "warn", "no run recorded yet", "bin/pi-publish --push")
+        return
+    d = json.loads(st.read_text())
+    age = days(d["ts"])
+    detail = f"last attempt {age:.1f}d ago — {d['outcome']}: {d['reason'][:120]}; {len(pushes)}/2 in 7d"
+    if age > 9:
+        add("publish", "warn", detail + " — timer has not run", "check pi-publish.timer / systemctl --user status")
+    elif d["outcome"] in ("failed", "blocked"):
+        add("publish", "warn", detail, "fix the blocker or record why publishing stays paused")
+    else:
+        add("publish", "pass", detail)
+
+
+def s_pdsa():
+    try:
+        c = sqlite3.connect(f"file:{MEM}?mode=ro", uri=True)
+        rows = c.execute("SELECT cycle, updated, created, plan FROM pdsa WHERE status='open' ORDER BY cycle").fetchall()
+    except Exception:
+        add("pdsa", "fail", "cannot read pdsa table", "bin/mem doctor")
+        return
+    stale = [(r[0], days(r[1] or r[2])) for r in rows if days(r[1] or r[2]) > 21]
+    detail = f"{len(rows)} open cycle(s)" + (f"; stale: {', '.join(f'#{c}({d:.0f}d)' for c, d in stale)}" if stale else "")
+    if not rows:
+        add("pdsa", "warn", "no open cycle — a system with no open cycle is stalled", "open one with `mem pdsa new`")
+    elif stale:
+        add("pdsa", "warn", detail, "advance or close the stale cycle with its measured result")
+    else:
+        add("pdsa", "pass", detail)
+
+
+def s_mind():
+    """The curiosity/creativity loop: an unexercised practice is a slogan, not a skill."""
+    mind = AGENT / "mind"
+    j = mind / "journal.jsonl"
+    if not j.exists() or not j.read_text().strip():
+        add("mind", "fail", "no curiosity/creativity episodes logged",
+            "log one with `bin/pi-mind log ...` (skills: curiosity, creativity)")
+        return
+    rows = [json.loads(l) for l in j.read_text().splitlines() if l.strip().startswith("{")]
+    last = max((r.get("ts", 0) for r in rows), default=0)
+    age = days(last)
+    kinds = {}
+    for r in rows:
+        kinds[r.get("kind")] = kinds.get(r.get("kind"), 0) + 1
+    rep = mind / "REPORT.md"
+    rage = days(rep.stat().st_mtime) if rep.exists() else 999
+    foc = json.loads((mind / "focus.json").read_text()) if (mind / "focus.json").exists() else {}
+    ref = foc.get("last_refresh", 0)
+    lage = days(ref) if ref else 999
+    detail = (f"{len(rows)} episodes ({', '.join(f'{k}:{v}' for k, v in sorted(kinds.items()))}), "
+              f"last {age:.1f}d; report {rage:.0f}d; lit refresh {lage:.0f}d")
+    if age > 14:
+        add("mind", "warn", detail + " — practice went stale",
+            "run one real episode today: `bin/pi-mind next`, then log it with bin/pi-mind log")
+    elif rage > 10:
+        add("mind", "warn", detail + " — report not refreshed", "bin/pi-mind report")
+    elif lage > 60:
+        add("mind", "warn", detail + " — literature due for a refresh",
+            "walk 3 new seeds with research/litwalk.py, update research/curiosity-creativity.md, `bin/pi-mind next --refresh ...`")
+    else:
+        add("mind", "pass", detail)
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--quiet", action="store_true")
+    ap.add_argument("--json", action="store_true")
+    a = ap.parse_args()
+
+    for fn in (s_agents_md, s_suite, s_delegation, s_memory, s_guards, s_timers, s_skills, s_vendor,
+               s_publish, s_pdsa, s_mind):
+        try:
+            fn()
+        except Exception as e:                     # a review that crashes is worse than one that warns
+            add(fn.__name__[2:], "fail", f"check crashed: {e!r}", "fix the review signal itself")
+
+    stamp = time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime())
+    actions = [r["action"] for r in OUT if r["action"]]
+    lines = [f"# Harness review — {stamp}", "",
+             f"{STATE['pass']} pass · {STATE['warn']} warn · {STATE['fail']} fail", "",
+             "| signal | state | detail |", "|---|---|---|"]
+    for r in OUT:
+        lines.append(f"| {r['signal']} | {r['state']} | {r['detail'].replace('|', '/')} |")
+    lines += ["", "## ACTIONS", ""]
+    lines += [f"- {x}" for x in actions] or ["- nothing to act on; the setup is consistent"]
+    lines += ["", "## Standing questions (answer in one line each next session)", "",
+              "- What did the last three sessions do that the rules here do not mention?",
+              "- Which doc, skill, agent or arm has not been used since it was written?",
+              "- Which rule did I break this week, and is the guard executable or a promise?", ""]
+    body = "\n".join(lines)
+    REVIEW.write_text(body)
+    # A failed run must leave a trace: review.md is overwritten by the next pass, so on 2026-11-15
+    # the 05:15 exit 1 left nothing but a journal line and its cause was unrecoverable by the time
+    # a session looked (the same table would have said which signal failed).
+    if STATE["fail"]:
+        fail_copy = SI / f"review-fail-{time.strftime('%Y-%m-%dT%H%M')}.md"
+        fail_copy.write_text(body)
+        OUT.append({"signal": "review", "state": "fail",
+                    "detail": f"failed table kept at {fail_copy.name}", "action": None})
+
+    if a.json:
+        print(json.dumps({"stamp": stamp, "state": STATE, "signals": OUT, "actions": actions}, indent=1))
+    elif not a.quiet:
+        for r in OUT:
+            print(f"{r['state']:4s} {r['signal']:10s} {r['detail']}")
+        print(f"\n{STATE['pass']} pass · {STATE['warn']} warn · {STATE['fail']} fail → {REVIEW}")
+        for x in actions:
+            print(f" - {x}")
+    return 1 if STATE["fail"] else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

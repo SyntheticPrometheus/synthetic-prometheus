@@ -8,9 +8,14 @@ self-improve suite, or a shell where no TUI is running.
   pi-delegate plan  "<task>" [--cwd DIR] [--files N]     decide solo / delegate / parallel
   pi-delegate run   --agent NAME --task "..." [--cwd DIR] [--model M] [--timeout S]
                                                           dispatch one agent, fold its output
+  pi-delegate record --agent window:<name> --task "..." [--cwd DIR] [--cost X]
+                                                          log a human-visible window (pi-term) as a dispatch
   pi-delegate verdict pass|fail [--sha SHA|--last] [--note "..."]
                                                           record the real outcome of a dispatch
   pi-delegate report [--min-n N]                          posteriors + proposals
+  pi-delegate flow  [--days N] [--json]                  flow/economics metrics for the retro
+  pi-delegate partition --shard a=f1,f2 --shard b=f3      file-ownership gate before a fan-out
+  pi-delegate panel --target PATH --risk "..."           disjoint-lens tester panel (2-4 testers)
   pi-delegate agents                                      list agent definitions
 
 Ledger: ~/.pi/agent/delegation/ledger.jsonl (append-only JSONL; dispatch rows from the extension
@@ -43,17 +48,28 @@ BUCKETS = {
     "recon": r"\b(find|locate|where|search|grep|which files?|list all|inventory|recon|explore|scan|survey|trace|map (out|the))\b",
     "patch": r"\b(fix|implement|add|refactor|migrat|patch|rewrite|change|update|rename|make .* pass|bump)\b",
     "verify": r"\b(verify|check|confirm|audit|re-?run|reproduce|does .* (pass|work)|validate|review)\b",
+    # break-it requests: a tester lens, not a confirmation run (policy §1e)
+    "breaking": r"\b(fuzz|break|bugs?|edge cases?|adversarial|exploit|vulnerab|smoke out)\b",
     "research": r"\b(find papers?|arxiv|literature|state of the art|cite|survey|look up|docs for|upstream)\b",
     "bulk": r"\b(each of|every (file|row|line|item)|batch|all \d+|n=|triage|classify|extract from each)\b",
     "understand": r"\b(read|understand|summari[sz]e|explain|interpret|why|compare|review|audit)\b",
+    # human-visible work: the one route the regex used to miss (Laya's `visible` probe is 88% on 24
+    # cases; the cue is the cheap half and Laya is the advisory half)
+    "window": r"\b(watch|live log|tail -f|soak|interactive session|until it (finishes|completes)|"
+              r"show me the (live )?(log|output)|attach to)\b",
 }
+
+# A window (pi-term) is a dispatch with a human in the loop: same ledger, same verdict, its own
+# denominators — its wall time and $ are not comparable to a subagent's (policy §6b).
+WINDOW_MODE = "window"
+
 
 # ordered by specificity: an execution cue beats a reading cue when both match
 AGENT_FIT = {
     "worker": {"patch"},
+    "tester": {"breaking"},
     "bulker": {"bulk"},
     "verifier": {"verify"},
-    "researcher": {"research"},
     "scout": {"recon", "understand"},
 }
 
@@ -63,6 +79,49 @@ SOLO_CUES = r"\b(one file|single file|this function|this line|in this file|less 
 # to delegate it dispatched nothing. Counting is shell work, not reading work.
 SHELL_CUES = (r"\b(count|counts|how many|sum|total|average|join|grep|rg|ripgrep|which lines?|each line|"
               r"aggregate|find|locate|list all|which files?|compare (?:the )?(?:file )?sizes?)\b")
+
+# Definition of Ready (policy v3): a dispatch that cannot state these six fields is not ready.
+DOR = {
+    "GOAL": r"\bgoal\b",
+    "INPUTS": r"\b(inputs?|paths?|files?|ids?)\b",
+    "OUTPUT": r"\b(output|fold|return|reply|shape)\b",
+    "ACCEPTANCE": r"\b(acceptance|verify|check|test|pass(es|ing)?|command)\b",
+    "SCOPE": r"\b(scope|read-only|touch only|do not edit|forbidden)\b",
+    "BUDGET": r"\b(budget|minutes?|turns?|timeout|tool calls?)\b",
+}
+
+# Files that many shards depend on. A fan-out that gives one of these to two workers, or to
+# nobody, is the classic integration failure (Brooks; Team Topologies: shared platform).
+HUB_NAMES = {
+    "Cargo.toml", "Cargo.lock", "package.json", "package-lock.json", "pnpm-lock.yaml",
+    "yarn.lock", "pyproject.toml", "poetry.lock", "uv.lock", "setup.py", "setup.cfg",
+    "go.mod", "go.sum", "Makefile", "CMakeLists.txt", "tsconfig.json", "mod.rs",
+    "lib.rs", "main.rs", "__init__.py", "conftest.py", "schema.prisma", "docker-compose.yml",
+}
+HUB_RE = re.compile(r"(^|/)(\.github/workflows/|migrations/|schema/|proto/)|(\.lock|lock\.json)$", re.I)
+
+
+def dor_fields(task: str) -> list[str]:
+    """Which of the six contract fields the task text actually names (cheap, lexical)."""
+    return [k for k, pat in DOR.items() if re.search(pat, task, re.I)]
+
+
+def wip(rows: list[dict]) -> tuple[int, int]:
+    """Dispatches in the last 24 h and last 1 h — a cheap Little's-law probe, not a hard gate."""
+    now_ts = time.time()
+    d1 = d24 = 0
+    for r in rows:
+        if r.get("type") or not r.get("agent"):
+            continue
+        try:
+            ts = datetime.fromisoformat(r["ts"].replace("Z", "+00:00")).timestamp()
+        except Exception:
+            continue
+        if now_ts - ts <= 86400:
+            d24 += 1
+        if now_ts - ts <= 3600:
+            d1 += 1
+    return d1, d24
 
 
 def now() -> str:
@@ -119,6 +178,7 @@ def posteriors(rows: list[dict]) -> dict:
         outcome = v["verdict"] if v else None
         for b in buckets:
             s = stats.setdefault((d["agent"], b), {"n": 0, "pass": 0, "fail": 0, "unverified": 0,
+                                                   "expired": 0,
                                                    "in": 0, "out": 0, "cost": 0.0, "wall": 0.0})
             s["n"] += 1
             s["in"] += d.get("input", 0) or 0
@@ -129,6 +189,8 @@ def posteriors(rows: list[dict]) -> dict:
                 s["pass"] += 1
             elif outcome == "fail":
                 s["fail"] += 1
+            elif outcome == "expired":
+                s["expired"] += 1
             else:
                 s["unverified"] += 1
     return stats
@@ -150,6 +212,25 @@ def cmd_agents(_args) -> int:
         desc = re.search(r"^description:\s*(.+)$", text, re.M)
         print(f"{f.stem:<10} {(desc.group(1) if desc else '').strip()[:110]}")
     return 0
+
+
+def decide(task: str) -> tuple[str, list[str]]:
+    """The regex decider, shared by `plan` and `route` so the two cannot drift."""
+    cues = classify(task)
+    understand = "understand" in cues
+    shell_cue = re.search(SHELL_CUES, task, re.I)
+    file_tokens = set(re.findall(r"\b[\w/.-]+\.(?:py|ts|tsx|js|sh|rs|go|md|json|ya?ml|txt)\b", task))
+    narrow = len(file_tokens) <= 2 and "patch" in cues and not re.search(
+        r"\b(each|all|every|across|shards?|modules?|files?)\b", task, re.I)
+    fits = [a for a, bs in AGENT_FIT.items() if bs & set(cues)]
+    if (shell_cue and not understand) or narrow:
+        fits = []
+    order = ["worker", "tester", "bulker", "verifier", "scout"]
+    if "window" in cues:
+        return "WINDOW", cues
+    if fits and not re.search(SOLO_CUES, task, re.I):
+        return f"DELEGATE:{next(a for a in order if a in fits)}", cues
+    return "SOLO", cues
 
 
 def cmd_plan(args) -> int:
@@ -180,8 +261,11 @@ def cmd_plan(args) -> int:
         notes.append(f"{args.files} files: context-lossy, the parent only needs the digest "
                      "(Context-Folding 2510.11967; subagent-vs-skill 2609.09233)")
     if "bulk" in cues:
-        notes.append("independent items: one fixed rule over many items fits bulker; keep the rule "
-                     "in the contract, not in the child's judgement")
+        notes.append("independent items: local-batch first (free, offline, agreement gate), bulker "
+                     "for the residue; keep the rule in the contract, not the child's judgement")
+    if "window" in cues:
+        notes.append("visible work: `pi-term --name ...` opens it tiled, records it, closes it on exit "
+                     "(policy §6b)")
 
     fits = [a for a, bs in AGENT_FIT.items() if bs & set(cues)]
     if shell_cue and not understand:
@@ -207,18 +291,29 @@ def cmd_plan(args) -> int:
     for n in notes:
         print("  -", n)
 
-    decision = "SOLO"
-    if fits and not re.search(SOLO_CUES, task, re.I):
-        # execution cues beat reading cues; bulker batches instead of fanning out
-        order = ["worker", "bulker", "verifier", "researcher", "scout"]
-        decision = f"DELEGATE:{next(a for a in order if a in fits)}"
-        if decision.endswith("worker") and not shell_cue:
-            decision += " (worker then verifier)"
+    if "window" not in cues:
+        present = dor_fields(task)
+        missing = [k for k in DOR if k not in present]
+        print(f"contract (DoR): {len(present)}/6 fields — "
+              + ("ready" if not missing else f"missing {', '.join(missing)}; add them before dispatch"))
+    else:
+        print("contract (window): name + task + close path — `pi-term --name <slug> \"<task>\"`")
+    d1, d24 = wip(read_ledger())
+    print(f"wip: {d1} dispatch(es) last 1h, {d24} last 24h — cap is 4 concurrent, <=8 per fan-out")
+    shard_files = sorted(set(file_tokens))
+    if len(shard_files) >= 2 and "patch" in cues:
+        print("partition: before fanning out, run `pi-delegate partition --shard a=... --shard b=...` "
+              "(overlap or unowned hub file = no fan-out)")
+
+    decision, _ = decide(task)
+    if decision == "DELEGATE:worker" and not shell_cue:
+        decision += " (worker then verifier)"
     if "verify" in cues:
         notes.append("verifier caveat: worth a dispatch when the claim is about to be reported or its "
                      "author is also its judge; a 1-second check you can run yourself is not")
     print(f"decision: {decision}")
-    print("reasons: delegation/policy.md (v2) — cue-based until the ledger has ≥3 verified samples per cell")
+    print("reasons: delegation/policy.md (v3) — partition/DoR/WIP; cue-based until the ledger has "
+          "≥3 verified samples per cell")
     return 0
 
 
@@ -242,6 +337,10 @@ def cmd_run(args) -> int:
     agent = load_agent(args.agent)
     cwd = Path(args.cwd or ".").resolve()
     model = args.model or agent["model"]
+    if (model or "").startswith("local/") and not args.allow_local:
+        sys.exit("pi-delegate: refusing a Pi subagent on a local model (measured 397 s for a 2-token "
+                 "reply: the harness prompt is 6.9k tokens at ~17 t/s prefill). Use `bin/local-gen` "
+                 "for <20 items or `bin/local-batch` for bulk; pass --allow-local only to re-measure.")
     cmd = [PI, "--mode", "json", "-p", "--no-session"]
     if model:
         cmd += ["--model", model]
@@ -253,7 +352,11 @@ def cmd_run(args) -> int:
     # Never inherit a parent session's model/thinking: a dispatched agent must resolve its own
     # model (CADMAS-CTX 2604.17950 — the capability posterior is per model+context, so a child that
     # silently changes model makes the ledger lie).
-    env = {k: v for k, v in os.environ.items() if not k.startswith("PI_") or k == "PI_AGENT_DIR"}
+    # keep the claim owner so a child's `pi-claim` call lands on the parent's lease instead of
+    # inventing a third session (CONCURRENCY.md)
+    keep = {"PI_AGENT_DIR", "PI_CLAIM_OWNER"}
+    env = {k: v for k, v in os.environ.items() if not k.startswith("PI_") or k in keep}
+    env.setdefault("PI_CLAIM_OWNER", os.environ.get("PI_SESSION_ID", ""))
     t0 = time.time()
     try:
         p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=args.timeout,
@@ -312,6 +415,38 @@ def cmd_run(args) -> int:
     return 0 if status == "completed" else 1
 
 
+def cmd_record(args) -> int:
+    """Append one dispatch row for a human-visible window, so a window is the same evidence class as
+    a subagent: it can be given a verdict, or expire. `pi-term` calls this on open; the shape is the
+    `run` row's, with cost 0 and wall 0 unless the caller knows better (mode="window")."""
+    task = " ".join(args.task.split())
+    if not task:
+        sys.exit("pi-delegate: record needs --task (a window with no stated task cannot be judged)")
+    cwd = Path(args.cwd or ".").resolve()
+    agent = args.agent if args.agent.startswith("window:") else f"window:{args.agent}"
+    sha = task_sha(task)
+    if args.win_id:
+        # idempotent per window id: a retry of the open hook must not double-count the dispatch
+        for r in read_ledger():
+            if r.get("mode") == WINDOW_MODE and r.get("win_id") == args.win_id:
+                print(f"window:{agent.split(':', 1)[-1]} already recorded sha={r.get('task_sha')}")
+                return 0
+    row = {"ts": now(), "mode": WINDOW_MODE, "agent": agent, "agent_source": "window",
+           "model": args.model or "", "status": "open", "stop_reason": None,
+           "cwd": str(cwd), "bucket": classify(task),
+           "task": task[:200], "task_sha": sha,
+           "input": 0, "output": 0, "cache_read": 0, "cache_write": 0,
+           "context_tokens": 0, "turns": 0, "cost": float(args.cost or 0.0),
+           "wall_ms": int(args.wall_ms or 0), "win_id": args.win_id or None}
+    append([row])
+    if args.json:
+        print(json.dumps({"row": row, "sha": sha}, indent=1))
+    else:
+        print(f"recorded {agent} bucket={','.join(row['bucket'])} status=open sha={sha} "
+              f"cost=${row['cost']:.4f}")
+    return 0
+
+
 def cmd_verdict(args) -> int:
     rows = read_ledger()
     sha = args.sha
@@ -328,21 +463,55 @@ def cmd_verdict(args) -> int:
     return 0
 
 
+def cmd_expire(args) -> int:
+    """A dispatch nobody checked within the window can no longer be judged honestly; mark it, so
+    the unverified share reflects what is still actionable instead of warning forever."""
+    rows = read_ledger()
+    verdicts = {r.get("task_sha") for r in rows if r.get("type") == "verdict"}
+    cutoff = time.time() - args.days * 86400
+    out = []
+    for r in rows:
+        if r.get("type") == "verdict" or not r.get("agent"):
+            continue
+        if r.get("task_sha") in verdicts:
+            continue
+        try:
+            ts = datetime.fromisoformat(r["ts"].replace("Z", "+00:00")).timestamp()
+        except Exception:
+            continue
+        if ts < cutoff:
+            out.append({"ts": now(), "type": "verdict", "task_sha": r["task_sha"],
+                        "verdict": "expired", "by": "guard",
+                        "note": f"unverifiable after {args.days}d without a verdict"})
+    if out:
+        append(out)
+    print(f"expired {len(out)} dispatch(es) older than {args.days}d")
+    return 0
+
+
 def cmd_report(args) -> int:
     rows = read_ledger()
     stats = posteriors(rows)
     if not stats:
         print("ledger empty — no delegations yet")
         return 0
-    print(f"{'agent':<10} {'bucket':<9} {'n':>3} {'pass':>4} {'fail':>4} {'unv':>4} {'mean':>5} {'risk':>5} "
+    # window rows carry names like `window:<slug>`, so the agent column is as wide as its longest cell
+    aw = max([10] + [len(a) for a, _ in stats])
+    bw = max([9] + [len(b) for _, b in stats])
+    print(f"{'agent':<{aw}} {'bucket':<{bw}} {'n':>3} {'pass':>4} {'fail':>4} {'unv':>4} {'exp':>4} {'mean':>5} {'risk':>5} "
           f"{'out_tok':>8} {'$':>8} {'wall_s':>7}")
     proposals = []
     for (agent, bucket), s in sorted(stats.items(), key=lambda kv: (kv[0][0], kv[0][1])):
         mean, risk = score(s)
-        print(f"{agent:<10} {bucket:<9} {s['n']:>3} {s['pass']:>4} {s['fail']:>4} {s['unverified']:>4} "
+        print(f"{agent:<{aw}} {bucket:<{bw}} {s['n']:>3} {s['pass']:>4} {s['fail']:>4} {s['unverified']:>4} "
+              f"{s['expired']:>4} "
               f"{mean:>5.2f} {risk:>5.2f} {s['out']:>8} {s['cost']:>8.4f} {s['wall']:>7.1f}")
         if s["n"] >= args.min_n:
-            if s["fail"] >= 2 and mean < 0.5:
+            if s["unverified"] * 2 > max(1, s["n"] - s["expired"]):
+                # a cell whose rows are mostly unchecked cannot support a KEEP/DROP claim
+                proposals.append(f"MEASURE {agent}/{bucket}: {s['unverified']}/{s['n']} dispatches unverified — "
+                                 f"mean {mean:.2f} is provisional; log `pi-delegate verdict pass|fail`")
+            elif s["fail"] >= 2 and mean < 0.5:
                 proposals.append(f"DROP {agent}/{bucket}: {s['fail']} verified failures (risk {risk:.2f}) — "
                                  f"stop delegating this cell, keep the row as evidence")
             elif mean >= 0.8 and s["pass"] >= 2:
@@ -351,10 +520,528 @@ def cmd_report(args) -> int:
             elif s["unverified"] == s["n"]:
                 proposals.append(f"MEASURE {agent}/{bucket}: all {s['n']} dispatches unverified — run "
                                  f"`pi-delegate verdict pass|fail` after checking, or the cell cannot be judged")
+    n_all = sum(s["n"] for s in stats.values())
+    n_unv = sum(s["unverified"] for s in stats.values())
+    if n_all and n_unv * 10 > n_all * 3:
+        print(f"\nwarning: {n_unv}/{n_all} dispatches never got a verdict — the policy is learning from "
+              f"partial evidence; close rows with `pi-delegate verdict pass|fail`")
     if proposals:
         print("\nproposals (act via skills/delegate/SKILL.md; A/B them through selfimprove/):")
         for p in proposals:
             print(" -", p)
+    return 0
+
+
+# Laya routing probe. The 7-way route question was measured at 25% zero-shot against 54% for the
+# regex on 24 labeled cases (delegation/route-eval.py) — so it is advisory, never the decider.
+# The `visible` binary was 88% (21/24, both positives at >=0.83), which is good enough to suggest a
+# pi-term window. Keep the wording identical to route-eval.py or the numbers stop transferring.
+LAYA_QUESTIONS = {
+    "route": {
+        "type": "choice",
+        "instructions": "How should a coding agent handle this task?",
+        "criteria": {
+            "solo": "do it in the current context: small, one file, shell-answerable, or dependency-dense",
+            "scout": "read-only recon or digest over many files or external evidence; return refs, not bodies",
+            "worker": "one scoped, checkable edit with a named acceptance command",
+            "verifier": "independent check that reproduces a command; the author of the claim must not judge it",
+            "bulker": "apply one fixed rule to many independent items; machine-readable rows",
+            "parallel_workers": "two or more disjoint file sets with no shared hub file, integrated afterwards",
+            "window": "needs a human-visible terminal: live log, build watch, or interactive chat",
+        },
+    },
+    "visible": {
+        "type": "noul",
+        "instructions": "Does this task need a human-visible terminal window or interactive session "
+                        "(live log, build watch, or chat)?",
+        "criteria": {"true": "watch a live process, run a long test, or chat interactively",
+                     "false": "produce a file or an answer without a window"},
+        "labels": {"true": "A", "false": "B"},
+    },
+    "wide_reading": {
+        "type": "noul",
+        "instructions": "Would answering this task require reading many files or a very large body of "
+                        "text, more than fits comfortably in one working context?",
+        "criteria": {"true": "many files, a whole directory, many papers, or long logs",
+                     "false": "one file, a few lines, or a single command"},
+        "labels": {"true": "A", "false": "B"},
+    },
+}
+
+
+def laya_ask(task: str) -> dict | None:
+    """One cold Laya pass (~7 s load + ~3 s); returns the parsed answers or None on failure."""
+    try:
+        r = subprocess.run([str(AGENT_DIR / "bin" / "layaq"), "--questions", json.dumps(LAYA_QUESTIONS),
+                            task, "--json"], capture_output=True, text=True, timeout=180)
+        if r.returncode != 0 or not r.stdout.strip():
+            return None
+        dec = json.JSONDecoder()
+        obj, _ = dec.raw_decode(r.stdout)
+        return obj.get("answers", obj)
+    except Exception:
+        return None
+
+
+def cmd_route(args) -> int:
+    """Show the regex decision and, with --laya, the local second opinion; log both for the eval."""
+    task = " ".join(args.task)
+    regex, cues = decide(task)
+    row = {"ts": now(), "task_sha": task_sha(task), "task": " ".join(task.split())[:200],
+           "buckets": cues, "regex": regex}
+    if args.laya:
+        ans = laya_ask(task)
+        if ans:
+            rt = ans.get("route") or {}
+            vis = ans.get("visible") or {}
+            wid = ans.get("wide_reading") or {}
+            row.update({"laya_route": rt.get("choice"), "laya_conf": rt.get("confidence"),
+                        "laya_visible": vis.get("noul"), "laya_wide": wid.get("noul")})
+    if not args.no_log:
+        append_routes(row)
+    if args.json:
+        print(json.dumps(row, indent=1))
+        return 0
+    print(f"task:   {task[:160]}")
+    print(f"regex:  {regex}  (buckets: {', '.join(cues)})")
+    if "laya_route" in row:
+        print(f"laya:   {row['laya_route']} (conf {row['laya_conf']:.2f}) | "
+              f"visible {row['laya_visible']:.2f} | wide {row['laya_wide']:.2f}")
+        if row["laya_route"] != re.sub(r"^DELEGATE:", "", regex):
+            print("note:   disagreement — regex decides; Laya is advisory until a fit beats it on a held-out set")
+        if (row["laya_visible"] or 0) >= 0.7 and regex != "WINDOW":
+            print("hint:   likely a visible window — consider `pi-term --name ...` (policy §6b)")
+        elif regex == "WINDOW" and (row["laya_visible"] or 0) < 0.5:
+            print("hint:   window cue but Laya says no window — open one only if you must watch it")
+    elif args.laya:
+        print("laya:   unavailable (layaq failed); regex decides")
+    else:
+        print("laya:   not asked (pass --laya); zero-shot 7-way was 25% vs regex 54% on 24 cases")
+    return 0
+
+
+def append_routes(row: dict) -> None:
+    p = AGENT_DIR / "delegation" / "routes.jsonl"
+    p.parent.mkdir(parents=True, exist_ok=True)
+    with p.open("a") as fh:
+        fh.write(json.dumps(row) + "\n")
+
+
+def cmd_targets(args) -> int:
+    """Every place a delegation can go: the roster's models plus the local rails."""
+    try:
+        providers = json.loads((AGENT_DIR / "models.json").read_text()).get("providers", {})
+    except Exception:
+        providers = {}
+    local_models = {m["id"]: m.get("name", "") for p in providers.values()
+                    for m in (p.get("models") or [])} if providers else {}
+    print(f"{'agent':<11} {'model':<42} {'where':<6} tools")
+    kinds = set()
+    for f in sorted(AGENTS.glob("*.md")):
+        text = f.read_text()
+        model = (re.search(r"^model:\s*(.+)$", text, re.M) or [None, "(parent default)"])[1].strip()
+        tools = (re.search(r"^tools:\s*(.+)$", text, re.M) or [None, ""])[1].strip()
+        kind = "local" if model.startswith("local/") else "cloud"
+        kinds.add(kind)
+        print(f"{f.stem:<11} {model:<42} {kind:<6} {tools[:40]}")
+    print("\nlocal rails (no Pi harness):")
+    active = subprocess.run(["systemctl", "--user", "is-active", "llama-router.service"],
+                            capture_output=True, text=True).stdout.strip() or "inactive"
+    print(f"  laya          Laya 421M typed decisions (choice/score/noul)   local   "
+          f"~2 s/call warm, 0 tokens")
+    print(f"  local-gen     {'/'.join(list(local_models)[:2]) or 'GGUF'}   local   "
+          f"~0.7 s/item warm, ~22 s cold")
+    print(f"  local-batch   same, with cross-model agreement gate            local   "
+          f"620-3700 items/h, router {active}")
+    print("\nmeasured: a Pi subagent on a local model took 397 s for a 2-token reply (6.9k-token")
+    print("harness prompt at ~17 t/s prefill) — `run` refuses `local/*` unless --allow-local.")
+    print(f"roster model families: {len({(re.search(r'^model:\s*(.+)$', f.read_text(), re.M) or [None,''])[1] for f in AGENTS.glob('*.md')})}"
+          f" (local targets: {len(local_models)})")
+    return 0
+
+
+def cmd_route_report(args) -> int:
+    """How much labeled routing evidence exists, and how often Laya agrees with the decider."""
+    p = AGENT_DIR / "delegation" / "routes.jsonl"
+    if not p.exists():
+        print("routes.jsonl empty — run `pi-delegate route <task> --laya` first")
+        return 0
+    rows = [json.loads(l) for l in p.read_text().splitlines() if l.strip()]
+    labelled = [r for r in rows if r.get("laya_route")]
+    agree = sum(1 for r in labelled if r["laya_route"] == re.sub(r"^DELEGATE:", "", r["regex"]))
+    counts: dict[str, int] = {}
+    for r in labelled:
+        counts[r["laya_route"]] = counts.get(r["laya_route"], 0) + 1
+    print(f"routes logged: {len(rows)} | with Laya: {len(labelled)} | agreement "
+          f"{agree}/{len(labelled) if labelled else 0}")
+    print("labels per route: " + ", ".join(f"{k}={v}" for k, v in sorted(counts.items())))
+    need = [k for k in LAYA_QUESTIONS["route"]["criteria"] if counts.get(k, 0) < 5]
+    print("fit readiness: " + ("enough labels (>=5/route) — fit and A/B it" if not need
+                                else f"need >=5/route; below floor: {', '.join(need)}"))
+    print("benchmark: delegation/route-eval.py (24 hand-labeled cases; zero-shot 7-way 25%, regex 62%, "
+          "visible 88%)")
+    return 0
+
+
+def _pct(xs: list[float], q: float) -> float:
+    if not xs:
+        return 0.0
+    xs = sorted(xs)
+    k = min(len(xs) - 1, max(0, int(round(q * (len(xs) - 1)))))
+    return xs[k]
+
+
+def cmd_flow(args) -> int:
+    """Flow and economics for the weekly retro: throughput, cycle time, first-pass yield, rework,
+    cost per verified pass. Posteriors answer 'who', this answers 'is the system getting better'."""
+    rows = read_ledger()
+    verdicts = {r.get("task_sha"): r for r in rows if r.get("type") == "verdict"}
+    cutoff = time.time() - args.days * 86400
+    ds = []
+    for r in rows:
+        if r.get("type") or not r.get("agent"):
+            continue
+        try:
+            ts = datetime.fromisoformat(r["ts"].replace("Z", "+00:00")).timestamp()
+        except Exception:
+            continue
+        if ts >= cutoff:
+            ds.append(r)
+    if not ds:
+        print(f"no dispatches in the last {args.days}d")
+        return 0
+    # Windows are dispatches with a human in the loop, not subagents: their wall/$ must never move
+    # a subagent denominator (a window's "cost" is not a model bill), so they get their own cells.
+    wins = [d for d in ds if d.get("mode") == WINDOW_MODE]
+    ds = [d for d in ds if d.get("mode") != WINDOW_MODE]
+    wv = [verdicts.get(d.get("task_sha")) for d in wins]
+    wpass = sum(1 for x in wv if x and x.get("verdict") == "pass")
+    wfail = sum(1 for x in wv if x and x.get("verdict") == "fail")
+    wexp = sum(1 for x in wv if x and x.get("verdict") == "expired")
+    wunv = sum(1 for x in wv if not x)
+    wver = wpass + wfail
+    n = len(ds)
+    v = [verdicts.get(d.get("task_sha")) for d in ds]
+    stale_unverified = 0
+    for d, x in zip(ds, v):
+        if x:
+            continue
+        try:
+            age = time.time() - datetime.fromisoformat(d["ts"].replace("Z", "+00:00")).timestamp()
+        except Exception:
+            age = 0
+        if age > 7 * 86400:
+            stale_unverified += 1
+    passed = sum(1 for x in v if x and x.get("verdict") == "pass")
+    failed = sum(1 for x in v if x and x.get("verdict") == "fail")
+    unverified = sum(1 for x in v if not x)
+    expired = sum(1 for x in v if x and x.get("verdict") == "expired")
+    verified = passed + failed
+    walls = [(d.get("wall_ms") or 0) / 1000.0 for d in ds if d.get("wall_ms")]
+    cost = sum(d.get("cost") or 0.0 for d in ds)
+    out_tok = sum(d.get("output") or 0 for d in ds)
+    per_agent: dict[str, dict] = {}
+    per_model: dict[str, dict] = {}
+    for d in ds:
+        a = per_agent.setdefault(d.get("agent", "?"), {"n": 0, "cost": 0.0, "out": 0})
+        a["n"] += 1
+        a["cost"] += d.get("cost") or 0.0
+        a["out"] += d.get("output") or 0
+        m = per_model.setdefault(d.get("model") or "?", {"n": 0, "cost": 0.0, "out": 0})
+        m["n"] += 1
+        m["cost"] += d.get("cost") or 0.0
+        m["out"] += d.get("output") or 0
+    stats = {
+        "window_days": args.days,
+        "dispatches": n,
+        "verified": verified,
+        "pass": passed,
+        "fail": failed,
+        "unverified": unverified,
+        "unverified_stale": stale_unverified,
+        "expired": expired,
+        "first_pass_yield": round(passed / verified, 3) if verified else None,
+        "rework_rate": round(failed / verified, 3) if verified else None,
+        "wall_median_s": round(_pct(walls, 0.5), 1),
+        "wall_p90_s": round(_pct(walls, 0.9), 1),
+        "cost_usd": round(cost, 4),
+        "output_tokens": out_tok,
+        "cost_per_verified_pass": round(cost / verified, 4) if verified else None,
+        "out_tokens_per_verified_pass": round(out_tok / verified) if verified else None,
+        "per_agent": {k: {"n": x["n"], "cost": round(x["cost"], 4), "out": x["out"]}
+                      for k, x in sorted(per_agent.items())},
+        "per_model": {k: {"n": x["n"], "cost": round(x["cost"], 4), "out": x["out"]}
+                      for k, x in sorted(per_model.items(), key=lambda kv: -kv[1]["n"])},
+        "local_dispatches": sum(1 for d in ds if (d.get("model") or "").startswith("local/")),
+        # separate denominators: judged as a pattern, never averaged into the subagent cells
+        "windows": len(wins),
+        "window_verified": wver,
+        "window_pass": wpass,
+        "window_fail": wfail,
+        "window_unverified": wunv,
+        "window_expired": wexp,
+        "window_first_pass_yield": round(wpass / wver, 3) if wver else None,
+        "window_cost_usd": round(sum(d.get("cost") or 0.0 for d in wins), 4),
+        "window_per_agent": {},
+    }
+    # per window name: n, verdicts — this is the cell the owner's one-window-per-item pattern
+    # is judged by (first-pass yield), so it is counted per name, not pooled under "window".
+    wa: dict[str, dict] = {}
+    for d, x in zip(wins, wv):
+        a = wa.setdefault(d.get("agent", "?"), {"n": 0, "verified": 0, "pass": 0, "fail": 0,
+                                                  "unverified": 0})
+        a["n"] += 1
+        if x and x.get("verdict") == "pass":
+            a["pass"] += 1
+            a["verified"] += 1
+        elif x and x.get("verdict") == "fail":
+            a["fail"] += 1
+            a["verified"] += 1
+        elif not x:
+            a["unverified"] += 1
+    stats["window_per_agent"] = wa
+    if args.json:
+        print(json.dumps(stats, indent=1))
+        return 0
+    print(f"delegation flow — last {args.days}d")
+    print(f"  dispatches {n} | verified {verified} (pass {passed}, fail {failed}) | "
+          f"unverified {unverified} ({stale_unverified} older than 7d) | expired {expired}")
+    if wins:
+        print(f"  windows {len(wins)} | verified {wver} (pass {wpass}, fail {wfail}) | "
+              f"unverified {wunv} | expired {wexp} | "
+              f"first-pass yield {stats['window_first_pass_yield']} "
+              f"(not counted in the subagent $/pass above)")
+    print(f"  first-pass yield {stats['first_pass_yield']} | rework {stats['rework_rate']} | "
+          f"wall median {stats['wall_median_s']}s p90 {stats['wall_p90_s']}s")
+    print(f"  cost ${stats['cost_usd']:.4f} | out {out_tok} tok | "
+          f"$ per verified pass {stats['cost_per_verified_pass']} | "
+          f"out-tok per verified pass {stats['out_tokens_per_verified_pass']}")
+    for a, x in stats["per_agent"].items():
+        print(f"  {a:<10} n={x['n']:<3} ${x['cost']:<8.4f} out={x['out']}")
+    if len(stats["per_model"]) > 1:
+        print("  by model:")
+        for m, x in stats["per_model"].items():
+            print(f"    {m:<42} n={x['n']:<3} ${x['cost']:<8.4f} out={x['out']}")
+    proposals = []
+    if verified and failed / verified > 0.2:
+        proposals.append("rework >20%: tighten DoR (ACCEPTANCE/SCOPE) or the partition gate before fan-out")
+    if unverified:
+        proposals.append(f"{unverified} dispatch(es) unverified: close them with verdicts or `expire`")
+    if verified and stats["cost_per_verified_pass"] is not None and n >= 5:
+        proposals.append("record this number in the PDSA Study step; compare next window on the same window length")
+    if wins and wunv:
+        proposals.append(f"{wunv} window(s) unverified: close each with `pi-delegate verdict pass|fail --sha` "
+                         f"or the one-window-per-item pattern cannot be judged")
+    if proposals:
+        print("proposals:")
+        for p in proposals:
+            print(" -", p)
+    return 0
+
+
+def _expand_shard(value: str, cwd: Path) -> list[str]:
+    """A shard value is a comma list of files, or a directory (expanded with git ls-files)."""
+    out: list[str] = []
+    for part in [p.strip() for p in value.split(",") if p.strip()]:
+        p = (cwd / part)
+        if part.endswith("/") or p.is_dir():
+            rel = part.rstrip("/")
+            try:
+                r = subprocess.run(["git", "-C", str(cwd), "ls-files", "--", rel],
+                                   capture_output=True, text=True, timeout=20)
+                files = [f for f in r.stdout.splitlines() if f.strip()]
+            except Exception:
+                files = [str(x.relative_to(cwd)) for x in p.rglob("*") if x.is_file()]
+            out.extend(files)
+        else:
+            out.append(os.path.normpath(part))
+    return out
+
+
+def cmd_partition(args) -> int:
+    """Gate a fan-out on file ownership: no file in two shards, every hub file owned by exactly one."""
+    cwd = Path(args.cwd).resolve()
+    shards: dict[str, list[str]] = {}
+    for spec in args.shard:
+        if "=" not in spec:
+            sys.exit("pi-delegate: --shard wants name=file1,file2 or name=dir/")
+        name, value = spec.split("=", 1)
+        shards[name] = _expand_shard(value, cwd)
+    if len(shards) < 2:
+        sys.exit("pi-delegate: partition needs at least two --shard specs")
+    owner: dict[str, list[str]] = {}
+    for name, files in shards.items():
+        for f in files:
+            owner.setdefault(f, []).append(name)
+    overlaps = {f: names for f, names in owner.items() if len(names) > 1}
+    owned_hubs = sorted(f for f in owner if Path(f).name in HUB_NAMES or HUB_RE.search(f))
+    # Hub files that exist on disk in a shard's directory but were not claimed by any shard.
+    dirs = {"."} | {str(Path(f).parent) for f in owner}
+    present_hubs: set[str] = set()
+    for d in dirs:
+        for name in HUB_NAMES:
+            if (cwd / d / name).exists():
+                present_hubs.add(os.path.normpath(os.path.join(d, name)))
+    unowned_hubs = sorted(present_hubs - set(owner))
+    implicit = []
+    for hub in unowned_hubs:
+        d = str(Path(hub).parent)
+        names = sorted({n for f, ns in owner.items() if str(Path(f).parent) == d for n in ns})
+        implicit.append(f"{hub} unowned in a dir shared by shards {', '.join(names)}")
+    lines = 0
+    for f in owner:
+        try:
+            lines += sum(1 for _ in (cwd / f).open("rb"))
+        except Exception:
+            pass
+    below_floor = bool(args.min_lines) and lines < args.min_lines
+    unsafe = bool(overlaps) or (args.strict and bool(unowned_hubs))
+    result = {
+        "shards": {k: len(v) for k, v in shards.items()},
+        "files": {k: v for k, v in shards.items()},
+        "overlaps": overlaps,
+        "hub_files_owned": owned_hubs,
+        "unowned_hubs": unowned_hubs,
+        "implicit_hub_risk": implicit,
+        "lines": lines,
+        "below_floor": below_floor,
+        "verdict": "UNSAFE" if unsafe else ("SAFE (below floor — prefer solo)" if below_floor else "SAFE"),
+    }
+    if args.json:
+        print(json.dumps(result, indent=1))
+        return 0 if not unsafe else 2
+    for k, v in shards.items():
+        print(f"  {k:<10} {len(v):>3} file(s)")
+    if overlaps:
+        print("\nUNSAFE — these files are claimed by more than one shard (put each in exactly one):")
+        for f, names in sorted(overlaps.items()):
+            print(f"  {f}  <- {', '.join(names)}")
+    if owned_hubs:
+        print(f"\nhub files owned: {', '.join(owned_hubs)}")
+    if implicit:
+        print("\nWARN — hub file in a shared directory is unowned (assign it to one shard, or keep the dir whole):")
+        for line in implicit:
+            print("  " + line)
+    print(f"\nsize: {lines} line(s) across {len(owner)} file(s)"
+          + (f" — below the {args.min_lines}-line floor; solo is cheaper" if below_floor else ""))
+    print(f"verdict: {result['verdict']}")
+    return 0 if not unsafe else 2
+
+
+# --- tester panel ------------------------------------------------------------
+# Diversity is assigned, not hoped for: each member gets a disjoint lens + technique + oracle
+# (Hong & Page 2004; Knight & Leveson 1986 — same model + same hints = coincident failures).
+# Lens catalogue: skills/adversarial-testing, research/tester-diversity.md.
+PANEL_LENSES = {
+    "boundaries": {
+        "agent": "tester",
+        "technique": "equivalence classes + boundary values: 0,1,2,max,max+1; empty vs null vs absent; "
+                     "unicode/emoji/RTL/zero-width; off-by-one",
+        "oracle": "the spec or schema says what the output must be",
+        "risk": "coverage-shaped bugs: silent truncation, off-by-one, encoding",
+    },
+    "state": {
+        "agent": "tester",
+        "technique": "state model + interleavings: double submit, cancel mid-flight, retry after partial "
+                     "success, reentrancy, out-of-order events, crash-resume",
+        "oracle": "the state machine: which transitions are legal, and what is true after each",
+        "risk": "duplicate effects, lost writes, stuck states",
+    },
+    "oracle": {
+        "agent": "tester",
+        "technique": "differential vs an old/reference implementation; round-trip; idempotence; "
+                     "commutativity; conservation invariants",
+        "oracle": "a second implementation or an invariant, not eyeballing output",
+        "risk": "silently wrong answers that look fine",
+    },
+    "hostile-input": {
+        "agent": "tester",
+        "technique": "fuzz + shrink: whitespace, dashes, glob chars, newline in filename, ../, symlink, "
+                     "non-UTF8, huge/deeply nested payloads",
+        "oracle": "crash, hang, or divergence from the documented handling",
+        "risk": "parser and path handling",
+    },
+    "faults": {
+        "agent": "tester",
+        "technique": "fault injection: dependency down/slow, disk full, chmod 000, clock skew/DST, "
+                     "expired token mid-op, SIGKILL between write and fsync",
+        "oracle": "the invariant must survive the fault, or fail loudly and safely",
+        "risk": "partial writes, silent data loss",
+    },
+    "compat": {
+        "agent": "tester",
+        "technique": "replay old fixtures: upgrade with existing data, migration re-run, downgrade, "
+                     "previous-version config, API version skew",
+        "oracle": "old behaviour preserved where it was promised",
+        "risk": "data written by the previous version",
+    },
+    "security": {
+        "agent": "redteam",
+        "technique": "threat model: enumerate trust-boundary crossings, authz on every id, injection "
+                     "sinks (shell/SQL/HTML/template/log), SSRF, secrets in errors",
+        "oracle": "what the attacker gains, and who is the victim",
+        "risk": "authz gaps, injection, credential leakage",
+    },
+    "recovery": {
+        "agent": "tester",
+        "technique": "read the error path: lying messages, partial writes, keyboard-only recovery, "
+                     "error recovery without data loss",
+        "oracle": "the user can tell what happened and get back to a good state",
+        "risk": "support load, silent damage",
+    },
+}
+
+# Risk words select lenses. Order matters: the first match wins the first slots.
+PANEL_CUES = [
+    (r"\b(auth|token|session|login|secret|password|permission|role|admin|payment|money)\b",
+     ["security", "state", "boundaries"]),
+    (r"\b(db|database|persist|save|store|migrat|file|disk|cache|queue|write)\b",
+     ["state", "faults", "compat"]),
+    (r"\b(pars|input|upload|cli|api|http|json|yaml|csv|regex|path)\b",
+     ["hostile-input", "boundaries", "oracle"]),
+    (r"\b(ui|form|error|message|report|display|access)\b",
+     ["recovery", "boundaries", "state"]),
+]
+DEFAULT_LENSES = ["boundaries", "state", "oracle"]
+
+
+def cmd_panel(args) -> int:
+    target = args.target
+    risk = args.risk or ""
+    if args.lens:
+        names = [x.strip() for x in args.lens if x.strip()]
+        unknown = [n for n in names if n not in PANEL_LENSES]
+        if unknown:
+            print(f"unknown lens: {', '.join(unknown)}; choose from {', '.join(PANEL_LENSES)}")
+            return 2
+    else:
+        names = list(DEFAULT_LENSES)
+        for pat, picks in PANEL_CUES:
+            if re.search(pat, risk, re.I):
+                names = list(picks)
+                break
+    names = names[: args.max]
+    if len(names) < 2:
+        print("a panel of one is a solo test — add a second disjoint lens or test it yourself")
+        return 2
+    budget = args.budget
+    print(f"panel: {len(names)} tester(s) for {target}")
+    print("rule: disjoint lenses, no shared findings before the merge, dedupe by root cause")
+    print("floor: each dispatch must be worth >=10x the ~15-50 s / 300-700 token floor "
+          "(delegation/policy.md §2)\n")
+    for i, name in enumerate(names, 1):
+        lens = PANEL_LENSES[name]
+        task = (f"GOAL: break {target} on the {name} axis and report reproducible failures.\n"
+                f"RISK: {risk or lens['risk']}\n"
+                f"TECHNIQUE: {lens['technique']}\n"
+                f"ORACLE: {lens['oracle']}\n"
+                f"SCOPE: {args.scope}\nOUTPUT: tester fold, findings need a repro command\n"
+                f"ACCEPTANCE: every finding reproduces twice\nBUDGET: {budget}")
+        print(f"[{i}] {name}  -> {lens['agent']}")
+        print(f"    o {lens['risk']}")
+        print(f"    pi-delegate run --agent {lens['agent']} --cwd {args.cwd} --timeout {args.timeout} "
+              f"--task {shlex.quote(task)}")
+    print("\nafter the merge: pi-delegate verdict pass|fail --note \"panel: <unique root causes>\"")
     return 0
 
 
@@ -373,9 +1060,22 @@ def main() -> int:
     p.add_argument("--task", required=True)
     p.add_argument("--cwd", default=".")
     p.add_argument("--model")
+    p.add_argument("--allow-local", action="store_true",
+                   help="permit a Pi subagent on a local/* model (measured 397 s for 2 tokens)")
     p.add_argument("--timeout", type=int, default=900)
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=cmd_run)
+
+    p = sub.add_parser("record")
+    p.add_argument("--agent", required=True, help="window:<name> (a `window:` prefix is added if missing)")
+    p.add_argument("--task", required=True, help="what this window is for; becomes the verdict key")
+    p.add_argument("--cwd", default=".")
+    p.add_argument("--model", default="")
+    p.add_argument("--cost", type=float, default=0.0, help="known spend, else 0 (a window has no model bill)")
+    p.add_argument("--wall-ms", type=int, default=0)
+    p.add_argument("--win-id", help="pi-term registry id; makes the append idempotent")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=cmd_record)
 
     p = sub.add_parser("verdict")
     p.add_argument("verdict", choices=["pass", "fail"])
@@ -384,14 +1084,58 @@ def main() -> int:
     p.add_argument("--note")
     p.set_defaults(func=cmd_verdict)
 
+    p = sub.add_parser("expire")
+    p.add_argument("--days", type=int, default=7)
+    p.set_defaults(func=cmd_expire)
+
     p = sub.add_parser("report")
     p.add_argument("--min-n", type=int, default=2)
     p.set_defaults(func=cmd_report)
 
+    p = sub.add_parser("flow")
+    p.add_argument("--days", type=int, default=30)
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=cmd_flow)
+
+    p = sub.add_parser("route")
+    p.add_argument("task", nargs="+")
+    p.add_argument("--laya", action="store_true")
+    p.add_argument("--no-log", action="store_true")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=cmd_route)
+
+    p = sub.add_parser("route-report")
+    p.set_defaults(func=cmd_route_report)
+
+    p = sub.add_parser("targets")
+    p.set_defaults(func=cmd_targets)
+
+    p = sub.add_parser("partition")
+    p.add_argument("--shard", action="append", default=[], metavar="NAME=FILES")
+    p.add_argument("--cwd", default=".")
+    p.add_argument("--strict", action="store_true", help="unowned hub file = UNSAFE, not a warning")
+    p.add_argument("--min-lines", type=int, default=0,
+                   help="flag a fan-out below this many total lines (write work: 60; the ~10x floor)")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=cmd_partition)
+
     p = sub.add_parser("agents")
     p.set_defaults(func=cmd_agents)
 
+    p = sub.add_parser("panel", help="print a disjoint-lens tester panel dispatch set")
+    p.add_argument("--target", required=True, help="path, module or feature under test")
+    p.add_argument("--risk", default="", help="what breaks expensively; selects the lenses")
+    p.add_argument("--lens", action="append", help="force a lens: " + ", ".join(PANEL_LENSES))
+    p.add_argument("--max", type=int, default=3, help="max testers (default 3, cap 4)")
+    p.add_argument("--scope", default="read-only; scratch files in a tmpdir you name")
+    p.add_argument("--budget", default="20 min / 30 tool calls")
+    p.add_argument("--timeout", type=int, default=900)
+    p.add_argument("--cwd", default=".")
+    p.set_defaults(func=cmd_panel)
+
     args = ap.parse_args()
+    if args.cmd == "panel":
+        args.max = min(max(args.max, 2), 4)
     return args.func(args)
 
 

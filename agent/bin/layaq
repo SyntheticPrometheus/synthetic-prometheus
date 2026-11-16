@@ -10,7 +10,13 @@ Prints one line per question: name, label/score/P(true), confidence, and the ful
 on --json. Warm MCP tools (mcp__laya__*) are cheaper for repeated calls; this pays ~7 s load.
 """
 import json
+import os
 import sys
+
+# Ivy Bridge (no AVX2/AVX-512): torch's bundled MKL otherwise dispatches AVX-512 kernels and
+# SIGILLs in mkl_vml_kernel_sCos. Prove the guard with MKL_ENABLE_INSTRUCTIONS set here, before
+# torch is imported, and mirrored in mcp.json.
+os.environ.setdefault("MKL_ENABLE_INSTRUCTIONS", "SSE4_2")
 
 import laya
 

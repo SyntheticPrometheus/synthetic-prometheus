@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <title>Why tiling layouts survive — a note</title>
+  <meta name="description" content="fixture">
+  <style>body { color: #111; } .nav a { text-decoration: none; }</style>
+  <script>window.analytics = { track: function () { return "noise"; } };</script>
+</head>
+<body>
+  <header class="nav">
+    <a href="/">Home</a> · <a href="/archive">Archive</a> · <a href="/about">About</a>
+    <form><input name="q"><button>Search</button></form>
+  </header>
+  <nav><ul><li><a href="/a">First</a></li><li><a href="/b">Second</a></li></ul></nav>
+  <article>
+    <h1>Why tiling layouts survive</h1>
+    <p>A tiling window manager arranges windows so that no pixel is wasted. The argument for it is
+    not aesthetic, it is about <a href="https://example.org/keyboard">keyboard-driven control</a>
+    and predictable geometry.</p>
+    <h2>Three costs</h2>
+    <p>First, the learning curve is real. Second, applications that expect to be resized freely
+    misbehave. Third, multi-monitor setups need a policy that most implementations do not state.</p>
+    <pre><code>pergola tile --weights 60,40</code></pre>
+    <p>See also <a href="/docs/adr/0002-layout-graph">the layout-graph ADR</a> for the model.</p>
+  </article>
+  <aside>Subscribe to the newsletter</aside>
+  <footer>© 2026 fixture · <a href="/privacy">Privacy</a></footer>
+  <script>console.log("trailing noise");</script>
+</body>
+</html>

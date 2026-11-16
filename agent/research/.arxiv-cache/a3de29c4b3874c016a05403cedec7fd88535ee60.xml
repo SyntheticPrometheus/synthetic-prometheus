@@ -1,0 +1,310 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/D1MfiALiS/IQeaD2ZCCOzhXpnkY</id>
+  <title>arXiv Query: search_query=all:subagent&amp;id_list=&amp;start=0&amp;max_results=12</title>
+  <updated>2026-11-15T14:52:23Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=all:subagent&amp;start=0&amp;max_results=12&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>12</opensearch:itemsPerPage>
+  <opensearch:totalResults>161</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2611.08905v1</id>
+    <title>From Procedures to Permissions: Learning Precise Subagent Authorization from Agent Skills</title>
+    <updated>2026-11-06T02:46:06Z</updated>
+    <link href="https://arxiv.org/abs/2611.08905v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2611.08905v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>As language agents tackle increasingly complex tasks, they increasingly rely on multiple agents to coordinate specialized work, requiring decisions not only about what each subagent should do but also which tools and workspace resources it should access. Existing agent systems provide mechanisms for controlling tools and execution environments, but do not directly specify the resources required by each delegated subtask. Moreover, task outcomes and execution trajectories alone provide limited supervision for determining whether a subagent has received appropriate permissions. We observe that Agent Skills encode procedural knowledge describing the operations, tools, and files required at each step, providing a natural source of supervision for authorization. Building on this observation, we synthesize tasks and step-by-step procedures from Skills, execute them through subagent delegation in interactive environments, and use verified trajectories to construct training data for task execution and authorization. On ClawArena-Team, our method improves tool permission precision by 13.4 percentage points and workspace permission precision by 24.1 percentage points, while increasing overall task success by 11.6 percentage points for Qwen3.5-35B-A3B. On Terminal-Bench 2.1 and SkillsBench, our method remains competitive with existing agent data synthesis approaches. These results show that the procedural knowledge embedded in Agent Skills provides a source of supervision for precise subagent orchestration that task outcomes alone cannot provide.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-11-06T02:46:06Z</published>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Wenkai Yu</name>
+    </author>
+    <author>
+      <name>Ning Ding</name>
+    </author>
+    <author>
+      <name>Wentao Zhang</name>
+    </author>
+    <author>
+      <name>Yehui Tang</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2603.18000v1</id>
+    <title>AgentFactory: A Self-Evolving Framework Through Executable Subagent Accumulation and Reuse</title>
+    <updated>2026-03-18T17:58:25Z</updated>
+    <link href="https://arxiv.org/abs/2603.18000v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2603.18000v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Building LLM-based agents has become increasingly important. Recent works on LLM-based agent self-evolution primarily record successful experiences as textual prompts or reflections, which cannot reliably guarantee efficient task re-execution in complex scenarios. We propose AgentFactory, a new self-evolution paradigm that preserves successful task solutions as executable subagent code rather than textual experience. Crucially, these subagents are continuously refined based on execution feedback, becoming increasingly robust and efficient as more tasks are encountered. Saved subagents are pure Python code with standardized documentation, enabling portability across any Python-capable system. We demonstrate that AgentFactory enables continuous capability accumulation: its library of executable subagents grows and improves over time, progressively reducing the effort required for similar tasks without manual intervention. Our implementation is open-sourced at https://github.com/zzatpku/AgentFactory, and our demonstration video is available at https://youtu.be/iKSsuAXJHW0.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-03-18T17:58:25Z</published>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Zhang Zhang</name>
+    </author>
+    <author>
+      <name>Shuqi Lu</name>
+    </author>
+    <author>
+      <name>Hongjin Qian</name>
+    </author>
+    <author>
+      <name>Di He</name>
+    </author>
+    <author>
+      <name>Zheng Liu</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2609.09233v1</id>
+    <title>Subagents vs Agent Skills: Executing Reusable Knowledge for Long-Horizon Agentic Tasks</title>
+    <updated>2026-09-07T20:14:11Z</updated>
+    <link href="https://arxiv.org/abs/2609.09233v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2609.09233v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>How can language model agents effectively leverage libraries of reusable knowledge to solve long-horizon tasks? Recent work has increasingly focused on agent skills: reusable capabilities represented as skill packages, i.e., multi-file bundles containing instructions, scripts, and other resources that help agents perform specific tasks. Agent skills are typically executed by loading their skill instructions into an agent's context and relying on the agent to follow them. As task horizons grow, however, this approach becomes increasingly brittle, because reasoning quality degrades as more information accumulates in the context window. We investigate an alternative approach in which skill packages are instead invoked as subagents. Rather than loading skill instructions into the main context, subagent execution spawns fresh context windows dedicated to solving individual subtasks. We show that subagent execution outperforms agent-skill execution when skill packages expose clear input-output contracts and their instructions encode the procedural knowledge needed to fulfill those contracts. The tradeoff is additional communication overhead, as extra tokens are required to coordinate between the main agent and its subagents. Our results show that the benefit of reusable knowledge depends not only on its content, but also on how it is organized and invoked.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-09-07T20:14:11Z</published>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Wasu Top Piriyakulkij</name>
+    </author>
+    <author>
+      <name>Rachel Lawrence</name>
+    </author>
+    <author>
+      <name>Alicia Curth</name>
+    </author>
+    <author>
+      <name>Sushrut Karmalkar</name>
+    </author>
+    <author>
+      <name>Niranjani Prasad</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2601.02365v1</id>
+    <title>FUSE : Failure-aware Usage of Subagent Evidence for MultiModal Search and Recommendation</title>
+    <updated>2025-11-15T07:55:51Z</updated>
+    <link href="https://arxiv.org/abs/2601.02365v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2601.02365v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Multimodal creative assistants decompose user goals and route tasks to subagents for layout, styling, retrieval, and generation. Retrieval quality is pivotal, yet failures can arise at several stages: understanding user intent, choosing content types, finding candidates (recall), or ranking results. Meanwhile, sending and processing images is costly, making naive multimodal approaches impractical. We present FUSE: Failure-aware Usage of Subagent Evidence for MultiModal Search and Recommendation. FUSE replaces most raw-image prompting with a compact Grounded Design Representation (GDR): a selection aware JSON of canvas elements (image, text, shape, icon, video, logo), structure, styles, salient colors, and user selection provided by the Planner team. FUSE implements seven context budgeting strategies: comprehensive baseline prompting, context compression, chain-of-thought reasoning, mini-shot optimization, retrieval-augmented context, two-stage processing, and zero-shot minimalism. Finally, a pipeline attribution layer monitors system performance by converting subagent signals into simple checks: intent alignment, content-type/routing sanity, recall health (e.g., zero-hit and top-match strength), and ranking displacement analysis. We evaluate the seven context budgeting variants across 788 evaluation queries from diverse users and design templates (refer Figure 3). Our systematic evaluation reveals that Context Compression achieves optimal performance across all pipeline stages, with 93.3% intent accuracy, 86.8% routing success(with fallbacks), 99.4% recall, and 88.5% NDCG@5. This approach demonstrates that strategic context summarization outperforms both comprehensive and minimal contextualization strategies.</summary>
+    <category term="cs.IR" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-11-15T07:55:51Z</published>
+    <arxiv:comment>ICDM MMSR 2025: Workshop on Multimodal Search and Recommendations</arxiv:comment>
+    <arxiv:primary_category term="cs.IR"/>
+    <author>
+      <name>Tushar Vatsa</name>
+    </author>
+    <author>
+      <name>Vibha Belavadi</name>
+    </author>
+    <author>
+      <name>Priya Shanmugasundaram</name>
+    </author>
+    <author>
+      <name>Suhas Suresha</name>
+    </author>
+    <author>
+      <name>Dewang Sultania</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2605.08460v1</id>
+    <title>When Child Inherits: Modeling and Exploiting Subagent Spawn in Multi-Agent Networks</title>
+    <updated>2026-05-08T20:27:23Z</updated>
+    <link href="https://arxiv.org/abs/2605.08460v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2605.08460v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Since the official release of ChatGPT in 2022, large language models (LLMs) have rapidly evolved from chatbot-style interfaces into agentic systems that can delegate work through tools and newly spawned subagents. While these capabilities improve automation and scalability, they also pose new security risks in multi-agent networks.
+  Existing research has studied how individual LLM-based agents can be compromised through prompt injection, jailbreaking, poisoned retrieval data, or malicious extensions. Less is known about what happens after one agent is compromised inside a multi-agent network. In particular, inherited memory from parent agents can carry malicious instructions, outdated states, or unintended behavioral rules into newly created subagents, allowing a local compromise to spread across agent boundaries.
+  In this paper, we model contemporary multi-agent networks through the lens of subagent inheritance. Our analysis shows that current frameworks can violate trust boundaries through insecure memory inheritance, weak resource control, stale post-spawn state, and improper termination authority. We demonstrate these risks in real agent frameworks and propose defenses based on explicit security invariants. Our findings show that inheritance is not merely an implementation detail, but a central component influencing the security of multi-agent systems.</summary>
+    <category term="cs.CR" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-05-08T20:27:23Z</published>
+    <arxiv:primary_category term="cs.CR"/>
+    <author>
+      <name>Ziwen Cai</name>
+    </author>
+    <author>
+      <name>Yihe Zhang</name>
+    </author>
+    <author>
+      <name>Xiali Hei</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2606.31174v2</id>
+    <title>ClawArena-Team: Benchmarking Subagent Orchestration and Dynamic Workflows in Language-Model Agents</title>
+    <updated>2026-07-02T07:39:52Z</updated>
+    <link href="https://arxiv.org/abs/2606.31174v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2606.31174v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Production large language-model (LLM) agents are increasingly deployed not as lone problem-solvers but as managers: a main model creates specialized subagents, delegates work, and orchestrates their parallel, asynchronous returns through dynamic workflows. Whether one model can actually run such a team is largely unmeasured: existing benchmarks score a policy's own task-solving or a fixed multi-agent system's emergent behavior, but none isolate the management ability of the single LLM acting as leader. We introduce ClawArena-Team, a benchmark of 41 multi-turn, multimodal, multi-directory scenarios spanning 258 evaluation rounds and 72 staged updates that measures this management ability. The main agent is deliberately constrained: it natively perceives only text and directly accesses only part of the workspace. It commands a fixed, locally served subagent pool, so score differences reflect management skill, not raw capability. All scoring is execution-based with no LLM judge: an overall score -- the Subagent-Management Score (SMS) -- multiplies task correctness by a least-privilege and modality-routing factor. Across twelve proprietary, community-hosted, and self-hosted models, experiments show that the management bottleneck is privilege granting rather than perception (no model exceeds 50% workspace-permission precision); that cost and management quality are decoupled (API cost spans over 100 times while the overall score spans under 4 times, with the cheapest open models on the Pareto frontier); and that most leaderboard scores cluster within a 9.9-point band while orchestration behaviors diverge by more than an order of magnitude. Code is available at https://github.com/aiming-lab/ClawArena.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-06-30T06:06:08Z</published>
+    <arxiv:comment>24 pages, 10 figures, website: https://www.clawarena.cc/</arxiv:comment>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Kaiwen Xiong</name>
+    </author>
+    <author>
+      <name>Haonian Ji</name>
+    </author>
+    <author>
+      <name>Shi Qiu</name>
+    </author>
+    <author>
+      <name>Zeyu Zheng</name>
+    </author>
+    <author>
+      <name>Cihang Xie</name>
+    </author>
+    <author>
+      <name>Xinyu Ye</name>
+    </author>
+    <author>
+      <name>Huaxiu Yao</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2404.01832v1</id>
+    <title>When does Subagging Work?</title>
+    <updated>2024-04-02T10:44:55Z</updated>
+    <link href="https://arxiv.org/abs/2404.01832v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2404.01832v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>We study the effectiveness of subagging, or subsample aggregating, on regression trees, a popular non-parametric method in machine learning. First, we give sufficient conditions for pointwise consistency of trees. We formalize that (i) the bias depends on the diameter of cells, hence trees with few splits tend to be biased, and (ii) the variance depends on the number of observations in cells, hence trees with many splits tend to have large variance. While these statements for bias and variance are known to hold globally in the covariate space, we show that, under some constraints, they are also true locally. Second, we compare the performance of subagging to that of trees across different numbers of splits. We find that (1) for any given number of splits, subagging improves upon a single tree, and (2) this improvement is larger for many splits than it is for few splits. However, (3) a single tree grown at optimal size can outperform subagging if the size of its individual trees is not optimally chosen. This last result goes against common practice of growing large randomized trees to eliminate bias and then averaging to reduce variance.</summary>
+    <category term="stat.ML" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2024-04-02T10:44:55Z</published>
+    <arxiv:primary_category term="stat.ML"/>
+    <author>
+      <name>Christos Revelas</name>
+    </author>
+    <author>
+      <name>Otilia Boldea</name>
+    </author>
+    <author>
+      <name>Bas J. M. Werker</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2209.02517v1</id>
+    <title>Subaging in underparametrized Deep Neural Networks</title>
+    <updated>2022-09-06T14:15:23Z</updated>
+    <link href="https://arxiv.org/abs/2209.02517v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2209.02517v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>We consider a simple classification problem to show that the dynamics of finite-width Deep Neural Networks in the underparametrized regime gives rise to effects similar to those associated with glassy systems, namely a slow evolution of the loss function and aging. Remarkably, the aging is sublinear in the waiting time (subaging) and the power-law exponent characterizing it is robust to different architectures under the constraint of a constant total number of parameters. Our results are maintained in the more complex scenario of the MNIST database. We find that for this database there is a unique exponent ruling the subaging behavior in the whole phase.</summary>
+    <category term="cond-mat.dis-nn" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cond-mat.stat-mech" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2022-09-06T14:15:23Z</published>
+    <arxiv:comment>16 pages, 10 figures. Manuscript accepted in"Machine Learning: Science and Technology"</arxiv:comment>
+    <arxiv:primary_category term="cond-mat.dis-nn"/>
+    <author>
+      <name>Carolina Herrera Segura</name>
+    </author>
+    <author>
+      <name>Edison Montoya</name>
+    </author>
+    <author>
+      <name>Diego Tapias</name>
+    </author>
+    <arxiv:doi>10.1088/2632-2153/ac8f1b</arxiv:doi>
+    <link rel="related" href="https://doi.org/10.1088/2632-2153/ac8f1b" title="doi"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2610.27574v1</id>
+    <title>The Show-Up Attack: When Subagents Win Over Their Supervisor</title>
+    <updated>2026-10-20T03:41:13Z</updated>
+    <link href="https://arxiv.org/abs/2610.27574v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2610.27574v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Multi-agent systems are increasingly deployed to coordinate multiple large language model (LLM) agents. However, this also creates new attack surfaces: malicious agents may have chances to exploit the coordination. In this paper, we propose and study the \textit{show-up attack}, in which a malicious subagent manipulates the supervisor into involving it in tasks beyond its assigned scope. To evaluate this risk, we propose SUA-Arena, which implements 6 attack strategies and contains 188 test cases. Then, we evaluate 6 frontier LLMs and find that all of them are vulnerable to show-up attacks. For example, GPT-5.6-Sol as a supervisor suffers an ASR of up to 0.93. Mitigation strategies such as prompting and restricted communication fail to reduce the risk consistently. These results show that multi-agent systems need explicit mechanisms for enforcing authority boundaries.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CR" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-10-20T03:41:13Z</published>
+    <arxiv:comment>Preprint</arxiv:comment>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Maosen Zhang</name>
+    </author>
+    <author>
+      <name>Jianshuo Dong</name>
+    </author>
+    <author>
+      <name>Yutong Zhang</name>
+    </author>
+    <author>
+      <name>Jie Zhang</name>
+    </author>
+    <author>
+      <name>Tianwei Zhang</name>
+    </author>
+    <author>
+      <name>Han Qiu</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/1011.5142v1</id>
+    <title>Estimating Subagging by cross-validation</title>
+    <updated>2010-11-23T16:12:33Z</updated>
+    <link href="https://arxiv.org/abs/1011.5142v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/1011.5142v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>In this article, we derive concentration inequalities for the cross-validation estimate of the generalization error for subagged estimators, both for classification and regressor. General loss functions and class of predictors with both finite and infinite VC-dimension are considered. We slightly generalize the formalism introduced by \cite{DUD03} to cover a large variety of cross-validation procedures including leave-one-out cross-validation, $k$-fold cross-validation, hold-out cross-validation (or split sample), and the leave-$\upsilon$-out cross-validation.
+  \bigskip
+  \noindent An interesting consequence is that the probability upper bound is bounded by the minimum of a Hoeffding-type bound and a Vapnik-type bounds, and thus is smaller than 1 even for small learning set. Finally, we give a simple rule on how to subbag the predictor. \bigskip</summary>
+    <category term="stat.ML" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2010-11-23T16:12:33Z</published>
+    <arxiv:primary_category term="stat.ML"/>
+    <author>
+      <name>Matthieu CORNEC</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2311.02827v1</id>
+    <title>On Subagging Boosted Probit Model Trees</title>
+    <updated>2023-11-06T02:22:16Z</updated>
+    <link href="https://arxiv.org/abs/2311.02827v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2311.02827v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>With the insight of variance-bias decomposition, we design a new hybrid bagging-boosting algorithm named SBPMT for classification problems. For the boosting part of SBPMT, we propose a new tree model called Probit Model Tree (PMT) as base classifiers in AdaBoost procedure. For the bagging part, instead of subsampling from the dataset at each step of boosting, we perform boosted PMTs on each subagged dataset and combine them into a powerful "committee", which can be viewed an incomplete U-statistic. Our theoretical analysis shows that (1) SBPMT is consistent under certain assumptions, (2) Increase the subagging times can reduce the generalization error of SBPMT to some extent and (3) Large number of ProbitBoost iterations in PMT can benefit the performance of SBPMT with fewer steps in the AdaBoost part. Those three properties are verified by a famous simulation designed by Mease and Wyner (2008). The last two points also provide a useful guidance in model tuning. A comparison of performance with other state-of-the-art classification methods illustrates that the proposed SBPMT algorithm has competitive prediction power in general and performs significantly better in some cases.</summary>
+    <category term="stat.ML" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="stat.AP" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2023-11-06T02:22:16Z</published>
+    <arxiv:primary_category term="stat.ML"/>
+    <author>
+      <name>Tian Qin</name>
+    </author>
+    <author>
+      <name>Wei-Min Huang</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2604.10469v1</id>
+    <title>Exact Finite-Sample Variance Decomposition of Subagging: A Spectral Filtering Perspective</title>
+    <updated>2026-04-12T05:47:41Z</updated>
+    <link href="https://arxiv.org/abs/2604.10469v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2604.10469v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Standard resampling ratios (e.g., $α\approx 0.632$) are widely used as default baselines in ensemble learning for three decades. However, how these ratios interact with a base learner's intrinsic functional complexity in finite samples lacks a exact mathematical characterization. We leverage the Hoeffding-ANOVA decomposition to derive the first exact, finite-sample variance decomposition for subagging, applicable to any symmetric base learner without requiring asymptotic limits or smoothness assumptions. We establish that subagging operates as a deterministic low-pass spectral filter: it preserves low-order structural signals while attenuating $c$-th order interaction variance by a geometric factor approaching $α^c$. This decoupling reveals why default baselines often under-regularize high-capacity interpolators, which instead require smaller $α$ to exponentially suppress spurious high-order noise. To operationalize these insights, we propose a complexity-guided adaptive subsampling algorithm, empirically demonstrating that dynamically calibrating $α$ to the learner's complexity spectrum consistently improves generalization over static baselines.</summary>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-04-12T05:47:41Z</published>
+    <arxiv:primary_category term="cs.LG"/>
+    <author>
+      <name>Ye Su</name>
+    </author>
+    <author>
+      <name>Mingrui Ye</name>
+    </author>
+    <author>
+      <name>Yining Wang</name>
+    </author>
+    <author>
+      <name>Jipeng Guo</name>
+    </author>
+    <author>
+      <name>Yong Liu</name>
+    </author>
+  </entry>
+</feed>

@@ -1,0 +1,189 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/3j5DDF1lAlUWPV8piDlDWx8GyG4</id>
+  <title>arXiv Query: search_query=all:"web agents"&amp;id_list=&amp;start=0&amp;max_results=6</title>
+  <updated>2026-11-15T16:14:31Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=all:%22web+agents%22&amp;start=0&amp;max_results=6&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>6</opensearch:itemsPerPage>
+  <opensearch:totalResults>379</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2507.14293v1</id>
+    <title>WebGuard: Building a Generalizable Guardrail for Web Agents</title>
+    <updated>2025-07-18T18:06:27Z</updated>
+    <link href="https://arxiv.org/abs/2507.14293v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2507.14293v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>The rapid development of autonomous web agents powered by Large Language Models (LLMs), while greatly elevating efficiency, exposes the frontier risk of taking unintended or harmful actions. This situation underscores an urgent need for effective safety measures, akin to access controls for human users. To address this critical challenge, we introduce WebGuard, the first comprehensive dataset designed to support the assessment of web agent action risks and facilitate the development of guardrails for real-world online environments. In doing so, WebGuard specifically focuses on predicting the outcome of state-changing actions and contains 4,939 human-annotated actions from 193 websites across 22 diverse domains, including often-overlooked long-tail websites. These actions are categorized using a novel three-tier risk schema: SAFE, LOW, and HIGH. The dataset includes designated training and test splits to support evaluation under diverse generalization settings. Our initial evaluations reveal a concerning deficiency: even frontier LLMs achieve less than 60% accuracy in predicting action outcomes and less than 60% recall in lagging HIGH-risk actions, highlighting the risks of deploying current-generation agents without dedicated safeguards. We therefore investigate fine-tuning specialized guardrail models using WebGuard. We conduct comprehensive evaluations across multiple generalization settings and find that a fine-tuned Qwen2.5VL-7B model yields a substantial improvement in performance, boosting accuracy from 37% to 80% and HIGH-risk action recall from 20% to 76%. Despite these improvements, the performance still falls short of the reliability required for high-stakes deployment, where guardrails must approach near-perfect accuracy and recall.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CV" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-07-18T18:06:27Z</published>
+    <arxiv:comment>We publicly release WebGuard, along with its annotation tools and fine-tuned models, to facilitate open-source research on monitoring and safeguarding web agents. All resources are available at https://github.com/OSU-NLP-Group/WebGuard</arxiv:comment>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Boyuan Zheng</name>
+    </author>
+    <author>
+      <name>Zeyi Liao</name>
+    </author>
+    <author>
+      <name>Scott Salisbury</name>
+    </author>
+    <author>
+      <name>Zeyuan Liu</name>
+    </author>
+    <author>
+      <name>Michael Lin</name>
+    </author>
+    <author>
+      <name>Qinyuan Zheng</name>
+    </author>
+    <author>
+      <name>Zifan Wang</name>
+    </author>
+    <author>
+      <name>Xiang Deng</name>
+    </author>
+    <author>
+      <name>Dawn Song</name>
+    </author>
+    <author>
+      <name>Huan Sun</name>
+    </author>
+    <author>
+      <name>Yu Su</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2410.17236v2</id>
+    <title>Large Language Models Empowered Personalized Web Agents</title>
+    <updated>2025-03-24T17:51:54Z</updated>
+    <link href="https://arxiv.org/abs/2410.17236v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2410.17236v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Web agents have emerged as a promising direction to automate Web task completion based on user instructions, significantly enhancing user experience. Recently, Web agents have evolved from traditional agents to Large Language Models (LLMs)-based Web agents. Despite their success, existing LLM-based Web agents overlook the importance of personalized data (e.g., user profiles and historical Web behaviors) in assisting the understanding of users' personalized instructions and executing customized actions. To overcome the limitation, we first formulate the task of LLM-empowered personalized Web agents, which integrate personalized data and user instructions to personalize instruction comprehension and action execution. To address the absence of a comprehensive evaluation benchmark, we construct a Personalized Web Agent Benchmark (PersonalWAB), featuring user instructions, personalized user data, Web functions, and two evaluation paradigms across three personalized Web tasks. Moreover, we propose a Personalized User Memory-enhanced Alignment (PUMA) framework to adapt LLMs to the personalized Web agent task. PUMA utilizes a memory bank with a task-specific retrieval strategy to filter relevant historical Web behaviors. Based on the behaviors, PUMA then aligns LLMs for personalized action execution through fine-tuning and direct preference optimization. Extensive experiments validate the superiority of PUMA over existing Web agents on PersonalWAB.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.IR" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2024-10-22T17:54:45Z</published>
+    <arxiv:comment>Accepted to WWW 2025. The code and data are available on the project website https://hongrucai.github.io/PersonalWAB/</arxiv:comment>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Hongru Cai</name>
+    </author>
+    <author>
+      <name>Yongqi Li</name>
+    </author>
+    <author>
+      <name>Wenjie Wang</name>
+    </author>
+    <author>
+      <name>Fengbin Zhu</name>
+    </author>
+    <author>
+      <name>Xiaoyu Shen</name>
+    </author>
+    <author>
+      <name>Wenjie Li</name>
+    </author>
+    <author>
+      <name>Tat-Seng Chua</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2406.01623v1</id>
+    <title>WebSuite: Systematically Evaluating Why Web Agents Fail</title>
+    <updated>2024-06-01T00:32:26Z</updated>
+    <link href="https://arxiv.org/abs/2406.01623v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2406.01623v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>We describe WebSuite, the first diagnostic benchmark for generalist web agents, designed to systematically evaluate why agents fail. Advances in AI have led to the rise of numerous web agents that autonomously operate a browser to complete tasks. However, most existing benchmarks focus on strictly measuring whether an agent can or cannot complete a task, without giving insight on why. In this paper, we 1) develop a taxonomy of web actions to facilitate identifying common failure patterns, and 2) create an extensible benchmark suite to assess agents' performance on our taxonomized actions. This benchmark suite consists of both individual tasks, such as clicking a button, and end-to-end tasks, such as adding an item to a cart, and is designed such that any failure of a task can be attributed directly to a failure of a specific web action. We evaluate two popular generalist web agents, one text-based and one multimodal, and identify unique weaknesses for each agent. Because WebSuite can disaggregate task failures into specific action failures, this enables granular identification of which UX flows an individual agent has trouble with and immediately highlights promising avenues for improvement. These findings highlight the need for more focused benchmarking on where web agents go wrong to effectively improve agents beyond their weaker performance today.</summary>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2024-06-01T00:32:26Z</published>
+    <arxiv:primary_category term="cs.SE"/>
+    <author>
+      <name>Eric Li</name>
+    </author>
+    <author>
+      <name>Jim Waldo</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2102.06607v4</id>
+    <title>Intelligent Software Web Agents: A Gap Analysis</title>
+    <updated>2021-09-24T14:16:41Z</updated>
+    <link href="https://arxiv.org/abs/2102.06607v4" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2102.06607v4" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Semantic web technologies have shown their effectiveness, especially when it comes to knowledge representation, reasoning, and data integration. However, the original semantic web vision, whereby machine readable web data could be automatically actioned upon by intelligent software web agents, has yet to be realised. In order to better understand the existing technological opportunities and challenges, in this paper we examine the status quo in terms of intelligent software web agents, guided by research with respect to requirements and architectural components, coming from the agents community. We use the identified requirements to both further elaborate on the semantic web agent motivating use case scenario, and to summarise different perspectives on the requirements from the semantic web agent literature. We subsequently propose a hybrid semantic web agent architecture, and use the various components and subcomponents in order to provide a focused discussion in relation to existing semantic web standards and community activities. Finally, we highlight open research opportunities and challenges and take a broader perspective of the research by discussing the potential for intelligent software web agents as an enabling technology for emerging domains, such as digital assistants, cloud computing, and the internet of things.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.MA" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.NI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2021-02-12T16:32:02Z</published>
+    <arxiv:primary_category term="cs.AI"/>
+    <arxiv:journal_ref>Journal of Web Semantics (2021)</arxiv:journal_ref>
+    <author>
+      <name>Sabrina Kirrane</name>
+    </author>
+    <arxiv:doi>10.1016/j.websem.2021.100659</arxiv:doi>
+    <link rel="related" href="https://doi.org/10.1016/j.websem.2021.100659" title="doi"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2410.00689v2</id>
+    <title>Multimodal Auto Validation For Self-Refinement in Web Agents</title>
+    <updated>2024-10-11T15:42:52Z</updated>
+    <link href="https://arxiv.org/abs/2410.00689v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2410.00689v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>As our world digitizes, web agents that can automate complex and monotonous tasks are becoming essential in streamlining workflows. This paper introduces an approach to improving web agent performance through multi-modal validation and self-refinement. We present a comprehensive study of different modalities (text, vision) and the effect of hierarchy for the automatic validation of web agents, building upon the state-of-the-art Agent-E web automation framework. We also introduce a self-refinement mechanism for web automation, using the developed auto-validator, that enables web agents to detect and self-correct workflow failures. Our results show significant gains on Agent-E's (a SOTA web agent) prior state-of-art performance, boosting task-completion rates from 76.2\% to 81.24\% on the subset of the WebVoyager benchmark. The approach presented in this paper paves the way for more reliable digital assistants in complex, real-world scenarios.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2024-10-01T13:43:55Z</published>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Ruhana Azam</name>
+    </author>
+    <author>
+      <name>Tamer Abuelsaad</name>
+    </author>
+    <author>
+      <name>Aditya Vempaty</name>
+    </author>
+    <author>
+      <name>Ashish Jagmohan</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2604.03465v2</id>
+    <title>The Tool Illusion: Rethinking Tool Use in Web Agents</title>
+    <updated>2026-07-16T12:25:02Z</updated>
+    <link href="https://arxiv.org/abs/2604.03465v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2604.03465v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>As web agents rapidly evolve, an increasing body of work has moved beyond conventional atomic browser interactions and explored tool use as a higher-level action paradigm. Although prior studies have shown the promise of tools, their conclusions are often drawn from limited experimental scales and sometimes non-comparable settings. As a result, several fundamental questions remain unclear: i) whether tools provide consistent gains for web agents, ii) what practical design principles characterize effective tools, and iii) what side effects tool use may introduce. To establish a stronger empirical foundation for future research, we revisit tool use in web agents through an extensive and carefully controlled study across diverse tool sources, backbone models, tool-use frameworks, and evaluation benchmarks. Our findings both revise some prior conclusions and complement others with broader evidence. We hope this study provides a more reliable empirical basis and inspires future research on tool-use web agents.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-04-03T21:18:26Z</published>
+    <arxiv:comment>COLM 2026</arxiv:comment>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Renze Lou</name>
+    </author>
+    <author>
+      <name>Baolin Peng</name>
+    </author>
+    <author>
+      <name>Wenlin Yao</name>
+    </author>
+    <author>
+      <name>Qianhui Wu</name>
+    </author>
+    <author>
+      <name>Hao Cheng</name>
+    </author>
+    <author>
+      <name>Suman Nath</name>
+    </author>
+    <author>
+      <name>Wenpeng Yin</name>
+    </author>
+    <author>
+      <name>Jianfeng Gao</name>
+    </author>
+  </entry>
+</feed>

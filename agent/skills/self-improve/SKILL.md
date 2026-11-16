@@ -35,6 +35,10 @@ record a `mem` decision), 2 hold (rerun with more reps, or the effect is too sma
 - The suite, its verifiers and the gate are outside the editable set; `run.py` records their hash
   and `gate.py` refuses to compare runs across a hash change (2609.12216, 2609.00069).
 - Record cost (wall per task, tokens) alongside accuracy — unattended loops die on cost (2609.20519).
+- At ceiling the gate may only move on cost: `policy.json → gate.cost_win_frac` accepts an equal-pass
+  arm that cuts output tokens ≥10% as `ACCEPT_COST` (never as a capability gain).
+- Weekly, and before proposing anything: `bin/pi-review` (writes `selfimprove/review.md`). A FAIL
+  there is the first thing to fix; `pi-preflight` refuses an action when the review is >10 days old.
 - A run that produced no durable note is incomplete: append the finding to `mem` and to the open
   PDSA cycle (2603.21321: coherence lives in external state, not in a context window).
 

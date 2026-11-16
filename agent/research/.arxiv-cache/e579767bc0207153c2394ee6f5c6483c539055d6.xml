@@ -1,0 +1,51 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/ewaZ9g4INPdsTT9K4qHLi0n1dt0</id>
+  <title>arXiv Query: search_query=all:RepoGraph&amp;id_list=&amp;start=0&amp;max_results=6</title>
+  <updated>2026-11-15T16:02:39Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=all:RepoGraph&amp;start=0&amp;max_results=6&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>6</opensearch:itemsPerPage>
+  <opensearch:totalResults>1</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2410.14684v2</id>
+    <title>RepoGraph: Enhancing AI Software Engineering with Repository-level Code Graph</title>
+    <updated>2025-03-18T20:26:58Z</updated>
+    <link href="https://arxiv.org/abs/2410.14684v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2410.14684v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Large Language Models (LLMs) excel in code generation yet struggle with modern AI software engineering tasks. Unlike traditional function-level or file-level coding tasks, AI software engineering requires not only basic coding proficiency but also advanced skills in managing and interacting with code repositories. However, existing methods often overlook the need for repository-level code understanding, which is crucial for accurately grasping the broader context and developing effective solutions. On this basis, we present RepoGraph, a plug-in module that manages a repository-level structure for modern AI software engineering solutions. RepoGraph offers the desired guidance and serves as a repository-wide navigation for AI software engineers. We evaluate RepoGraph on the SWE-bench by plugging it into four different methods of two lines of approaches, where RepoGraph substantially boosts the performance of all systems, leading to a new state-of-the-art among open-source frameworks. Our analyses also demonstrate the extensibility and flexibility of RepoGraph by testing on another repo-level coding benchmark, CrossCodeEval. Our code is available at https://github.com/ozyyshr/RepoGraph.</summary>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2024-10-03T05:45:26Z</published>
+    <arxiv:comment>ICLR 2025</arxiv:comment>
+    <arxiv:primary_category term="cs.SE"/>
+    <author>
+      <name>Siru Ouyang</name>
+    </author>
+    <author>
+      <name>Wenhao Yu</name>
+    </author>
+    <author>
+      <name>Kaixin Ma</name>
+    </author>
+    <author>
+      <name>Zilin Xiao</name>
+    </author>
+    <author>
+      <name>Zhihan Zhang</name>
+    </author>
+    <author>
+      <name>Mengzhao Jia</name>
+    </author>
+    <author>
+      <name>Jiawei Han</name>
+    </author>
+    <author>
+      <name>Hongming Zhang</name>
+    </author>
+    <author>
+      <name>Dong Yu</name>
+    </author>
+  </entry>
+</feed>

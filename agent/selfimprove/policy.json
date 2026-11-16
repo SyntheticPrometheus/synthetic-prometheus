@@ -1,10 +1,11 @@
 {
   "version": 1,
-  "note": "Pinned policy. The loop may not edit this file; audit.py refuses an arm whose diff would change it. Thresholds are the pre-registered decision rule.",
+  "note": "Pinned policy. The loop may not edit this file; audit.py refuses an arm whose diff would change it. Thresholds are the pre-registered decision rule. v2 (cycle 15): cost_win_frac 0.10 \u2014 at ceiling the gate may accept an equal-pass arm that cuts output tokens by >=10% at k>=3 with no regression; reported as ACCEPT_COST, never as a capability gain.",
   "gate": {
     "min_reps": 3,
     "min_delta": 2,
-    "require_no_regression": true
+    "require_no_regression": true,
+    "cost_win_frac": 0.1
   },
   "proposal": {
     "max_added_lines": 12,

@@ -25,3 +25,21 @@ Return exactly this shape, nothing else:
 ANSWER: <1-4 lines that directly answer the question>
 REFS: <up to 20 lines, "path:line — one-line note", most relevant first>
 GAPS: <what you could not determine, or "none">
+
+## External evidence mode (when the question is outside this machine)
+
+Search engines are bot-walled on this host: never try Google/Bing/DDG/Brave. Use primary APIs and
+cite only ids you actually retrieved (`https://export.arxiv.org/api/query?search_query=...`,
+`api.github.com`, `en.wikipedia.org/w/api.php`, `hn.algolia.com/api/v1/search?query=`);
+`https://r.jina.ai/<url>` renders JS pages. Read the abstract body, not the title; extract the claim
+and the number (effect size, benchmark, n) in one line each, and say what would falsify it. Never
+invent an id or cite from memory; if a fetch fails, report the failure.
+
+Return, for evidence questions: `QUESTION:` one line · `FINDINGS:` bullets `- <id> <year> — <claim> —
+<number> — <relevance>` · `TENSIONS:` or "none" · `GAPS:` or "none". Keep it under 60 lines and
+**≤25 words per bullet** — a fold that costs 8k output tokens has failed to compress.
+
+Before citing a paper, read its `comment` field: if it says withdrawn, retracted, or correction,
+drop the numbers and say so in GAPS (a 2025 multi-agent paper's headline result was withdrawn after
+a code audit). Cite Wikipedia by article title, not a year; cite a book by author/year/ISBN only if
+you actually retrieved the record — otherwise write "canonical, no DOI retrieved".

@@ -1,0 +1,392 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/AEYFJ7X/2uIUkf+teKvejGTUfLQ</id>
+  <title>arXiv Query: search_query=all:"multi-agent" AND all:efficiency&amp;id_list=&amp;start=0&amp;max_results=12</title>
+  <updated>2026-11-15T14:52:31Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=all:%22multi-agent%22+AND+all:efficiency&amp;start=0&amp;max_results=12&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>12</opensearch:itemsPerPage>
+  <opensearch:totalResults>4276</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2603.15054v1</id>
+    <title>Interference-Aware K-Step Reachable Communication in Multi-Agent Reinforcement Learning</title>
+    <updated>2026-03-16T10:07:33Z</updated>
+    <link href="https://arxiv.org/abs/2603.15054v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2603.15054v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Effective communication is pivotal for addressing complex collaborative tasks in multi-agent reinforcement learning (MARL). Yet, limited communication bandwidth and dynamic, intricate environmental topologies present significant challenges in identifying high-value communication partners. Agents must consequently select collaborators under uncertainty, lacking a priori knowledge of which partners can deliver task-critical information. To this end, we propose Interference-Aware K-Step Reachable Communication (IA-KRC), a novel framework that enhances cooperation via two core components: (1) a K-Step reachability protocol that confines message passing to physically accessible neighbors, and (2) an interference-prediction module that optimizes partner choice by minimizing interference while maximizing utility. Compared to existing methods, IA-KRC enables substantially more persistent and efficient cooperation despite environmental interference. Comprehensive evaluations confirm that IA-KRC achieves superior performance compared to state-of-the-art baselines, while demonstrating enhanced robustness and scalability in complex topological and highly dynamic multi-agent scenarios.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-03-16T10:07:33Z</published>
+    <arxiv:comment>multi-agent reinforcement learning, communication</arxiv:comment>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Ziyu Cheng</name>
+    </author>
+    <author>
+      <name>Jinsheng Ren</name>
+    </author>
+    <author>
+      <name>Zhouxian Jiang</name>
+    </author>
+    <author>
+      <name>Chenzhihang Li</name>
+    </author>
+    <author>
+      <name>Rongye Shi</name>
+    </author>
+    <author>
+      <name>Bin Liang</name>
+    </author>
+    <author>
+      <name>Jun Yang</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2412.05449v1</id>
+    <title>Towards Effective GenAI Multi-Agent Collaboration: Design and Evaluation for Enterprise Applications</title>
+    <updated>2024-12-06T22:14:17Z</updated>
+    <link href="https://arxiv.org/abs/2412.05449v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2412.05449v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>AI agents powered by large language models (LLMs) have shown strong capabilities in problem solving. Through combining many intelligent agents, multi-agent collaboration has emerged as a promising approach to tackle complex, multi-faceted problems that exceed the capabilities of single AI agents. However, designing the collaboration protocols and evaluating the effectiveness of these systems remains a significant challenge, especially for enterprise applications. This report addresses these challenges by presenting a comprehensive evaluation of coordination and routing capabilities in a novel multi-agent collaboration framework. We evaluate two key operational modes: (1) a coordination mode enabling complex task completion through parallel communication and payload referencing, and (2) a routing mode for efficient message forwarding between agents. We benchmark on a set of handcrafted scenarios from three enterprise domains, which are publicly released with the report. For coordination capabilities, we demonstrate the effectiveness of inter-agent communication and payload referencing mechanisms, achieving end-to-end goal success rates of 90%. Our analysis yields several key findings: multi-agent collaboration enhances goal success rates by up to 70% compared to single-agent approaches in our benchmarks; payload referencing improves performance on code-intensive tasks by 23%; latency can be substantially reduced with a routing mechanism that selectively bypasses agent orchestration. These findings offer valuable guidance for enterprise deployments of multi-agent systems and advance the development of scalable, efficient multi-agent collaboration frameworks.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2024-12-06T22:14:17Z</published>
+    <arxiv:comment>Technical report for multi-agent collaboration on AWS Bedrock Agents</arxiv:comment>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Raphael Shu</name>
+    </author>
+    <author>
+      <name>Nilaksh Das</name>
+    </author>
+    <author>
+      <name>Michelle Yuan</name>
+    </author>
+    <author>
+      <name>Monica Sunkara</name>
+    </author>
+    <author>
+      <name>Yi Zhang</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2604.09703v1</id>
+    <title>Cayley Graph Optimization for Scalable Multi-Agent Communication Topologies</title>
+    <updated>2026-04-07T13:43:09Z</updated>
+    <link href="https://arxiv.org/abs/2604.09703v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2604.09703v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Large-scale multi-agent communication has long faced a scalability bottleneck: fully connected networks require quadratic complexity, yet existing sparse topologies rely on hand-crafted rules. This paper treats the communication graph itself as a design variable and proposes CayleyTopo, a family of circulant Cayley graphs whose generator sets are optimized to minimize diameter, directly targeting worst-case information propagation speed. To navigate the enormous search space of possible generator sets, we develop a lightweight reinforcement learning framework that injects a number-theoretic prior to favor structurally rich generators, alongside a message-propagation score that provides dense connectivity feedback during construction. The resulting CayleyTopo consistently outperforms existing hand-crafted topologies, achieving faster information dissemination, greater resilience to link failures, and lower communication load, all while approaching the theoretical Moore bound. Our study opens the door to scalable, robust, and efficient communication foundations for future multi-agent systems, where the graph itself becomes optimizable rather than a fixed constraint.</summary>
+    <category term="cs.NI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.IT" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.MA" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-04-07T13:43:09Z</published>
+    <arxiv:comment>Keywords: Multi-agent communication, scalable topology, Cayley graph, diameter minimization</arxiv:comment>
+    <arxiv:primary_category term="cs.NI"/>
+    <author>
+      <name>Jingkai Luo</name>
+    </author>
+    <author>
+      <name>Yulin Shao</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2110.08172v2</id>
+    <title>MLFC: From 10 to 50 Planners in the Multi-Agent Programming Contest</title>
+    <updated>2021-10-18T09:36:09Z</updated>
+    <link href="https://arxiv.org/abs/2110.08172v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2110.08172v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>In this paper, we describe the strategies used by our team, MLFC, that led us to achieve the 2nd place in the 15th edition of the Multi-Agent Programming Contest. The scenario used in the contest is an extension of the previous edition (14th) "Agents Assemble" wherein two teams of agents move around a 2D grid and compete to assemble complex block structures. We discuss the languages and tools used during the development of our team. Then, we summarise the main strategies that were carried over from our previous participation in the 14th edition and list the limitations (if any) of using these strategies in the latest contest edition. We also developed new strategies that were made specifically for the extended scenario: cartography (determining the size of the map); formal verification of the map merging protocol (to provide assurances that it works when increasing the number of agents); plan cache (efficiently scaling the number of planners); task achievement (forming groups of agents to achieve tasks); and bullies (agents that focus on stopping agents from the opposing team). Finally, we give a brief overview of our performance in the contest and discuss what we believe were our shortcomings.</summary>
+    <category term="cs.MA" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2021-10-15T15:59:08Z</published>
+    <arxiv:comment>Published in The Multi-Agent Programming Contest 2021: One-and-a-Half Decades of Exploring Multi-Agent Systems</arxiv:comment>
+    <arxiv:primary_category term="cs.MA"/>
+    <author>
+      <name>Rafael C. Cardoso</name>
+    </author>
+    <author>
+      <name>Angelo Ferrando</name>
+    </author>
+    <author>
+      <name>Fabio Papacchini</name>
+    </author>
+    <author>
+      <name>Matt Luckcuck</name>
+    </author>
+    <author>
+      <name>Sven Linker</name>
+    </author>
+    <author>
+      <name>Terry R. Payne</name>
+    </author>
+    <arxiv:doi>10.1007/978-3-030-88549-6_4</arxiv:doi>
+    <link rel="related" href="https://doi.org/10.1007/978-3-030-88549-6_4" title="doi"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2208.01769v1</id>
+    <title>Deep Reinforcement Learning for Multi-Agent Interaction</title>
+    <updated>2022-08-02T21:55:56Z</updated>
+    <link href="https://arxiv.org/abs/2208.01769v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2208.01769v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>The development of autonomous agents which can interact with other agents to accomplish a given task is a core area of research in artificial intelligence and machine learning. Towards this goal, the Autonomous Agents Research Group develops novel machine learning algorithms for autonomous systems control, with a specific focus on deep reinforcement learning and multi-agent reinforcement learning. Research problems include scalable learning of coordinated agent policies and inter-agent communication; reasoning about the behaviours, goals, and composition of other agents from limited observations; and sample-efficient learning based on intrinsic motivation, curriculum learning, causal inference, and representation learning. This article provides a broad overview of the ongoing research portfolio of the group and discusses open problems for future directions.</summary>
+    <category term="cs.MA" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2022-08-02T21:55:56Z</published>
+    <arxiv:comment>Published in AI Communications Special Issue on Multi-Agent Systems Research in the UK</arxiv:comment>
+    <arxiv:primary_category term="cs.MA"/>
+    <author>
+      <name>Ibrahim H. Ahmed</name>
+    </author>
+    <author>
+      <name>Cillian Brewitt</name>
+    </author>
+    <author>
+      <name>Ignacio Carlucho</name>
+    </author>
+    <author>
+      <name>Filippos Christianos</name>
+    </author>
+    <author>
+      <name>Mhairi Dunion</name>
+    </author>
+    <author>
+      <name>Elliot Fosong</name>
+    </author>
+    <author>
+      <name>Samuel Garcin</name>
+    </author>
+    <author>
+      <name>Shangmin Guo</name>
+    </author>
+    <author>
+      <name>Balint Gyevnar</name>
+    </author>
+    <author>
+      <name>Trevor McInroe</name>
+    </author>
+    <author>
+      <name>Georgios Papoudakis</name>
+    </author>
+    <author>
+      <name>Arrasy Rahman</name>
+    </author>
+    <author>
+      <name>Lukas Schäfer</name>
+    </author>
+    <author>
+      <name>Massimiliano Tamborski</name>
+    </author>
+    <author>
+      <name>Giuseppe Vecchio</name>
+    </author>
+    <author>
+      <name>Cheng Wang</name>
+    </author>
+    <author>
+      <name>Stefano V. Albrecht</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2004.08883v4</id>
+    <title>Variational Policy Propagation for Multi-agent Reinforcement Learning</title>
+    <updated>2022-01-29T11:08:12Z</updated>
+    <link href="https://arxiv.org/abs/2004.08883v4" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2004.08883v4" rel="related" type="application/pdf" title="pdf"/>
+    <summary>We propose a \emph{collaborative} multi-agent reinforcement learning algorithm named variational policy propagation (VPP) to learn a \emph{joint} policy through the interactions over agents. We prove that the joint policy is a Markov Random Field under some mild conditions, which in turn reduces the policy space effectively. We integrate the variational inference as special differentiable layers in policy such that the actions can be efficiently sampled from the Markov Random Field and the overall policy is differentiable. We evaluate our algorithm on several large scale challenging tasks and demonstrate that it outperforms previous state-of-the-arts.</summary>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.MA" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="stat.ML" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2020-04-19T15:42:55Z</published>
+    <arxiv:comment>The title of previous version was "Intention Propagation for Multi-agent Reinforcement Learning"</arxiv:comment>
+    <arxiv:primary_category term="cs.LG"/>
+    <author>
+      <name>Chao Qu</name>
+    </author>
+    <author>
+      <name>Hui Li</name>
+    </author>
+    <author>
+      <name>Chang Liu</name>
+    </author>
+    <author>
+      <name>Junwu Xiong</name>
+    </author>
+    <author>
+      <name>James Zhang</name>
+    </author>
+    <author>
+      <name>Wei Chu</name>
+    </author>
+    <author>
+      <name>Weiqiang Wang</name>
+    </author>
+    <author>
+      <name>Yuan Qi</name>
+    </author>
+    <author>
+      <name>Le Song</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2405.00839v1</id>
+    <title>Communication-Efficient Training Workload Balancing for Decentralized Multi-Agent Learning</title>
+    <updated>2024-05-01T20:03:37Z</updated>
+    <link href="https://arxiv.org/abs/2405.00839v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2405.00839v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Decentralized Multi-agent Learning (DML) enables collaborative model training while preserving data privacy. However, inherent heterogeneity in agents' resources (computation, communication, and task size) may lead to substantial variations in training time. This heterogeneity creates a bottleneck, lengthening the overall training time due to straggler effects and potentially wasting spare resources of faster agents. To minimize training time in heterogeneous environments, we present a Communication-Efficient Training Workload Balancing for Decentralized Multi-Agent Learning (ComDML), which balances the workload among agents through a decentralized approach. Leveraging local-loss split training, ComDML enables parallel updates, where slower agents offload part of their workload to faster agents. To minimize the overall training time, ComDML optimizes the workload balancing by jointly considering the communication and computation capacities of agents, which hinges upon integer programming. A dynamic decentralized pairing scheduler is developed to efficiently pair agents and determine optimal offloading amounts. We prove that in ComDML, both slower and faster agents' models converge, for convex and non-convex functions. Furthermore, extensive experimental results on popular datasets (CIFAR-10, CIFAR-100, and CINIC-10) and their non-I.I.D. variants, with large models such as ResNet-56 and ResNet-110, demonstrate that ComDML can significantly reduce the overall training time while maintaining model accuracy, compared to state-of-the-art methods. ComDML demonstrates robustness in heterogeneous environments, and privacy measures can be seamlessly integrated for enhanced data protection.</summary>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.DC" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.MA" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.PF" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2024-05-01T20:03:37Z</published>
+    <arxiv:comment>This paper has been accepted for presentation at ICDCS (44th IEEE International Conference on Distributed Computing Systems). Keywords: decentralized multi-agent learning, federated learning, edge computing, heterogeneous agents, workload balancing, and communication-efficient training )</arxiv:comment>
+    <arxiv:primary_category term="cs.LG"/>
+    <arxiv:journal_ref>2024 IEEE 44th International Conference on Distributed Computing Systems (ICDCS)</arxiv:journal_ref>
+    <author>
+      <name>Seyed Mahmoud Sajjadi Mohammadabadi</name>
+    </author>
+    <author>
+      <name>Lei Yang</name>
+    </author>
+    <author>
+      <name>Feng Yan</name>
+    </author>
+    <author>
+      <name>Junshan Zhang</name>
+    </author>
+    <arxiv:doi>10.1109/ICDCS60910.2024.00069</arxiv:doi>
+    <link rel="related" href="https://doi.org/10.1109/ICDCS60910.2024.00069" title="doi"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2512.06196v1</id>
+    <title>ARCANE: A Multi-Agent Framework for Interpretable and Configurable Alignment</title>
+    <updated>2025-12-05T22:39:54Z</updated>
+    <link href="https://arxiv.org/abs/2512.06196v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2512.06196v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>As agents based on large language models are increasingly deployed to long-horizon tasks, maintaining their alignment with stakeholder preferences becomes critical. Effective alignment in such settings requires reward models that are interpretable so that stakeholders can understand and audit model objectives. Moreover, reward models must be capable of steering agents at interaction time, allowing preference shifts to be incorporated without retraining. We introduce ARCANE, a framework that frames alignment as a multi-agent collaboration problem that dynamically represents stakeholder preferences as natural-language rubrics: weighted sets of verifiable criteria that can be generated on-the-fly from task context. Inspired by utility theory, we formulate rubric learning as a reconstruction problem and apply a regularized Group-Sequence Policy Optimization (GSPO) procedure that balances interpretability, faithfulness, and computational efficiency. Using a corpus of 219 labeled rubrics derived from the GDPVal benchmark, we evaluate ARCANE on challenging tasks requiring multi-step reasoning and tool use. The learned rubrics produce compact, legible evaluations and enable configurable trade-offs (e.g., correctness vs. conciseness) without retraining. Our results show that rubric-based reward models offer a promising path toward interpretable, test-time adaptive alignment for complex, long-horizon AI systems.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-12-05T22:39:54Z</published>
+    <arxiv:comment>Accepted to the AAAI 2026 LLAMAS Workshop (Large Language Model Agents for Multi-Agent Systems)</arxiv:comment>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Charlie Masters</name>
+    </author>
+    <author>
+      <name>Marta Grześkiewicz</name>
+    </author>
+    <author>
+      <name>Stefano V. Albrecht</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2006.00176v2</id>
+    <title>When2com: Multi-Agent Perception via Communication Graph Grouping</title>
+    <updated>2020-06-02T19:32:30Z</updated>
+    <link href="https://arxiv.org/abs/2006.00176v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2006.00176v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>While significant advances have been made for single-agent perception, many applications require multiple sensing agents and cross-agent communication due to benefits such as coverage and robustness. It is therefore critical to develop frameworks which support multi-agent collaborative perception in a distributed and bandwidth-efficient manner. In this paper, we address the collaborative perception problem, where one agent is required to perform a perception task and can communicate and share information with other agents on the same task. Specifically, we propose a communication framework by learning both to construct communication groups and decide when to communicate. We demonstrate the generalizability of our framework on two different perception tasks and show that it significantly reduces communication bandwidth while maintaining superior performance.</summary>
+    <category term="cs.CV" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.MA" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.RO" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2020-05-30T04:41:32Z</published>
+    <arxiv:comment>Accepted to CVPR 2020; for the project page, see https://ycliu93.github.io/projects/multi-agent-perception.html</arxiv:comment>
+    <arxiv:primary_category term="cs.CV"/>
+    <author>
+      <name>Yen-Cheng Liu</name>
+    </author>
+    <author>
+      <name>Junjiao Tian</name>
+    </author>
+    <author>
+      <name>Nathaniel Glaser</name>
+    </author>
+    <author>
+      <name>Zsolt Kira</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2006.10422v1</id>
+    <title>Train Unit Shunting and Servicing: a Real-Life Application of Multi-Agent Path Finding</title>
+    <updated>2020-06-18T10:57:12Z</updated>
+    <link href="https://arxiv.org/abs/2006.10422v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2006.10422v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>In between transportation services, trains are parked and maintained at shunting yards. The conflict-free routing of trains to and on these yards and the scheduling of service and maintenance tasks is known as the train unit shunting and service problem. Efficient use of the capacity of these yards is becoming increasingly important, because of increasing numbers of trains without proportional extensions of the yards. Efficiently scheduling maintenance activities is extremely challenging: currently only heuristics succeed in finding solutions to the integrated problem at all. Bounds are needed to determine the quality of these heuristics, and also to support investment decisions on increasing the yard capacity. For this, a complete algorithm for a possibly relaxed problem model is required. We analyze the potential of extending the model for multi-agent path finding to be used for such a relaxation.</summary>
+    <category term="cs.MA" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.DM" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2020-06-18T10:57:12Z</published>
+    <arxiv:comment>14 pages, 2 figures, to be published in the 4th International Workshop on Multi-agent Path Finding (2020)</arxiv:comment>
+    <arxiv:primary_category term="cs.MA"/>
+    <author>
+      <name>Jesse Mulderij</name>
+      <arxiv:affiliation>Delft University of Technology</arxiv:affiliation>
+    </author>
+    <author>
+      <name>Bob Huisman</name>
+      <arxiv:affiliation>Nederlandse Spoorwegen</arxiv:affiliation>
+    </author>
+    <author>
+      <name>Denise Tönissen</name>
+      <arxiv:affiliation>Vrije Universiteit Amsterdam</arxiv:affiliation>
+    </author>
+    <author>
+      <name>Koos van der Linden</name>
+      <arxiv:affiliation>Delft University of Technology</arxiv:affiliation>
+    </author>
+    <author>
+      <name>Mathijs de Weerdt</name>
+      <arxiv:affiliation>Delft University of Technology</arxiv:affiliation>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2110.08642v3</id>
+    <title>Local Advantage Actor-Critic for Robust Multi-Agent Deep Reinforcement Learning</title>
+    <updated>2021-12-19T19:39:13Z</updated>
+    <link href="https://arxiv.org/abs/2110.08642v3" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2110.08642v3" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Policy gradient methods have become popular in multi-agent reinforcement learning, but they suffer from high variance due to the presence of environmental stochasticity and exploring agents (i.e., non-stationarity), which is potentially worsened by the difficulty in credit assignment. As a result, there is a need for a method that is not only capable of efficiently solving the above two problems but also robust enough to solve a variety of tasks. To this end, we propose a new multi-agent policy gradient method, called Robust Local Advantage (ROLA) Actor-Critic. ROLA allows each agent to learn an individual action-value function as a local critic as well as ameliorating environment non-stationarity via a novel centralized training approach based on a centralized critic. By using this local critic, each agent calculates a baseline to reduce variance on its policy gradient estimation, which results in an expected advantage action-value over other agents' choices that implicitly improves credit assignment. We evaluate ROLA across diverse benchmarks and show its robustness and effectiveness over a number of state-of-the-art multi-agent policy gradient algorithms.</summary>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.MA" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2021-10-16T19:03:34Z</published>
+    <arxiv:primary_category term="cs.LG"/>
+    <arxiv:journal_ref>IEEE The 3rd International Symposium on Multi-Robot and Multi-Agent Systems (MRS), 2021</arxiv:journal_ref>
+    <author>
+      <name>Yuchen Xiao</name>
+    </author>
+    <author>
+      <name>Xueguang Lyu</name>
+    </author>
+    <author>
+      <name>Christopher Amato</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2503.12684v1</id>
+    <title>On Some Fundamental Problems for Multi-Agent Systems Over Multilayer Networks</title>
+    <updated>2025-03-16T22:56:44Z</updated>
+    <link href="https://arxiv.org/abs/2503.12684v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2503.12684v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Many researchers have considered multi-agent systems over single-layer networks as models for studying diffusion phenomena. Since real-world networks involve connections between agents with different semantics (e.g., family member, friend, colleague), the study of multi-agent systems over multilayer networks has assumed importance. Our focus is on one class of multi-agent system models over multilayer networks, namely multilayer synchronous dynamical systems (MSyDSs). We study several fundamental problems for this model. We establish properties of the phase spaces of MSyDSs and bring out interesting differences between single-layer and multilayer dynamical systems. We show that, in general, the problem of determining whether two given MSyDSs are inequivalent is NP-complete. This hardness result holds even when the only difference between the two systems is the local function at just one node in one layer. We also present efficient algorithms for the equivalence problem for restricted versions of MSyDSs (e.g., systems where each local function is a bounded-threshold function, systems where the number of layers is fixed and each local function is symmetric). In addition, we investigate the expressive power of MSyDSs based on the number of layers. In particular, we examine conditions under which a system with k &gt;= 2 layers has an equivalent system with k-1 or fewer layers.</summary>
+    <category term="cs.MA" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CC" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-03-16T22:56:44Z</published>
+    <arxiv:comment>This is a complete version of the paper (with the same title) that will appear in Proc. of the 24th International Conference on Autonomous Agents and Multi-agent Systems (AAMAS 2025), Detroit, MI, May 2025</arxiv:comment>
+    <arxiv:primary_category term="cs.MA"/>
+    <author>
+      <name>Daniel J. Rosenkrantz</name>
+    </author>
+    <author>
+      <name>Madhav V. Marathe</name>
+    </author>
+    <author>
+      <name>Zirou Qiu</name>
+    </author>
+    <author>
+      <name>S. S. Ravi</name>
+    </author>
+    <author>
+      <name>Richard E. Stearns</name>
+    </author>
+  </entry>
+</feed>

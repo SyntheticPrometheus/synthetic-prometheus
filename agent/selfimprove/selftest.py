@@ -11,6 +11,8 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+import fixtures
+
 HERE = Path(__file__).resolve().parent
 SUITE = json.loads((HERE / "suite" / "suite.json").read_text())
 
@@ -55,6 +57,7 @@ for _t in SUITE["tasks"]:
 
 
 def run(task, extra):
+    task = fixtures.task(task)
     d = Path(tempfile.mkdtemp(prefix="selftest-"))
     try:
         for name, content in task.get("files", {}).items():
@@ -81,8 +84,15 @@ def main():
     for t in SUITE["tasks"]:
         if a.task and t["id"] != a.task:
             continue
-        ok_pass, err1 = run(t, GOOD[t["id"]])
-        ok_fail, err2 = run(t, BAD[t["id"]])
+        good_files, bad_files = fixtures.selftest_answers(t)
+        good_files = good_files or GOOD.get(t["id"])
+        bad_files = bad_files or BAD.get(t["id"])
+        if good_files is None or bad_files is None:
+            print(f"{t['id']:16s} NO SELFTEST ANSWERS  BROKEN")
+            bad += 1
+            continue
+        ok_pass, err1 = run(t, good_files)
+        ok_fail, err2 = run(t, bad_files)
         status = "ok" if (ok_pass and not ok_fail) else "BROKEN"
         if status == "BROKEN":
             bad += 1

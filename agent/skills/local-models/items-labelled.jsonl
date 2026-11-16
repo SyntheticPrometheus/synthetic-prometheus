@@ -1,0 +1,40 @@
+{"id":"1","text":"Login page returns 500 when the email field is empty","want":"bug"}
+{"id":"2","text":"Add dark mode to the settings screen","want":"feature"}
+{"id":"3","text":"README install section still says pip install -e ., we use uv now","want":"docs"}
+{"id":"4","text":"Bump ruff from 0.4.1 to 0.5.0","want":"chore"}
+{"id":"5","text":"Crash when the config file is missing","want":"bug"}
+{"id":"6","text":"Support wildcard patterns in --include","want":"feature"}
+{"id":"7","text":"Typo in CHANGELOG","want":"docs"}
+{"id":"8","text":"Drop Python 3.9 support","want":"chore"}
+{"id":"9","text":"SSL handshake fails behind a corporate proxy","want":"bug"}
+{"id":"10","text":"Add --json flag to the status command","want":"feature"}
+{"id":"11","text":"Fix flaky test_retry","want":"bug"}
+{"id":"12","text":"Document all environment variables","want":"docs"}
+{"id":"13","text":"Remove unused imports flagged by ruff","want":"chore"}
+{"id":"14","text":"Memory leak in the websocket reconnect loop","want":"bug"}
+{"id":"15","text":"Export metrics in Prometheus format","want":"feature"}
+{"id":"16","text":"Add docstrings to the public API in http.py","want":"docs"}
+{"id":"17","text":"Update pre-commit hooks to the latest versions","want":"chore"}
+{"id":"18","text":"Wrong exit code returned on SIGTERM","want":"bug"}
+{"id":"19","text":"Batch mode: accept multiple files at once","want":"feature"}
+{"id":"20","text":"CONTRIBUTING.md has a broken link to the style guide","want":"docs"}
+{"id":"21","text":"Pin the CI image to 24.04 instead of latest","want":"chore"}
+{"id":"22","text":"Unicode in filenames breaks the parser","want":"bug"}
+{"id":"23","text":"Add a --dry-run option to the upload command","want":"feature"}
+{"id":"24","text":"Explain the retry policy in the README","want":"docs"}
+{"id":"25","text":"Move from setup.py to pyproject.toml","want":"chore"}
+{"id":"26","text":"Timeout is ignored when the server sends a partial response","want":"bug"}
+{"id":"27","text":"Allow configuring the port via an env var","want":"feature"}
+{"id":"28","text":"Add an example of the JSON output to the manual page","want":"docs"}
+{"id":"29","text":"Delete the dead feature flag module","want":"chore"}
+{"id":"30","text":"Division by zero when the input list is empty","want":"bug"}
+{"id":"31","text":"Support TLS client certificates","want":"feature"}
+{"id":"32","text":"Fix the typo in the error message for missing keys","want":"docs"}
+{"id":"33","text":"Upgrade the pinned linter version in the dev container","want":"chore"}
+{"id":"34","text":"Race condition when two workers claim the same task","want":"bug"}
+{"id":"35","text":"Add support for reading config from stdin","want":"feature"}
+{"id":"36","text":"The migration guide still references the old flag names","want":"docs"}
+{"id":"37","text":"Drop the dependency on the unmaintained requests-oauthlib","want":"chore"}
+{"id":"38","text":"Search returns stale results after a delete","want":"bug"}
+{"id":"39","text":"Implement pagination for the list endpoint","want":"feature"}
+{"id":"40","text":"Clarify in the docs that output is not sorted","want":"docs"}

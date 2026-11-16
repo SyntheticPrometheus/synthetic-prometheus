@@ -1,0 +1,108 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/1eyw3U26IKYmpG1tz0jce3ePjFE</id>
+  <title>arXiv Query: search_query=all:CodeRAG&amp;id_list=&amp;start=0&amp;max_results=6</title>
+  <updated>2026-11-15T16:02:39Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=all:CodeRAG&amp;start=0&amp;max_results=6&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>6</opensearch:itemsPerPage>
+  <opensearch:totalResults>3</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2509.16112v1</id>
+    <title>CodeRAG: Finding Relevant and Necessary Knowledge for Retrieval-Augmented Repository-Level Code Completion</title>
+    <updated>2025-09-19T15:57:40Z</updated>
+    <link href="https://arxiv.org/abs/2509.16112v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2509.16112v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Repository-level code completion automatically predicts the unfinished code based on the broader information from the repository. Recent strides in Code Large Language Models (code LLMs) have spurred the development of repository-level code completion methods, yielding promising results. Nevertheless, they suffer from issues such as inappropriate query construction, single-path code retrieval, and misalignment between code retriever and code LLM. To address these problems, we introduce CodeRAG, a framework tailored to identify relevant and necessary knowledge for retrieval-augmented repository-level code completion. Its core components include log probability guided query construction, multi-path code retrieval, and preference-aligned BestFit reranking. Extensive experiments on benchmarks ReccEval and CCEval demonstrate that CodeRAG significantly and consistently outperforms state-of-the-art methods. The implementation of CodeRAG is available at https://github.com/KDEGroup/CodeRAG.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.IR" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-09-19T15:57:40Z</published>
+    <arxiv:comment>EMNLP 2025</arxiv:comment>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Sheng Zhang</name>
+    </author>
+    <author>
+      <name>Yifan Ding</name>
+    </author>
+    <author>
+      <name>Shuquan Lian</name>
+    </author>
+    <author>
+      <name>Shun Song</name>
+    </author>
+    <author>
+      <name>Hui Li</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2406.14497v2</id>
+    <title>CodeRAG-Bench: Can Retrieval Augment Code Generation?</title>
+    <updated>2025-02-26T22:10:36Z</updated>
+    <link href="https://arxiv.org/abs/2406.14497v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2406.14497v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>While language models (LMs) have proven remarkably adept at generating code, many programs are challenging for LMs to generate using their parametric knowledge alone. Providing external contexts such as library documentation can facilitate generating accurate and functional code. Despite the success of retrieval-augmented generation (RAG) in various text-oriented tasks, its potential for improving code generation remains under-explored. In this work, we conduct a systematic, large-scale analysis by asking: in what scenarios can retrieval benefit code generation models? and what challenges remain? We first curate a comprehensive evaluation benchmark, CodeRAG-Bench, encompassing three categories of code generation tasks, including basic programming, open-domain, and repository-level problems. We aggregate documents from five sources for models to retrieve contexts: competition solutions, online tutorials, library documentation, StackOverflow posts, and GitHub repositories. We examine top-performing models on CodeRAG-Bench by providing contexts retrieved from one or multiple sources. While notable gains are made in final code generation by retrieving high-quality contexts across various settings, our analysis reveals room for improvement -- current retrievers still struggle to fetch useful contexts especially with limited lexical overlap, and generators fail to improve with limited context lengths or abilities to integrate additional contexts. We hope CodeRAG-Bench serves as an effective testbed to encourage further development of advanced code-oriented RAG methods.</summary>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2024-06-20T16:59:52Z</published>
+    <arxiv:primary_category term="cs.SE"/>
+    <author>
+      <name>Zora Zhiruo Wang</name>
+    </author>
+    <author>
+      <name>Akari Asai</name>
+    </author>
+    <author>
+      <name>Xinyan Velocity Yu</name>
+    </author>
+    <author>
+      <name>Frank F. Xu</name>
+    </author>
+    <author>
+      <name>Yiqing Xie</name>
+    </author>
+    <author>
+      <name>Graham Neubig</name>
+    </author>
+    <author>
+      <name>Daniel Fried</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2505.20642v1</id>
+    <title>CoderAgent: Simulating Student Behavior for Personalized Programming Learning with Large Language Models</title>
+    <updated>2025-05-27T02:43:38Z</updated>
+    <link href="https://arxiv.org/abs/2505.20642v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2505.20642v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Personalized programming tutoring, such as exercise recommendation, can enhance learners' efficiency, motivation, and outcomes, which is increasingly important in modern digital education. However, the lack of sufficient and high-quality programming data, combined with the mismatch between offline evaluation and real-world learning, hinders the practical deployment of such systems. To address this challenge, many approaches attempt to simulate learner practice data, yet they often overlook the fine-grained, iterative nature of programming learning, resulting in a lack of interpretability and granularity. To fill this gap, we propose a LLM-based agent, CoderAgent, to simulate students' programming processes in a fine-grained manner without relying on real data. Specifically, we equip each human learner with an intelligent agent, the core of which lies in capturing the cognitive states of the human programming practice process. Inspired by ACT-R, a cognitive architecture framework, we design the structure of CoderAgent to align with human cognitive architecture by focusing on the mastery of programming knowledge and the application of coding ability. Recognizing the inherent patterns in multi-layered cognitive reasoning, we introduce the Programming Tree of Thought (PTOT), which breaks down the process into four steps: why, how, where, and what. This approach enables a detailed analysis of iterative problem-solving strategies. Finally, experimental evaluations on real-world datasets demonstrate that CoderAgent provides interpretable insights into learning trajectories and achieves accurate simulations, paving the way for personalized programming education.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-05-27T02:43:38Z</published>
+    <arxiv:comment>Accepted by IJCAI2025</arxiv:comment>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Yi Zhan</name>
+    </author>
+    <author>
+      <name>Qi Liu</name>
+    </author>
+    <author>
+      <name>Weibo Gao</name>
+    </author>
+    <author>
+      <name>Zheng Zhang</name>
+    </author>
+    <author>
+      <name>Tianfu Wang</name>
+    </author>
+    <author>
+      <name>Shuanghong Shen</name>
+    </author>
+    <author>
+      <name>Junyu Lu</name>
+    </author>
+    <author>
+      <name>Zhenya Huang</name>
+    </author>
+  </entry>
+</feed>

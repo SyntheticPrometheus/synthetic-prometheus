@@ -1,0 +1,171 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/hswLpYW34ycBNJDykGfHQhX6BYk</id>
+  <title>arXiv Query: search_query=all:localization&amp;id_list=&amp;start=0&amp;max_results=6</title>
+  <updated>2026-11-15T16:02:41Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=all:localization&amp;start=0&amp;max_results=6&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>6</opensearch:itemsPerPage>
+  <opensearch:totalResults>342746</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2505.14055v1</id>
+    <title>Near-Field RIS-Assisted Localization Under Mutual Coupling</title>
+    <updated>2025-05-20T07:56:49Z</updated>
+    <link href="https://arxiv.org/abs/2505.14055v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2505.14055v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Reconfigurable intelligent surfaces (RISs) have the potential to significantly enhance the performance of integrated sensing and communication (ISAC) systems, particularly in line-of-sight (LoS) blockage scenarios. However, as larger RISs are integrated into ISAC systems, mutual coupling (MC) effects between RIS elements become more pronounced, leading to a substantial degradation in performance, especially for localization applications. In this paper, we first conduct a misspecified and standard Cramér-Rao bound analysis to quantify the impact of MC on localization performance, demonstrating severe degradations in accuracy, especially when MC is ignored. Building on this, we propose a novel joint user equipment localization and RIS MC parameter estimation (JLMC) method in near-field wireless systems. Our two-stage MC-aware approach outperforms classical methods that neglect MC, significantly improving localization accuracy and overall system performance. Simulation results validate the effectiveness and advantages of the proposed method in realistic scenarios.</summary>
+    <category term="eess.SP" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-05-20T07:56:49Z</published>
+    <arxiv:comment>6 pages, 4 figures, IEEE ICC 2025 4th Workshop on Synergies of Communication, Localization, and Sensing towards 6G</arxiv:comment>
+    <arxiv:primary_category term="eess.SP"/>
+    <arxiv:journal_ref>IEEE ICC 2025 4th Workshop on Synergies of Communication, Localization, and Sensing towards 6G</arxiv:journal_ref>
+    <author>
+      <name>Alireza Fadakar</name>
+    </author>
+    <author>
+      <name>Musa Furkan Keskin</name>
+    </author>
+    <author>
+      <name>Hui Chen</name>
+    </author>
+    <author>
+      <name>Henk Wymeersch</name>
+    </author>
+    <author>
+      <name>Andreas F. Molisch</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2308.12277v1</id>
+    <title>Operational requirements for localization in autonomous vehicles</title>
+    <updated>2023-08-23T17:49:51Z</updated>
+    <link href="https://arxiv.org/abs/2308.12277v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2308.12277v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Autonomous vehicles (AVs) need to determine their position and orientation accurately with respect to global coordinate system or local features under different scene geometries, traffic conditions and environmental conditions. \cite{reid2019localization} provides a comprehensive framework for the localization requirements for AVs. However, the framework is too restrictive whereby - (a) only a very small deviation from the lane is tolerated (one every $10^{8}$ hours), (b) all roadway types are considered same without any attention to restriction provided by the environment onto the localization and (c) the temporal nature of the location and orientation is not considered in the requirements. In this research, we present a more practical view of the localization requirement aimed at keeping the AV safe during an operation. We present the following novel contributions - (a) we propose a deviation penalty as a cumulative distribution function of the Weibull distribution which starts from the adjacent lane boundary, (b) we customize the parameters of the deviation penalty according to the current roadway type, particular lane boundary that the ego vehicle is against and roadway curvature and (c) we update the deviation penalty based on the available gap in the adjacent lane. We postulate that this formulation can provide a more robust and achievable view of the localization requirements than previous research while focusing on safety.</summary>
+    <category term="cs.RO" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2023-08-23T17:49:51Z</published>
+    <arxiv:comment>Submitted to IROS 2023 Localization Workshop</arxiv:comment>
+    <arxiv:primary_category term="cs.RO"/>
+    <author>
+      <name>Arpan Kusari</name>
+    </author>
+    <author>
+      <name>Satabdi Saha</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2207.12317v1</id>
+    <title>ALTO: A Large-Scale Dataset for UAV Visual Place Recognition and Localization</title>
+    <updated>2022-07-19T21:13:44Z</updated>
+    <link href="https://arxiv.org/abs/2207.12317v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2207.12317v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>We present the ALTO dataset, a vision-focused dataset for the development and benchmarking of Visual Place Recognition and Localization methods for Unmanned Aerial Vehicles. The dataset is composed of two long (approximately 150km and 260km) trajectories flown by a helicopter over Ohio and Pennsylvania, and it includes high precision GPS-INS ground truth location data, high precision accelerometer readings, laser altimeter readings, and RGB downward facing camera imagery. In addition, we provide reference imagery over the flight paths, which makes this dataset suitable for VPR benchmarking and other tasks common in Localization, such as image registration and visual odometry. To the author's knowledge, this is the largest real-world aerial-vehicle dataset of this kind. Our dataset is available at https://github.com/MetaSLAM/ALTO.</summary>
+    <category term="cs.CV" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.RO" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2022-07-19T21:13:44Z</published>
+    <arxiv:comment>UAV Localization dataset paper</arxiv:comment>
+    <arxiv:primary_category term="cs.CV"/>
+    <author>
+      <name>Ivan Cisneros</name>
+    </author>
+    <author>
+      <name>Peng Yin</name>
+    </author>
+    <author>
+      <name>Ji Zhang</name>
+    </author>
+    <author>
+      <name>Howie Choset</name>
+    </author>
+    <author>
+      <name>Sebastian Scherer</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2302.13816v2</id>
+    <title>Suppression of one-dimensional weak localization by band asymmetry</title>
+    <updated>2023-08-24T06:12:55Z</updated>
+    <link href="https://arxiv.org/abs/2302.13816v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2302.13816v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>We investigate disorder-induced localization in metals that break time-reversal and inversion symmetries through their energy dispersion, $ε_{k}\neqε_{-k}$, but lack Berry phases. In the perturbative regime of disorder, we show that weak localization is suppressed due to a mismatch of the Fermi velocities of left and right movers. To substantiate this analytical result, we perform quench numerics on chains shorter than the Anderson localization length -- the latter computed and verified to be finite using the recursive Green's function method -- and find a sharp rise in the saturation value of the participation ratio due to band asymmetry, indicating a tendency to delocalize. Interestingly, for weak disorder strength $η$, we see a better fit to the scaling behavior $ξ\propto1/η^{2}$ for asymmetric bands than conventional symmetric ones.</summary>
+    <category term="cond-mat.dis-nn" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="quant-ph" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2023-02-27T14:25:40Z</published>
+    <arxiv:comment>Added scaling of localization length with weak disorder</arxiv:comment>
+    <arxiv:primary_category term="cond-mat.dis-nn"/>
+    <arxiv:journal_ref>Physical Review B, 108(6), 064211 (2023)</arxiv:journal_ref>
+    <author>
+      <name>Kartikeya Arora</name>
+    </author>
+    <author>
+      <name>Rajeev Singh</name>
+    </author>
+    <author>
+      <name>Pavan Hosur</name>
+    </author>
+    <arxiv:doi>10.1103/PhysRevB.108.064211</arxiv:doi>
+    <link rel="related" href="https://doi.org/10.1103/PhysRevB.108.064211" title="doi"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/1802.02435v2</id>
+    <title>Mixed-state localization operators: Cohen's class and trace class operators</title>
+    <updated>2018-10-15T23:23:24Z</updated>
+    <link href="https://arxiv.org/abs/1802.02435v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/1802.02435v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>We study mixed-state localization operators from the perspective of Werner's operator convolutions which allows us to extend known results from the rank-one case to trace class operators. The idea of localizing a signal to a domain in phase space is approached from various directions such as bounds on the spreading function, probability densities associated to mixed-state localization operators, positive operator valued measures, positive correspondence rules and variants of Tauberian theorems for operator translates. Our results include a rigorous treatment of multiwindow-STFT filters and a characterization of mixed-state localization operators as positive correspondence rules. Furthermore, we provide a description of the Cohen class in terms of Werner's convolution of operators and deduce consequences on positive Cohen class distributions, an uncertainty principle, uniqueness and phase retrieval for general elements of Cohen's class.</summary>
+    <category term="math.FA" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="math-ph" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2018-02-07T14:35:46Z</published>
+    <arxiv:comment>We call generalized localization operators now mixed-state localization operators. In addition to a change of title and other parts involving generalized localization operators. We did a major revision of the manuscript incorporating suggestions by reviewers</arxiv:comment>
+    <arxiv:primary_category term="math.FA"/>
+    <author>
+      <name>Franz Luef</name>
+    </author>
+    <author>
+      <name>Eirik Skrettingland</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2509.13776v1</id>
+    <title>Morphology-optimized Multi-Scale Fusion: Combining Local Artifacts and Mesoscopic Semantics for Deepfake Detection and Localization</title>
+    <updated>2025-09-17T07:46:07Z</updated>
+    <link href="https://arxiv.org/abs/2509.13776v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2509.13776v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>While the pursuit of higher accuracy in deepfake detection remains a central goal, there is an increasing demand for precise localization of manipulated regions. Despite the remarkable progress made in classification-based detection, accurately localizing forged areas remains a significant challenge. A common strategy is to incorporate forged region annotations during model training alongside manipulated images. However, such approaches often neglect the complementary nature of local detail and global semantic context, resulting in suboptimal localization performance. Moreover, an often-overlooked aspect is the fusion strategy between local and global predictions. Naively combining the outputs from both branches can amplify noise and errors, thereby undermining the effectiveness of the localization.
+  To address these issues, we propose a novel approach that independently predicts manipulated regions using both local and global perspectives. We employ morphological operations to fuse the outputs, effectively suppressing noise while enhancing spatial coherence. Extensive experiments reveal the effectiveness of each module in improving the accuracy and robustness of forgery localization.</summary>
+    <category term="cs.CV" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-09-17T07:46:07Z</published>
+    <arxiv:comment>The 3rd Place, IJCAI 2025 Workshop on Deepfake Detection, Localization, and Interpretability</arxiv:comment>
+    <arxiv:primary_category term="cs.CV"/>
+    <author>
+      <name>Chao Shuai</name>
+    </author>
+    <author>
+      <name>Gaojian Wang</name>
+    </author>
+    <author>
+      <name>Kun Pan</name>
+    </author>
+    <author>
+      <name>Tong Wu</name>
+    </author>
+    <author>
+      <name>Fanli Jin</name>
+    </author>
+    <author>
+      <name>Haohan Tan</name>
+    </author>
+    <author>
+      <name>Mengxiang Li</name>
+    </author>
+    <author>
+      <name>Zhenguang Liu</name>
+    </author>
+    <author>
+      <name>Feng Lin</name>
+    </author>
+    <author>
+      <name>Kui Ren</name>
+    </author>
+  </entry>
+</feed>

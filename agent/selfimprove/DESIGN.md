@@ -66,6 +66,24 @@ layer for expensive evaluation (2609.19526), and automated run-end memory captur
 - `ledger.jsonl` — append-only: arm hash, parent, suite hash, reps, per-task results, decision.
 - `maintain.py` — housekeeping: prune `runs/` beyond N, verify ledger chain, report drift.
 
+## At ceiling: the cost axis (cycle 15)
+
+Three cycles (10, 11, 12, 15) failed to find a task class where the base arm drops below 1.0; input
+size, dependency depth and prose volume all collapse into "the model scripts it". A saturated suite
+makes the gate unable to accept anything, so `policy.json` now carries `gate.cost_win_frac` (0.10):
+when accuracy is tied at k≥3 with no regression, an arm that cuts **output** tokens by ≥10% is
+accepted as `ACCEPT_COST`. It is labelled as cost, never as capability, and is re-measured next
+cycle. Capability headroom (cycle 16 hypothesis) must come from authored output under many
+simultaneous constraints, or from probing an opaque oracle — not from bigger inputs.
+
+## Review (the part that keeps it relevant)
+
+`bin/pi-review` walks the setup, not the metrics: AGENTS.md size/dangling refs, suite saturation and
+evidence age, unverified delegation share and dead roster entries, brief budget ratio, guard/timer
+health, skill frontmatter, publish attempt age, stale PDSA cycles. It writes `review.md`, exits 1 on
+a hard failure, runs weekly (`pi-review.timer`) and `pi-preflight` fails when the review is >10 days
+old. Metrics catch a system that degrades; the review catches one that stopped mattering.
+
 ## Maintenance (the part that keeps it alive)
 
 - `maintain.py --check` after every session that mutates the genome; exits non-zero if the suite

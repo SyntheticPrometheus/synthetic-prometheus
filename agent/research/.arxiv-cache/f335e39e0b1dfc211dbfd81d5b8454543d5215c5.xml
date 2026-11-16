@@ -1,0 +1,120 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/6SrnP+7HmzgeIpKPJj6xRr6a19Y</id>
+  <title>arXiv Query: search_query=all:"self-improving agents"&amp;id_list=&amp;start=0&amp;max_results=3</title>
+  <updated>2026-11-15T01:31:28Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=all:%22self-improving+agents%22&amp;start=0&amp;max_results=3&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>3</opensearch:itemsPerPage>
+  <opensearch:totalResults>124</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2611.15885v1</id>
+    <title>Reward-Driven Collider Physics Challenges for Self-Improving Agentic AI via Reinforcement Learning</title>
+    <updated>2026-11-11T19:00:41Z</updated>
+    <link href="https://arxiv.org/abs/2611.15885v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2611.15885v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Recent advances in agentic AI have demonstrated the potential to automate complex high-energy physics (HEP) workflows. We focus on the regime of HEP tasks where frontier models still struggle to provide correct and complete solutions, and introduce an open-ended optimization task format with continuous, automatically evaluated rewards. Unlike conventional benchmarks focused on task completion, these tasks target reinforcement learning (RL) environments to generate agentic improvement on state- of-the-art HEP challenges. We benchmark frontier reasoning models on several HEP tasks and demonstrate an initial proof of concept in which a small language model improves through RL using automated feedback without human intervention. By connecting challenging HEP problems with verifiable scientific rewards and RL, we aim to advance agentic AI from reproducing established workflows to autonomously discovering better scientific solutions, paving the way toward self-improving scientific agents.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-11-11T19:00:41Z</published>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Alexander Yue</name>
+    </author>
+    <author>
+      <name>Qibin Liu</name>
+    </author>
+    <author>
+      <name>Julia Gonski</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2611.15700v1</id>
+    <title>AskALCF: A Self-Improving Agentic System for Intelligent HPC User Support</title>
+    <updated>2026-11-11T16:38:54Z</updated>
+    <link href="https://arxiv.org/abs/2611.15700v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2611.15700v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>AI-based question-answering systems are increasingly used for user support, including at high-performance computing (HPC) facilities. However, existing systems lack a systematic, deployment-oriented approach for evaluating final-answer quality and attributing failures to specific components. They also remain largely static after deployment, apart from periodic knowledge-base updates.
+  We present AskALCF, an agentic log-analysis and improvement pipeline for HPC user support. AskALCF evaluates production interactions at a fine-grained level, identifies whether failures arise from missing knowledge, retrieval, prompting, model behavior, or tool execution, and routes each failure to an actionable repair. Its diagnostic core combines answer-quality assessment with a two-scope sufficiency test that distinguishes information missing from the documentation corpus from information present but not retrieved. We further introduce a controlled harness-training process that uses expert references, null edits, and explicit ship, revert, or decline decisions to improve the diagnostic pipeline reliably.
+  Across 2,174 support turns, AskALCF reduced unattributable failures from 41.4% to 14.2%, while harness training improved expert agreement from 108/150 to 123/150 turns. These results demonstrate a governed form of self-evolution in which production evidence drives targeted system improvements. By turning production interactions into fine-grained diagnoses and actionable repairs, AskALCF provides a systematic foundation for continuously improving deployed AI support systems beyond knowledge-base updates alone.</summary>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-11-11T16:38:54Z</published>
+    <arxiv:comment>12 pages, 5 figures. Accepted at HUST 2026 (13th International Workshop on HPC User Support Tools), co-located with SC26, Chicago, IL, USA, November 15, 2026. Camera-ready version</arxiv:comment>
+    <arxiv:primary_category term="cs.SE"/>
+    <author>
+      <name>Jingyan Jiang</name>
+    </author>
+    <author>
+      <name>Akhilesh Bondapalli</name>
+    </author>
+    <author>
+      <name>Krishna Rauniyar</name>
+    </author>
+    <author>
+      <name>Murat Keceli</name>
+    </author>
+    <author>
+      <name>Yasaman Ghadar</name>
+    </author>
+    <author>
+      <name>Haritha Siddabathuni Som</name>
+    </author>
+    <author>
+      <name>Venkatram Vishwanath</name>
+    </author>
+    <author>
+      <name>Michael E. Papka</name>
+    </author>
+    <author>
+      <name>Rong Ge</name>
+    </author>
+    <author>
+      <name>Huihuo Zheng</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2611.14949v1</id>
+    <title>RSI-PDEbench: A Benchmark for Self-Improving Agents in PDE Solving</title>
+    <updated>2026-11-11T02:55:14Z</updated>
+    <link href="https://arxiv.org/abs/2611.14949v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2611.14949v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Identifying and solving partial differential equations (PDEs) from sampled solution data often requires substantial expert effort in equation discovery, coefficient estimation, and numerical solver configuration, especially under noise and distribution shifts. Can large language model (LLM) agents automate this workflow accurately and efficiently? To investigate this question, we introduce \bench{}, a benchmark of 1,001 cases spanning 42 equation templates, including both classical and fractional PDEs. It provides three evaluation settings: Full evaluates performance on noise-free solution data; Noisy tests robustness to Gaussian noise with an RMS equal to 50\% of the clean-signal RMS; and Hard-OOD tests challenging out-of-distribution generalization to unseen equation templates and shifted coefficient ranges. We further introduce RSI-PDE, a recursively self-improving agent harness that shortlists candidate equations by residual loss, uses relative $L^2$ feedback to refine coefficients and numerical solvers, and applies a validation gate to policy and memory updates. We compare RSI-PDE with single-run baselines and native agent harnesses (Claude Code or Codex) across four frontier models. Across the three settings, RSI-PDE improves the pass rate averaged across the four models by 106.5--181.9\% relative to single-run baselines and by 3.0--19.6\% relative to native harnesses, while reducing total recorded model calls by 46.9\% across the 12 model--setting pairs. These results highlight the potential of validated recursive self-improvement in LLM agents to advance scientific computing.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-11-11T02:55:14Z</published>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Binghang Lu</name>
+    </author>
+    <author>
+      <name>Lang Cao</name>
+    </author>
+    <author>
+      <name>Changhong Mou</name>
+    </author>
+    <author>
+      <name>Yige Sun</name>
+    </author>
+    <author>
+      <name>Cindy Xiangrui Kong</name>
+    </author>
+    <author>
+      <name>Zheyuan Deng</name>
+    </author>
+    <author>
+      <name>Tian Yuan</name>
+    </author>
+    <author>
+      <name>Bing Hu</name>
+    </author>
+    <author>
+      <name>Runyu Zhang</name>
+    </author>
+    <author>
+      <name>Na Lu</name>
+    </author>
+    <author>
+      <name>Guang Lin</name>
+    </author>
+  </entry>
+</feed>

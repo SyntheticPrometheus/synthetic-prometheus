@@ -1,0 +1,380 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/FAEzaQrh+8ME15BCNTz5W1q1dBM</id>
+  <title>arXiv Query: search_query=all:context AND all:compression AND all:agent&amp;id_list=&amp;start=0&amp;max_results=12</title>
+  <updated>2026-11-15T14:52:37Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=all:context+AND+(all:compression+AND+all:agent)&amp;start=0&amp;max_results=12&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>12</opensearch:itemsPerPage>
+  <opensearch:totalResults>487</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2604.24971v1</id>
+    <title>PolyKV: A Shared Asymmetrically-Compressed KV Cache Pool for Multi-Agent LLM Inference</title>
+    <updated>2026-04-27T20:10:21Z</updated>
+    <link href="https://arxiv.org/abs/2604.24971v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2604.24971v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>We present PolyKV, a system in which multiple concurrent inference agents share a single, asymmetrically compressed KV cache pool. Rather than allocating a separate KV cache per agent -- the standard paradigm -- PolyKV writes a compressed cache once and injects it into N independent agent contexts via HuggingFace DynamicCache objects. Compression is asymmetric: Keys are quantized at int8 (q8_0) to preserve softmax stability, while Values are compressed using TurboQuant MSE -- a Fast Walsh-Hadamard Transform (FWHT) rotation followed by 3-bit Lloyd-Max quantization with centroids tuned to N(0,1). We evaluate across two model scales (SmolLM2-1.7B-Instruct and Llama-3-8B-Instruct), three context lengths (600-7,194 tokens), and up to 15 concurrent agents. PolyKV achieves a stable 2.91x compression ratio across all configurations. On Llama-3-8B with 15 agents sharing a 4K-token context, PolyKV reduces KV cache memory from 19.8 GB to 0.45 GB -- a 97.7% reduction -- while maintaining only +0.57% perplexity degradation and a mean BERTScore F1 of 0.928. PPL delta does not grow with agent count and improves as context length increases, inverting to -0.26% at 1,851 coherent tokens. To our knowledge, no prior work combines a single shared, lossy-compressed KV pool with multi-reader concurrent agent access.</summary>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.DC" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-04-27T20:10:21Z</published>
+    <arxiv:comment>10 pages, 6 tables. Code: https://github.com/ishan1410/PolyKV Keywords: KV cache compression, multi-agent LLM inference, asymmetric quantization, FWHT, TurboQuant, shared memory</arxiv:comment>
+    <arxiv:primary_category term="cs.LG"/>
+    <author>
+      <name>Ishan Patel</name>
+    </author>
+    <author>
+      <name>Ishan Joshi</name>
+    </author>
+    <arxiv:doi>10.5281/zenodo.19686729</arxiv:doi>
+    <link rel="related" href="https://doi.org/10.5281/zenodo.19686729" title="doi"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2608.11775v1</id>
+    <title>The Sleeping Agent: What Gist-Based Context Compression Loses and Why</title>
+    <updated>2026-08-12T08:19:15Z</updated>
+    <link href="https://arxiv.org/abs/2608.11775v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2608.11775v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Gist-based context compression---summarising older conversation history into compact representations---is a common approach in long-horizon language model agents, yet its effect on different types of memory retrieval is poorly understood. We use Salience-Weighted Consolidation (SWC), a biologically-inspired compression framework motivated by sleep-based memory consolidation, as a diagnostic probe to study when gist compression helps and when it hurts. SWC scores conversation history by salience, partitions it into priority tiers, and applies structured gist abstraction to mid-priority content. Evaluating four conditions on all ten LoCoMo conversations---1,935 matched text-only questions in total, 1,501 used in the primary aggregate after excluding Category 5 (adversarial) questions---at temperature 0, we find a consistent task-type interaction: gist compression substantially outperforms truncation on multi-hop reasoning and single-hop factual questions, but temporal questions remain substantially harder under compression, with compressed conditions scoring well below the full-context reference on the conversations where both are evaluated. We trace this failure to a specific mechanism: the gist abstraction prompt preserves relational and event structure while discarding dates and times. A preservation analysis across all ten conversations confirms the mechanism: an approximately 20-fold increase in temporal expression preservation (3.05% to 62.39%) with a one-sentence prompt modification, while named entity and event preservation rates barely change (x1.02 and x1.11), demonstrating that the fix is a precision instrument. The prompt modification recovers +0.314 [0.254, 0.375] judge accuracy on category-2 (temporal) questions in the matched set. Code and results: https://github.com/kyrkewood/sleeping-agent.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-08-12T08:19:15Z</published>
+    <arxiv:comment>7 pages, 5 tables, appendices. Code and results at https://github.com/kyrkewood/sleeping-agent</arxiv:comment>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Nicholas E. Kyrkewood</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2609.36526v1</id>
+    <title>Adapting Context Compression for Long-Horizon Agents with Counterfactual Continuations</title>
+    <updated>2026-09-29T02:18:13Z</updated>
+    <link href="https://arxiv.org/abs/2609.36526v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2609.36526v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Long-horizon agents require context compression to manage growing interaction histories. Compression quality, however, is ultimately determined by downstream execution. Existing prompt-adaptation methods infer compression errors by comparing full-context and compressed trajectories. Such comparisons cannot isolate individual compressions and are confounded by agent stochasticity. We first find that compression degrades reliability before solvability. Using matched counterfactual continuations that compare execution from the same agent state with versus without compression, we further show that severe degradation concentrates at isolated compression events. Motivated by this finding, we propose PAIR (Prompt Adaptation using Interventional Rollouts) for adapting structured compression prompts. PAIR identifies individual compressions that degrade subsequent execution, diagnoses their effects, and revises the relevant sections of a fixed compression template. PAIR achieves the strongest cross-run reliability among compressed methods in every main benchmark-scope combination, consistently exceeding the competing prompt-adaptation baseline. Without modifying the downstream agent, PAIR brings compressed execution close to the no-compression baseline and sometimes numerically exceeds it.</summary>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-09-29T02:18:13Z</published>
+    <arxiv:comment>41 pages, 10 figures, 9 tables</arxiv:comment>
+    <arxiv:primary_category term="cs.LG"/>
+    <author>
+      <name>Guanghui Min</name>
+    </author>
+    <author>
+      <name>Liang Wu</name>
+    </author>
+    <author>
+      <name>Mingjia Shi</name>
+    </author>
+    <author>
+      <name>Yinhan He</name>
+    </author>
+    <author>
+      <name>Mayank Darbari</name>
+    </author>
+    <author>
+      <name>Liangjie Hong</name>
+    </author>
+    <author>
+      <name>Chen Chen</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2611.06500v1</id>
+    <title>Tools Need Not Speak in Text: Latent Context Compression for Agents</title>
+    <updated>2026-11-04T13:32:36Z</updated>
+    <link href="https://arxiv.org/abs/2611.06500v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2611.06500v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Large language model (LLM) agents typically append raw tool outputs to their context. Over multi-step interactions, long and noisy observations incur substantial context overhead and dilute the agent's attention to task-relevant information. Existing token pruning and summarization methods remain constrained by discrete text representations, limiting the achievable compression ratios.
+  In this work, we challenge the prevailing assumption that agents must consume tool observations as explicit text tokens. To this end, we propose Coca-Cola, a continuous latent context compression model for LLM agents. Coca-Cola compresses tool observations into latent tokens and embeds them into the input embedding space of the agent. We further introduce Action-Preserving Training, which aligns the agent's next-action distributions under full and compressed observations. This trains the compression model to learn action-sufficient latent tokens that retain decision-critical information. Experiments with web-search agents on four QA benchmarks and two model families show that Coca-Cola reduces the agent's token consumption by 70.01%-89.24% and end-to-end runtime by 24.45%-55.97%, while consistently improving task performance. These results suggest that Coca-Cola offers a promising approach for context compression in agents. Our code is available at https://github.com/THU-Agent/Coca-cola.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-11-04T13:32:36Z</published>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Yuetong Liu</name>
+    </author>
+    <author>
+      <name>Zhehao Zhou</name>
+    </author>
+    <author>
+      <name>Yitong Zhang</name>
+    </author>
+    <author>
+      <name>Haorui Chen</name>
+    </author>
+    <author>
+      <name>Jia Li</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2510.00615v3</id>
+    <title>ACON: Optimizing Context Compression for Long-horizon LLM Agents</title>
+    <updated>2026-06-01T07:41:52Z</updated>
+    <link href="https://arxiv.org/abs/2510.00615v3" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2510.00615v3" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Large language models (LLMs) are increasingly deployed as agents in dynamic real-world environments, where success depends on maintaining precise records of actions and observations. However, the resulting unbounded context growth in long-horizon agentic tasks makes two critical bottlenecks: prohibitive inference memory costs and reasoning degradation due to irrelevant information. Existing compression methods fail to fully address this, often relying on brittle heuristics or requiring parameter updates impractical for proprietary or large-scale LLMs. We introduce Agent Context Optimization (ACON), a unified framework that optimally compresses both observations and history into concise, informative representations. Distinct from prior works, ACON employs an optimization in natural language space: it iteratively refines compression guidelines based on failure analysis of the agent, ensuring critical state information is preserved without model fine-tuning. To further minimize computational overhead, we distill the optimized compressor into smaller models. Experiments on AppWorld, OfficeBench, and Multi-objective QA demonstrate that ACON reduces peak token usage by 26-54% while improving task success over existing compression baselines. Notably, it enables smaller LMs to function effectively as long-horizon agents, achieving up to 46% performance improvement by mitigating context distraction. Our code is available at https://github.com/microsoft/acon.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-10-01T07:43:49Z</published>
+    <arxiv:comment>ICML 2026</arxiv:comment>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Minki Kang</name>
+    </author>
+    <author>
+      <name>Wei-Ning Chen</name>
+    </author>
+    <author>
+      <name>Dongge Han</name>
+    </author>
+    <author>
+      <name>Huseyin A. Inan</name>
+    </author>
+    <author>
+      <name>Lukas Wutschitz</name>
+    </author>
+    <author>
+      <name>Yanzhi Chen</name>
+    </author>
+    <author>
+      <name>Robert Sim</name>
+    </author>
+    <author>
+      <name>Saravan Rajmohan</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2609.26121v1</id>
+    <title>DTOC: Dynamic Tool Output Compression for Adaptive Context Management in AI Agents</title>
+    <updated>2026-08-06T12:06:36Z</updated>
+    <link href="https://arxiv.org/abs/2609.26121v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2609.26121v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>As agent capabilities have grown, practical limitations increasingly stem from constrained context windows rather than model capacity. Common strategies, such as truncation, heuristic aging, and lossy summarization, may discard useful information or introduce hallucination risk. To address these challenges, we propose Dynamic Tool Output Compression (DTOC), a framework for scalable context management in LLM-based agents that models context updates as explicit and reversible operations within the agent reasoning loop. DTOC retains full tool outputs in external memory while inserting compact placeholders into the active context, enabling selective reconstruction when needed. We formalize the DTOC mechanism, integrate it into a ReAct-style agent architecture, and provide a production-oriented implementation supporting on-demand restoration of compressed outputs. Experiments on DeepSWE reveal model-dependent effects: for responsive models (Sonnet 4.6, GPT-5.4), DTOC reduces input tokens (10.3 and 12.7%) and agent steps (2.4 and 32.3%), while increasing solve rates (2.5 and 1.5 times higher) and lowering cost per solved task (3 and 3.5 times lower cost per solved task). For the other models results are more mixed, with GPT-5.5 doubling solve rate and halving cost, but no impact on solve rate and negative impact on cost for the other models. Ablation results show reversibility is critical: disable-only compression variants degraded performance, while full DTOC recovered baseline accuracy at substantially lower context cost. These findings indicate that explicit, reversible context management can improve the efficiency of long-horizon agent reasoning without degrading task performance.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.MA" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-08-06T12:06:36Z</published>
+    <arxiv:comment>Accepted for 29th International Conference on Discovery Science, October 5-9, 2026, Mainz, Germany</arxiv:comment>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Abhay Chaturvedi</name>
+    </author>
+    <author>
+      <name>Shreya Bhattacharya</name>
+    </author>
+    <author>
+      <name>Rashmika Gopalkrishnan</name>
+    </author>
+    <author>
+      <name>Peter van der Putten</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2608.06503v2</id>
+    <title>Towards Reliable Context Compression for Long-Horizon Agents: An Empirical Study of Execution Instability</title>
+    <updated>2026-10-14T18:24:26Z</updated>
+    <link href="https://arxiv.org/abs/2608.06503v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2608.06503v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Recurrent context compression controls context growth in long-horizon agents, but its behavioral effects remain poorly understood. In this preliminary empirical study, we show that compression can weaken the influence of recent interactions, increasing blocked actions, repeated exploration, and instability across runs. Motivated by these observations, we introduce TRACE, a verifier-guided framework that evaluates individual compaction events through paired closed-loop continuations from the same environment state and uses summary preferences to optimize a natural-language compression prompt while keeping all models frozen. Initial results on AppWorld show improvements over existing compression baselines in task performance, multi-run reliability, and context--execution efficiency. These findings provide early evidence for boundary-local evaluation as a promising direction for reliable agent context compression.</summary>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-08-06T18:42:02Z</published>
+    <arxiv:comment>31 pages, 6 figures</arxiv:comment>
+    <arxiv:primary_category term="cs.LG"/>
+    <author>
+      <name>Guanghui Min</name>
+    </author>
+    <author>
+      <name>Liang Wu</name>
+    </author>
+    <author>
+      <name>Mayank Darbari</name>
+    </author>
+    <author>
+      <name>Chen Chen</name>
+    </author>
+    <author>
+      <name>Liangjie Hong</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2602.09084v2</id>
+    <title>Agent Banana: High-Fidelity Image Editing with Agentic Thinking and Tooling</title>
+    <updated>2026-02-21T19:01:59Z</updated>
+    <link href="https://arxiv.org/abs/2602.09084v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2602.09084v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>We study instruction-based image editing under professional workflows and identify three persistent challenges: (i) editors often over-edit, modifying content beyond the user's intent; (ii) existing models are largely single-turn, while multi-turn edits can alter object faithfulness; and (iii) evaluation at around 1K resolution is misaligned with real workflows that often operate on ultra high-definition images (e.g., 4K). We propose Agent Banana, a hierarchical agentic planner-executor framework for high-fidelity, object-aware, deliberative editing. Agent Banana introduces two key mechanisms: (1) Context Folding, which compresses long interaction histories into structured memory for stable long-horizon control; and (2) Image Layer Decomposition, which performs localized layer-based edits to preserve non-target regions while enabling native-resolution outputs. To support rigorous evaluation, we build HDD-Bench, a high-definition, dialogue-based benchmark featuring verifiable stepwise targets and native 4K images (11.8M pixels) for diagnosing long-horizon failures. On HDD-Bench, Agent Banana achieves the best multi-turn consistency and background fidelity (e.g., IC 0.871, SSIM-OM 0.84, LPIPS-OM 0.12) while remaining competitive on instruction following, and also attains strong performance on standard single-turn editing benchmarks. We hope this work advances reliable, professional-grade agentic image editing and its integration into real workflows.</summary>
+    <category term="cs.CV" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-02-09T18:59:18Z</published>
+    <arxiv:comment>Project Website: agent-banana.github.io</arxiv:comment>
+    <arxiv:primary_category term="cs.CV"/>
+    <author>
+      <name>Ruijie Ye</name>
+    </author>
+    <author>
+      <name>Jiayi Zhang</name>
+    </author>
+    <author>
+      <name>Zhuoxin Liu</name>
+    </author>
+    <author>
+      <name>Zihao Zhu</name>
+    </author>
+    <author>
+      <name>Siyuan Yang</name>
+    </author>
+    <author>
+      <name>Li Li</name>
+    </author>
+    <author>
+      <name>Tianfu Fu</name>
+    </author>
+    <author>
+      <name>Franck Dernoncourt</name>
+    </author>
+    <author>
+      <name>Yue Zhao</name>
+    </author>
+    <author>
+      <name>Jiacheng Zhu</name>
+    </author>
+    <author>
+      <name>Ryan Rossi</name>
+    </author>
+    <author>
+      <name>Wenhao Chai</name>
+    </author>
+    <author>
+      <name>Zhengzhong Tu</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2604.19572v3</id>
+    <title>A Self-Evolving Framework for Efficient Terminal Agents via Observational Context Compression</title>
+    <updated>2026-05-15T13:11:00Z</updated>
+    <link href="https://arxiv.org/abs/2604.19572v3" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2604.19572v3" rel="related" type="application/pdf" title="pdf"/>
+    <summary>As terminal agents scale to long-horizon, multi-turn workflows, a key bottleneck is not merely limited context length, but the accumulation of noisy terminal observations in the interaction history. Retaining raw observations preserves useful environment feedback, but also leads to context saturation and high token cost; conversely, naive compression may discard task-critical signals needed for subsequent actions. Because terminal environments are highly heterogeneous across repositories, commands, and execution states, heuristic-based or fixed-prompt compression methods are difficult to generalize. We propose TACO, a plug-and-play, training-free, self-evolving Terminal Agent Compression framework for existing terminal agents. TACO automatically discovers, refines, and reuses structured compression rules from interaction trajectories, enabling workflow-adaptive filtering of low-value terminal outputs while preserving task-relevant observations. Experiments on TerminalBench (TB 1.0 and TB 2.0) and four additional terminal-related benchmarks, including SWE-Bench Lite, CompileBench, DevEval, and CRUST-Bench, show that TACO consistently improves task performance and token efficiency across agent scaffolds and backbone models. On TerminalBench, TACO yields 1%-4% accuracy gains across strong agentic models and improves accuracy by around 2%-3% under the same token budget. On additional terminal-related benchmarks, it reduces total token consumption while maintaining or improving task success rates. These results suggest that self-evolving, workflow-adaptive observation compression is an effective path toward more reliable and efficient long-horizon terminal agents. The code is publicly available at https://github.com/multimodal-art-projection/TACO.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-04-21T15:25:54Z</published>
+    <arxiv:comment>27 pages</arxiv:comment>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Jincheng Ren</name>
+    </author>
+    <author>
+      <name>Siwei Wu</name>
+    </author>
+    <author>
+      <name>Yizhi Li</name>
+    </author>
+    <author>
+      <name>Kang Zhu</name>
+    </author>
+    <author>
+      <name>Shu Xu</name>
+    </author>
+    <author>
+      <name>Boyu Feng</name>
+    </author>
+    <author>
+      <name>Ruibin Yuan</name>
+    </author>
+    <author>
+      <name>Wei Zhang</name>
+    </author>
+    <author>
+      <name>Riza Batista-Navarro</name>
+    </author>
+    <author>
+      <name>Jian Yang</name>
+    </author>
+    <author>
+      <name>Chenghua Lin</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2610.41291v1</id>
+    <title>In-Model Context Compression with Agentic Soft Tokens for Long-Horizon LLM Agents</title>
+    <updated>2026-10-30T05:52:25Z</updated>
+    <link href="https://arxiv.org/abs/2610.41291v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2610.41291v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Long-horizon LLM agents play an important role in solving complex and sustained tasks, with ever-growing interaction contexts. However, these accumulated contexts will raise substantial computational cost and obscure key decision-relevant evidence. Existing methods typically train external compressors or context-management agents to rewrite context as shorter hard-token sequences, but such external selection may not align with the LLM's evolving representation and is necessarily lossy. In this paper, we introduce Agentic Soft-Token Compression (ASTC), a training-free compression method using soft tokens within LLM agent for long-horizon tasks. Specifically, ASTC uses the model's native recurrent dynamics to determine the already absorbed information, leveraging the commonly-used hybrid Gated Delta Network (GDN)-attention. It then carries this information forward as agentic soft tokens while retaining exact values as hard tokens. The resulting compact sequence reduces later-layer computation and yields reusable KV caches, extending the savings across the agent's trajectory. Extensive experiments on long-horizon tasks show that ASTC matches or exceeds the uncompressed agent's accuracy with up to 50.68% fewer end-to-end Attention Pairs, while trained compressors require 15.4 to 103.7 times more Attention Pairs per successful task. These findings highlight agentic soft tokens as a model-native way to carry absorbed context forward as the task representation evolves.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.NE" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-10-30T05:52:25Z</published>
+    <arxiv:comment>26 pages, 9 figures, 11 tables. Code: https://github.com/RISE-X-Lab/Agentic-Soft-Token</arxiv:comment>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Xuning He</name>
+    </author>
+    <author>
+      <name>Kai Fan</name>
+    </author>
+    <author>
+      <name>Runyu Zhang</name>
+    </author>
+    <author>
+      <name>Binghuan Wang</name>
+    </author>
+    <author>
+      <name>Yuxiang Zhang</name>
+    </author>
+    <author>
+      <name>Xue Jiang</name>
+    </author>
+    <author>
+      <name>Yihong Dong</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2609.22114v1</id>
+    <title>An Empirical Cost Attribution of Context-Compression Gateways in Multi-Turn Coding Agents</title>
+    <updated>2026-08-19T07:43:01Z</updated>
+    <link href="https://arxiv.org/abs/2609.22114v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2609.22114v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Context compression is widely proposed as a way to cut the token bill of LLM coding agents, and public benchmarks report that aggressive compression preserves task-solving quality. These two facts do not imply the third one commonly assumed: that compressing file reads saves money in a real multi-turn agent. We instrument a production compression gateway (Paritok) between coding agents (Claude Code, Codex) and frontier LLMs (Claude Sonnet, GPT-5), and decompose the token bill of real sessions into three independent levers: tool-schema filtering, content compression of file reads and tool output, and history summarization. Measured in isolation under controlled A/B runs, the three save at fundamentally different rates. Tool-schema filtering removes a fixed block every turn, roughly 21K-57K tokens on a typical turn; it is linear in the turn count N and the only unambiguously and reproducibly positive lever. Content compression saves only about 2% of the cache-priced prefix per turn, but compressed reads accumulate in history and are re-sent on every later turn, so its cumulative saving grows quadratically, about 3350*N^2 tokens (measured), overtaking the fixed tool-filter saving within roughly 6 turns until the context window caps it. A non-destructive gateway lets the agent pull original bytes back on demand; each recall re-sends exactly the one segment just compressed away, so its cost is fixed and bounded rather than a multiplicative blowup, and heavy recall spends the accumulated saving back one segment at a time. Finally, a strong single-shot compression benchmark - 86.5% of SWE-bench quality retained at a 25.7% compression rate, achieved by the model this gateway deploys (Paritok-4B, reported separately) - is orthogonal to multi-turn agent cost and must not be cited as a cost-saving argument. We distill the results into an actionable recipe for where token-saving effort pays off.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.PF" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-08-19T07:43:01Z</published>
+    <arxiv:comment>10 pages, 1 figure, 4 tables</arxiv:comment>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Luzhuo Chen</name>
+    </author>
+    <author>
+      <name>Jiayu Shi</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2609.37590v1</id>
+    <title>FOCUS: Training-Free Decision-Preserving Context Compression for LLM Agents</title>
+    <updated>2026-09-29T13:45:34Z</updated>
+    <link href="https://arxiv.org/abs/2609.37590v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2609.37590v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>LLM agents accumulate interaction histories that grow linearly with task length, causing quadratic inference cost scaling and performance degradation from attention dilution. Existing context-compression methods learn what to discard offline: by contrastively optimizing guidelines, distilling compressors, or training compression policies. This incurs a substantial cost. Further, the compression policy is learned a priori and is not dynamically conditioned on the evolving test-time trajectories. In this paper we ask a complementary question: Which past interactions causally shape the agent's future decisions? We recast context compression as a causal decision preservation problem over discrete interaction units and introduce FOCUS, a training-free context compression framework that operates entirely at test time. Our method requires no offline data collection or fine-tuning, and is architecture-agnostic, attaching to any closed-API frontier model as a modular compression layer. We evaluate FOCUS on diverse agentic benchmarks including API and tool-calling, QA, web domain and multi-turn dialogue. Our method establishes new state of the art performance, cutting peak context by up to 48% and dependency by 73% while improving task success by up to 8.9 percentage points over uncompressed execution.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-09-29T13:45:34Z</published>
+    <arxiv:comment>Preprint. Under Review</arxiv:comment>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Shantanu Dixit</name>
+    </author>
+    <author>
+      <name>Anson Bastos</name>
+    </author>
+    <author>
+      <name>Xuchao Zhang</name>
+    </author>
+    <author>
+      <name>Chetan Bansal</name>
+    </author>
+    <author>
+      <name>Saravan Rajmohan</name>
+    </author>
+  </entry>
+</feed>

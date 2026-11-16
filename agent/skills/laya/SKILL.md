@@ -94,7 +94,12 @@ the load. Prefer `laya_predict_batch` for lists. The model is 421M params fp16; 
   token budget starves.
 - Negation is not safe (see upstream issue #377): validate the exact wording you serve.
 
-## Making it accurate on your data (`fit`, no gradients)
+## Making it accurate on your data (calibration only, no gradients)
+
+> 2026-11-16: laya 0.4.32 installed here has **no** `Agent.fit()` (labelled-CSV head training). The
+> block below is upstream-doc aspiration, not this install. What exists: `fit_temperatures`,
+> `fit_binning`, `fit_abstention_thresholds`, `save_calibration`/`load_calibration`. Zero-shot +
+> calibration + a confidence gate is the whole local vocabulary until a version with `fit()` lands.
 
 ```python
 import laya

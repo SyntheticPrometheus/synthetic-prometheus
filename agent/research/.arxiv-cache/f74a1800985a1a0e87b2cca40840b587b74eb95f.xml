@@ -1,0 +1,328 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/4EWs5WIV1inWDWMKNe7sbs2zHJM</id>
+  <title>arXiv Query: search_query=all:parallel AND all:"coding agent"&amp;id_list=&amp;start=0&amp;max_results=12</title>
+  <updated>2026-11-15T14:52:28Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=all:parallel+AND+all:%22coding+agent%22&amp;start=0&amp;max_results=12&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>12</opensearch:itemsPerPage>
+  <opensearch:totalResults>114</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2607.26083v1</id>
+    <title>Cross-Model Cross-Language AI Coding Agent Performance: Accuracy and Speed of Parallel CLRS Algorithms</title>
+    <updated>2026-07-26T19:31:17Z</updated>
+    <link href="https://arxiv.org/abs/2607.26083v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2607.26083v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>AI coding agents have quickly become omnipresent in software engineering. Their serial performance, both in terms of accuracy and speed, has been extensively covered. However, recent initial results suggest their parallel programming capabilities lag behind serial programming capabilities. This paper presents a cross-language evaluation of three coding agents -- Cursor's Composer 2.0, GPT 5.4, and Claude Sonnet 4.6 -- on parallel code generation across three algorithm categories -- sorting, graph traversal, and search -- in C++, Python, and Julia. For each algorithm and language pair, we prompt a coding agent to produce a parallel implementation from a serial baseline, track the prompting effort required to achieve both functional correctness and performance improvements, and measure speedup against both custom serial baselines and third-party library implementations. We find that coding agents can produce correct parallel implementations with modest prompting effort, but that achieving meaningful speedup is heavily algorithm- and language-dependent. Sonnet 4.6 delivers the strongest overall performance gains, whereas GPT 5.4 produces no measurable speedups despite consistent correctness. C++ is most consistently parallelizable for graph algorithms, while Python and Julia achieve the largest speedups on search algorithms: no single language dominates across all categories. Python and Julia each achieve speedup on some graph algorithms but regress on others. These findings underscore the impact of including runtime performance efficiency as a main LLM performance metric, in addition to accuracy, particularly for parallel implementations.</summary>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-07-26T19:31:17Z</published>
+    <arxiv:primary_category term="cs.SE"/>
+    <author>
+      <name>Shiqi Cheng</name>
+    </author>
+    <author>
+      <name>Evelyne Ringoot</name>
+    </author>
+    <author>
+      <name>Rabab Alomairy</name>
+    </author>
+    <author>
+      <name>Alan Edelman</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2601.04327v1</id>
+    <title>ParaCodex: A Profiling-Guided Autonomous Coding Agent for Reliable Parallel Code Generation and Translation</title>
+    <updated>2026-01-07T19:04:53Z</updated>
+    <link href="https://arxiv.org/abs/2601.04327v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2601.04327v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Parallel programming is central to HPC and AI, but producing code that is correct and fast remains challenging, especially for OpenMP GPU offload, where data movement and tuning dominate. Autonomous coding agents can compile, test, and profile on target hardware, but outputs are brittle without domain scaffolding.
+  We present ParaCodex, an HPC-engineer workflow that turns a Codex-based agent into an autonomous OpenMP GPU offload system using staged hotspot analysis, explicit data planning, correctness gating, and profiling-guided refinement. We evaluate translation from serial CPU kernels to OpenMP GPU offload kernels on HeCBench, Rodinia, and NAS. After excluding five kernels, ParaCodex succeeded on all 31 valid kernels. The generated kernels improved GPU time over reference OpenMP implementations in 25/31 cases, achieving geometric-mean speedups of 3x on HeCBench and 5x on Rodinia, and outperforming a zero-shot Codex baseline on all suites. We also evaluate CUDA to OpenMP offload translation on ParEval, where ParaCodex maintains high compilation and validation rates in code-only and end-to-end settings.</summary>
+    <category term="cs.DC" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-01-07T19:04:53Z</published>
+    <arxiv:primary_category term="cs.DC"/>
+    <author>
+      <name>Erel Kaplan</name>
+    </author>
+    <author>
+      <name>Tomer Bitan</name>
+    </author>
+    <author>
+      <name>Lian Ghrayeb</name>
+    </author>
+    <author>
+      <name>Le Chen</name>
+    </author>
+    <author>
+      <name>Tom Yotam</name>
+    </author>
+    <author>
+      <name>Niranjan Hasabnis</name>
+    </author>
+    <author>
+      <name>Gal Oren</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2606.27416v1</id>
+    <title>Glite ARF: Verifier-Driven Research with Parallel LLM Coding Agents</title>
+    <updated>2026-06-25T17:52:26Z</updated>
+    <link href="https://arxiv.org/abs/2606.27416v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2606.27416v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>LLM coding agents make it tempting to automate empirical research by delegating experiments to them directly, but naive delegation does not scale to large projects: low-rate instruction lapses compound into broken, irreproducible artefacts. To address this problem, we present Glite ARF, an open-source Python framework for running many LLM coding agents in parallel on a research repository without sacrificing reproducibility or auditability. The framework defines a three-role stack: a human researcher chooses which hypotheses to test, coding agents (Claude Code, Codex CLI) implement individual tasks under a fixed structure, and deterministic Python verifier scripts enforce task isolation, immutability of completed work, a corrections overlay, and a materialised project overview. We call this verifier-driven research: the rules of the research process live in code that fails loudly when violated, not in prose that agents are merely asked to follow. Using Glite ARF, we developed our submission to the BEA 2026 vocabulary-difficulty shared task, placing first in the closed track and second in the open track on all three target languages (Spanish, German, Mandarin) and reducing the official baseline RMSE by 29.9% (closed) and 35.9% (open). The campaign comprised 273 tracked tasks (146 experiment runs) across 129 feature sets, run by up to twelve parallel agents orchestrated from a single laptop - with some model training on rented A100s - at approximately \$450 in LLM API spend (\$498 total third-party cost), and structured per-fold provenance let us catch and strip four target-leaking feature sets, correcting an implausible 0.609 RMSE to 0.802. Across three campaigns in three domains, the framework's structural machinery adds only about 1% of wall-clock time. Framework and a public demo project accompany this paper.</summary>
+    <category term="cs.MA" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-06-25T17:52:26Z</published>
+    <arxiv:comment>13 pages, 6 figures, 7 tables. Open-source framework (Apache-2.0) and a public demo project at https://github.com/GliteTech/glite-arf and https://github.com/GliteTech/research-ace-cefr</arxiv:comment>
+    <arxiv:primary_category term="cs.MA"/>
+    <author>
+      <name>Vassili Philippov</name>
+    </author>
+    <author>
+      <name>Pavel Katunin</name>
+    </author>
+    <author>
+      <name>Dmitry Andreev</name>
+    </author>
+    <author>
+      <name>Igor Ostanin</name>
+    </author>
+    <author>
+      <name>Anton Nikolaev</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2606.16824v1</id>
+    <title>CacheWise: Understanding Workloads and Optimizing KVCache Management for Efficiently Serving LLM Coding Agents</title>
+    <updated>2026-06-15T15:08:01Z</updated>
+    <link href="https://arxiv.org/abs/2606.16824v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2606.16824v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Coding agents are a fast-growing LLM application, executing as long-running closed-loop sessions in which LLM generations alternate with external tool calls. Yet, unlike chat workloads, their serving behavior has not been studied extensively. We address this gap by collecting a dataset of real-world coding assistant traces. Our analysis shows that coding agent sessions repeatedly reuse large prefixes and create sustained KVCache pressure that conventional LLM serving policies handle poorly.
+  Based on our analysis, we present CacheWise, a KVCache management layer that improves KVCache reuse for coding agent workloads. CacheWise combines prefix-aware scheduling with reuse-aware eviction guided by lightweight predictions from tool call metadata. Implemented in vLLM and evaluated on the collected traces, CacheWise reduces KVCache evictions by up to 2-2.6x and improves total agent session completion time by up to 3.5x.</summary>
+    <category term="cs.DC" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.OS" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-06-15T15:08:01Z</published>
+    <arxiv:primary_category term="cs.DC"/>
+    <author>
+      <name>Shubham Tiwari</name>
+    </author>
+    <author>
+      <name>Tapan Chugh</name>
+    </author>
+    <author>
+      <name>Nash Rickert</name>
+    </author>
+    <author>
+      <name>Simon Peter</name>
+    </author>
+    <author>
+      <name>Ratul Mahajan</name>
+    </author>
+    <author>
+      <name>Haiying Shen</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2512.03549v1</id>
+    <title>PARC: An Autonomous Self-Reflective Coding Agent for Robust Execution of Long-Horizon Tasks</title>
+    <updated>2025-12-03T08:15:10Z</updated>
+    <link href="https://arxiv.org/abs/2512.03549v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2512.03549v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>We introduce PARC, a coding agent for the autonomous and robust execution of long-horizon computational tasks. PARC is built on a hierarchical multi-agent architecture incorporating task planning, execution, and a mechanism that evaluates its own actions and their outcomes from an independent context and provides feedback, namely self-assessment and self-feedback. This design enables PARC to detect and correct high-level strategic errors and sustain progress without human intervention. We evaluate PARC across computational science and data science tasks. In materials science, it autonomously reproduces key results from studies on lithium-ion conduction and alloy segregation. In particular, it coordinates dozens of parallel simulation tasks, each requiring roughly 43 hours of computation, managing orchestration, monitoring, and error correction end-to-end. In Kaggle-based experiments, starting from minimal natural-language instructions, PARC conducts data analysis and implements search strategies, producing solutions competitive with human-engineered baselines. These results highlight the potential of integrating a hierarchical multi-agent system with self-assessment and self-feedback to enable AI systems capable of independent, large-scale scientific and analytical work.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-12-03T08:15:10Z</published>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Yuki Orimo</name>
+    </author>
+    <author>
+      <name>Iori Kurata</name>
+    </author>
+    <author>
+      <name>Hodaka Mori</name>
+    </author>
+    <author>
+      <name>Ryuhei Okuno</name>
+    </author>
+    <author>
+      <name>Ryohto Sawada</name>
+    </author>
+    <author>
+      <name>Daisuke Okanohara</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2509.00883v1</id>
+    <title>Accelerating Latency-Critical Applications with AI-Powered Semi-Automatic Fine-Grained Parallelization on SMT Processors</title>
+    <updated>2025-08-31T14:51:19Z</updated>
+    <link href="https://arxiv.org/abs/2509.00883v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2509.00883v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Latency-critical applications tend to show low utilization of functional units due to frequent cache misses and mispredictions during speculative execution in high-performance superscalar processors. However, due to significant impact on single-thread performance, Simultaneous Multithreading (SMT) technology is rarely used with heavy threads of latency-critical applications. In this paper, we explore utilization of SMT technology to support fine-grained parallelization of latency-critical applications. Following the advancements in the development of Large Language Models (LLMs), we introduce Aira, an AI-powered Parallelization Adviser. To implement Aira, we extend AI Coding Agent in Cursor IDE with additional tools connected through Model Context Protocol, enabling end-to-end AI Agent for parallelization. Additional connected tools enable LLM-guided hotspot detection, collection of dynamic dependencies with Dynamic Binary Instrumentation, SMT-aware performance simulation to estimate performance gains. We apply Aira with Relic parallel framework for fine-grained task parallelism on SMT cores to parallelize latency-critical benchmarks representing real-world applications used in industry. We show 17% geomean performance gain from parallelization of latency-critical benchmarks using Aira with Relic framework.</summary>
+    <category term="cs.DC" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-08-31T14:51:19Z</published>
+    <arxiv:primary_category term="cs.DC"/>
+    <arxiv:journal_ref>International Journal of Open Information Technologies, vol. 13, no. 9, pp. 129-134, 2025</arxiv:journal_ref>
+    <author>
+      <name>Denis Los</name>
+    </author>
+    <author>
+      <name>Igor Petushkov</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2610.07261v1</id>
+    <title>Verifying Coordination in Parallel Coding Agents: NP-Bench and a Scheduling Planner</title>
+    <updated>2026-10-05T19:02:27Z</updated>
+    <link href="https://arxiv.org/abs/2610.07261v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2610.07261v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>A team of coding agents can look fine agent by agent yet fail as a team: each passes its own tests while the merged result is broken, and single-agent evaluation never catches it. As teams run several LLM coding agents in parallel on one codebase, the agents collide: two rewrite the same function, one codes against a contract a teammate just changed, and integration fails after the work is done. Most coordination tools react (watch for a conflict, then warn), but at agent speed the warning arrives after the wasted edit. We recast the problem as scheduling: take each work item's declared scope, partition the work into disjoint scopes, and order merges along the producer-&gt;consumer graph, all up front. We build this planner into Nerveplane and evaluate it with NP-Bench, an environment-grounded three-arm benchmark (no coordination; reactive detection; proactive planning) that verifies integration off a real git merge, both in a deterministic simulation and with live agents. The planner lifts clean-integration from 1/9 to 9/9 scenarios and cuts merge conflicts from 13 to 0, with a gap that grows in the number of agents. On a live breaking contract change it rescues an outcome both baselines miss on every seed: the clean-integration rate rises from 0 (no coordination and reactive detection) to 1.0 on a frontier model and 0.6 on a small one, while agents respect assigned scopes (0/5 leakage). A cross-session memory drops the repeated-mistake rate from 1.00 to 0.00 on strong and weak models alike. We also report a negative result: routing facts to agents does not rescue long-context accuracy at window-fitting scales; its value is cost and capacity, not attention. Across two capability tiers and two vendors, the benefit did not shrink as models got stronger, because it comes from how work is allocated, not model reasoning.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-10-05T19:02:27Z</published>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Sumanyu Muku</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2607.21909v1</id>
+    <title>Claim Plane: Enforceable Change Intents and Dynamic Scope for Parallel Coding Agents</title>
+    <updated>2026-07-24T02:30:50Z</updated>
+    <link href="https://arxiv.org/abs/2607.21909v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2607.21909v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Parallel coding agents can independently produce locally valid changes while still interfering at integration time, expanding beyond planned scope, or relying on premises invalidated by concurrent work. Existing responses emphasize communication, isolated workspaces, late merge-time repair, continuous supervision, or post-hoc runtime recovery. This paper presents Claim Plane, a model-agnostic coordination architecture that treats concurrent software change as a pre-write admission problem. Before implementation, each worker declares a versioned ChangeIntent containing an exact base commit, typed resources, dependencies, and operations marked as committed or contingent. A deterministic control plane atomically admits compatible intents, constrains same-file parallelism to declared regions, serializes unresolved overlap, tracks dependency invalidation, and fails closed on ambiguous authority. During execution, a contingent mutation does not reserve write ownership initially; the first attempted mutation triggers atomic scope promotion and re-admission against the current active set. Brokered execution binds capabilities to intent versions, leases, OS-level worktree locks, monotonic fencing tokens, and Git-tree provenance, while integration verifies immutable patches and evidence. A preliminary six-pair CooperBench mechanism check is reported only as feasibility evidence: static Claim Plane achieved 6/6 pair passes with full serialization, while dynamic scope retained parallel admission on half of the pairs, performed seven successful scope promotions, and failed closed on two undeclared mutations. The sample is intentionally too small for comparative claims. We argue that separating probabilistic planning from deterministic authority provides a foundation for a future learned semantic-dependency model and frontier-model escalation only on unresolved cases.</summary>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-07-24T02:30:50Z</published>
+    <arxiv:comment>10 pages, 2 figures. Preprint</arxiv:comment>
+    <arxiv:primary_category term="cs.SE"/>
+    <author>
+      <name>Maxim Nikolaev</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2607.01415v1</id>
+    <title>The Rollout Infrastructure Tax in Coding-Agent Reinforcement Learning</title>
+    <updated>2026-07-01T19:20:46Z</updated>
+    <link href="https://arxiv.org/abs/2607.01415v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2607.01415v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Coding-agent reinforcement learning treats execution infrastructure as a background implementation detail, despite relying on large numbers of interactive software rollouts. This is a missed opportunity: measuring infrastructure overhead can reveal practical efficiency gains for RL post-training, where small per-rollout savings compound at scale. We present a comparative study of four execution substrates: single containers, hosted sandboxes, Kubernetes-orchestrated containers, and cloud virtual machines. We find up to $110\times$ variation in cold-start latency and a $1.8\times$ spread in projected worker-hours for one million 150-step trajectories. Our results suggest that future coding-agent RL systems should optimize execution substrates as part of the training system itself, not merely as deployment plumbing.</summary>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.DC" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-07-01T19:20:46Z</published>
+    <arxiv:comment>Preprint. 6 pages, 6 figures, 2 tables. Submitted to ACM SoCC 2026</arxiv:comment>
+    <arxiv:primary_category term="cs.LG"/>
+    <author>
+      <name>Daniel Thi Graviet</name>
+    </author>
+    <author>
+      <name>Lovre Pesut</name>
+    </author>
+    <author>
+      <name>Ivan Dagelic</name>
+    </author>
+    <author>
+      <name>Vedran Jukic</name>
+    </author>
+    <author>
+      <name>Ivan Burazin</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2607.01810v1</id>
+    <title>Decoupling Code Complexity from Newcomer Participation: A Causal Study of AI Coding Agent Adoption in OSS</title>
+    <updated>2026-07-02T07:24:20Z</updated>
+    <link href="https://arxiv.org/abs/2607.01810v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2607.01810v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Open-source projects depend on a steady inflow of newcomers. A growing concern is that AI coding agents (tools such as Cursor and Claude Code that write code from natural-language instructions) will crowd them out, by absorbing the simple tasks that beginners start with and by making code harder to read. We give this concern a causal answer. Using GitHub code search we identify 1,888 projects that adopted an agent, signaled by their first commit of a configuration file. We apply difference-in-differences against matched non-adopting controls, restricting the main analysis to the 603 adopters with a genuine pre-adoption period. We find no evidence of crowding-out: across estimators newcomer inflow shows no significant decline after adoption (point estimates run from a small increase to, under the most conservative trend specification, a slight and insignificant dip), onboarding and retention are unchanged, and a sparse, correlational beginner-task measure (good-first-issue labels, which we cannot test for parallel trends) shows no decline. The feared mechanism is real but decoupled: adoption raises per-function code complexity (about +11% on a cognitive metric for Python, a quarter of the prior estimate, and +3 to 4% in cyclomatic terms across all languages), yet in fixed-unit subsets where complexity rose (Python on the cognitive metric, and all languages on the cyclomatic metric), newcomer participation does not decline. These results suggest that, in established open-source projects, adopting an AI coding agent makes code modestly more complex but does not crowd out the human newcomers that a project depends on: the feared trade-off between AI assistance and human participation does not materialize.</summary>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-07-02T07:24:20Z</published>
+    <arxiv:primary_category term="cs.SE"/>
+    <author>
+      <name>Weiwei Xu</name>
+    </author>
+    <author>
+      <name>Xuanning Cui</name>
+    </author>
+    <author>
+      <name>Hengzhi Ye</name>
+    </author>
+    <author>
+      <name>Minghui Zhou</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2603.02510v2</id>
+    <title>ParEVO: Synthesizing Code for Irregular Data: High-Performance Parallelism through Agentic Evolution</title>
+    <updated>2026-07-06T09:08:30Z</updated>
+    <link href="https://arxiv.org/abs/2603.02510v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2603.02510v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>The transition from sequential to parallel computing is essential for modern high-performance applications but is hindered by the steep learning curve of concurrent programming. This challenge is magnified for irregular data structures (such as sparse graphs, unbalanced trees, and non-uniform meshes) where static scheduling fails and data dependencies are unpredictable. Current Large Language Models (LLMs) often fail catastrophically on these tasks, generating code plagued by subtle race conditions, deadlocks, and sub-optimal scaling.
+  We bridge this gap with ParEVO, a framework designed to synthesize high-performance parallel algorithms for irregular data. Our contributions include: (1) The Parlay-Instruct Corpus, a curated dataset of 13,820 tasks synthesized via a "Critic-Refine" pipeline that explicitly filters for empirically performant algorithms that effectively utilize Work-Span parallel primitives; (2) specialized DeepSeek, Qwen, and Gemini models fine-tuned to align probabilistic generation with the rigorous semantics of the ParlayLib library; and (3) an Evolutionary Coding Agent (ECA) that improves the "last mile" of correctness by iteratively repairing code using feedback from compilers, dynamic race detectors, and performance profilers.
+  On the ParEval benchmark, ParEVO achieves an average 106x speedup (with a maximum of 1103x) across the suite, and a robust 13.6x speedup specifically on complex irregular graph problems, outperforming state-of-the-art commercial models. Furthermore, our evolutionary approach matches state-of-the-art expert human baselines, achieving up to a 4.1x speedup on specific highly-irregular kernels. Source code and datasets are available at https://github.com/WildAlg/ParEVO.</summary>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.DC" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.NE" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.PF" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-03-03T01:41:07Z</published>
+    <arxiv:primary_category term="cs.LG"/>
+    <author>
+      <name>Liu Yang</name>
+    </author>
+    <author>
+      <name>Zeyu Nie</name>
+    </author>
+    <author>
+      <name>Andrew Liu</name>
+    </author>
+    <author>
+      <name>Felix Zou</name>
+    </author>
+    <author>
+      <name>Deniz Altinbüken</name>
+    </author>
+    <author>
+      <name>Amir Yazdanbakhsh</name>
+    </author>
+    <author>
+      <name>Quanquan C. Liu</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2610.03088v1</id>
+    <title>Coda: Exploiting Admission Flexibility for Coding-Agent Serving</title>
+    <updated>2026-10-02T10:07:36Z</updated>
+    <link href="https://arxiv.org/abs/2610.03088v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2610.03088v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Coding agents powered by large language models (LLMs) repeatedly alternate between model inference and tool calls, creating long-lived sessions with reusable key-value (KV) states and asynchronous request resumptions. Logical readiness, however, does not ensure efficient admission in a shared serving system. Through direct trace analysis and trace-driven replay, we identify two mismatches: reusable KV states reside across storage tiers and incur unequal computational costs for state preparation, while requests with heterogeneous context lengths can decode inefficiently together. Our central insight is that exploiting admission flexibility can improve serving performance while preserving request progress.
+  We present Coda, a coding-agent serving system that realizes this insight through a readiness-informed admission layer incorporating two mechanisms. Tiered-Aging state admission exploits bounded flexibility in admission order to improve admission efficiency and preserve request progress. Compatibility-Aware execution admission exploits flexibility in attention grouping within each model iteration to reduce mixed-context interference and improve shared decoding efficiency. For multi-worker configurations, Coda introduces a separate routing layer that considers KV-state residency, worker load, and request-to-worker context-length compatibility to guide efficient request placement. We evaluate Coda across different models and workloads against state-of-the-art coding-agent serving systems and vLLM. Across the single-worker and multi-worker experiments, Coda improves output-token and SLO-compliant throughput by 20.3% and 70.5% on average, with peak gains of 29.3% and 140.2%.</summary>
+    <category term="cs.DC" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-10-02T10:07:36Z</published>
+    <arxiv:primary_category term="cs.DC"/>
+    <author>
+      <name>Youhe Jiang</name>
+    </author>
+    <author>
+      <name>Fangcheng Fu</name>
+    </author>
+    <author>
+      <name>Binhang Yuan</name>
+    </author>
+    <author>
+      <name>Krishna Malladi</name>
+    </author>
+    <author>
+      <name>Ehsan K. Ardestani</name>
+    </author>
+    <author>
+      <name>Zhan Shu</name>
+    </author>
+    <author>
+      <name>Adnan Aziz</name>
+    </author>
+    <author>
+      <name>Yi Xu</name>
+    </author>
+  </entry>
+</feed>

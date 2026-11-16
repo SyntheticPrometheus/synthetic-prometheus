@@ -89,3 +89,32 @@ Not done on purpose (each needs a reason, not a checkbox):
 - automatic run-end memory capture (Engram 2603.21321) — the cycle note is written by hand into
   `decisions.md` and `mem`; automating it means an LLM call per run, which the cost data does not
   justify yet.
+
+## 2026-11-14 — Cycle 15: headroom by input size (falsified) → cost axis in the gate
+
+- hypothesis: heavy context pressure (60 prose records ≈ 110 KB, 40 dependent edits, a 4-file CSV
+  reconciliation) would drop base below 1.0 and give the gate something to accept.
+- measured: base **9/9** at k=3 (semantic-shards 3/3 at 21–34k tokens_in; chain-40 3/3; join-60 3/3
+  in ~5 s). Suite is now 15 tasks and still saturated. Third falsification of "bigger input creates
+  discrimination" (cycles 10, 11, 12 were the first two) — the base arm either reads the input or
+  writes a script, and a script is a fold.
+- kept anyway: the three tasks are a floor for weaker arms and cost ~$0.03/run to keep honest.
+- protocol change that follows: at ceiling, `gate.py` now reads `gate.cost_win_frac` (0.10) from
+  `policy.json`, so an equal-pass arm that cuts output tokens ≥10% at k≥3 with no regression is
+  accepted as **ACCEPT_COST** — explicitly not a capability gain. Without this the loop cannot act
+  on anything while the suite is saturated.
+- next hypothesis (cycle 16, not yet run): headroom comes from *authored output under many
+  simultaneous constraints*, or from probing an opaque oracle — not from larger inputs.
+
+## 2026-11-14 — Review pass: the harness now audits its own relevance weekly
+
+- `bin/pi-review` scores nine signals that metrics alone miss: AGENTS.md size and dangling
+  references, suite saturation and evidence age, unverified delegation share and dead roster
+  entries, brief budget ratio and consolidation age, preflight + incident guards, timer health,
+  skill frontmatter, publish attempt age, stale PDSA cycles. It writes `selfimprove/review.md` and
+  exits 1 on a hard failure; `pi-review.timer` runs it weekly and `pi-preflight` fails when the
+  review is older than 10 days, so the reflection cannot silently stop.
+- First run found two real things: 58% of delegation rows had no verdict, and 12/12 suite
+  saturation. Both now have executable signals instead of my memory.
+- `pi-delegate expire --days 7` marks dispatches nobody can judge any more as `expired`, so the
+  unverified share measures what is still actionable rather than warning forever.

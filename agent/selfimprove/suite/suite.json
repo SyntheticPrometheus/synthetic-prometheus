@@ -1,6 +1,6 @@
 {
  "version": 4,
- "note": "Pinned judge. Never edited by an arm. Verifier runs with cwd = task dir; exit 0 = pass. verify_files are rewritten after the arm runs. v3 adds log-fanout (30 shards: context-lossy aggregate, the recon-delegation probe). v4 adds parallel-fix (six independent modules: the parallel-delegation probe).",
+ "note": "Pinned judge. Never edited by an arm. Verifier runs with cwd = task dir; exit 0 = pass. verify_files are rewritten after the arm runs. v3 adds log-fanout (30 shards: context-lossy aggregate, the recon-delegation probe). v4 adds parallel-fix (six independent modules: the parallel-delegation probe). v3: semantic-shards, chain-40, join-60 added as headroom for the saturated suite (cycle 15); inputs come from suite/fixtures/*.py.",
  "tasks": [
   {
    "id": "accounting-sum",
@@ -263,6 +263,24 @@
    "selftest_bad": {
     "answer.json": "{\"count\": 7, \"earliest\": \"2026-03-02T09:14:00Z\"}"
    }
+  },
+  {
+   "id": "semantic-shards",
+   "fixture": "semantic-shards.py",
+   "prompt": "Every shard-NN.md under this directory is one change record. Read them all. Write to ids.txt the two-digit numbers of every record that (a) was rolled back fully, (b) is reversible without a deploy, and (c) touched more than one service \u2014 ascending, comma-separated with no spaces (one line). Write the count of those records to count.txt. A record that was only partially rolled back does not qualify. Then reply with the count.",
+   "verify": "true"
+  },
+  {
+   "id": "chain-40",
+   "fixture": "chain-40.py",
+   "prompt": "m/ holds 40 modules applied in numeric order, each feeding the next; ORDER.md gives the expected output after every stage for input 2. Each module has exactly one constant wrong and the operation is correct. Fix every constant so the composed pipeline matches the table for every input. Then reply with the final output for input 7.",
+   "verify": "true"
+  },
+  {
+   "id": "join-60",
+   "fixture": "join-60.py",
+   "prompt": "RULES.md states which orders count. Using customers.csv, orders.csv and exclusions.txt, write count.txt (the number of counting orders) and total.txt (their amounts summed, two decimals, no separator or symbol). Then reply with the total.",
+   "verify": "true"
   }
  ]
 }

@@ -1,0 +1,258 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/t28JuFEHfipxvzZLVqSSounRnRE</id>
+  <title>arXiv Query: search_query=all:"context window"&amp;id_list=&amp;start=0&amp;max_results=8</title>
+  <updated>2026-11-15T16:02:39Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=all:%22context+window%22&amp;start=0&amp;max_results=8&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>8</opensearch:itemsPerPage>
+  <opensearch:totalResults>1509</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2401.07004v1</id>
+    <title>Extending LLMs' Context Window with 100 Samples</title>
+    <updated>2024-01-13T07:57:01Z</updated>
+    <link href="https://arxiv.org/abs/2401.07004v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2401.07004v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Large Language Models (LLMs) are known to have limited extrapolation ability beyond their pre-trained context window, constraining their application in downstream tasks with lengthy inputs. Recent studies have sought to extend LLMs' context window by modifying rotary position embedding (RoPE), a popular position encoding method adopted by well-known LLMs such as LLaMA, PaLM, and GPT-NeoX. However, prior works like Position Interpolation (PI) and YaRN are resource-intensive and lack comparative experiments to assess their applicability. In this work, we identify the inherent need for LLMs' attention entropy (i.e. the information entropy of attention scores) to maintain stability and introduce a novel extension to RoPE which combines adjusting RoPE's base frequency and scaling the attention logits to help LLMs efficiently adapt to a larger context window. We validate the superiority of our method in both fine-tuning performance and robustness across different context window sizes on various context-demanding tasks. Notably, our method extends the context window of LLaMA-2-7B-Chat to 16,384 with only 100 samples and 6 training steps, showcasing extraordinary efficiency. Finally, we also explore how data compositions and training curricula affect context window extension for specific downstream tasks, suggesting fine-tuning LLMs with lengthy conversations as a good starting point. We release our code and SFT data at https://github.com/GAIR-NLP/Entropy-ABF.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2024-01-13T07:57:01Z</published>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Yikai Zhang</name>
+    </author>
+    <author>
+      <name>Junlong Li</name>
+    </author>
+    <author>
+      <name>Pengfei Liu</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2405.18009v2</id>
+    <title>Exploring Context Window of Large Language Models via Decomposed Positional Vectors</title>
+    <updated>2024-11-18T11:15:56Z</updated>
+    <link href="https://arxiv.org/abs/2405.18009v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2405.18009v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Transformer-based large language models (LLMs) typically have a limited context window, resulting in significant performance degradation when processing text beyond the length of the context window. Extensive studies have been proposed to extend the context window and achieve length extrapolation of LLMs, but there is still a lack of in-depth interpretation of these approaches. In this study, we explore the positional information within and beyond the context window for deciphering the underlying mechanism of LLMs. By using a mean-based decomposition method, we disentangle positional vectors from hidden states of LLMs and analyze their formation and effect on attention. Furthermore, when texts exceed the context window, we analyze the change of positional vectors in two settings, i.e., direct extrapolation and context window extension. Based on our findings, we design two training-free context window extension methods, positional vector replacement and attention window extension. Experimental results show that our methods can effectively extend the context window length.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2024-05-28T09:50:46Z</published>
+    <arxiv:comment>Accepted by Neurips 2024 as a spotlight</arxiv:comment>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Zican Dong</name>
+    </author>
+    <author>
+      <name>Junyi Li</name>
+    </author>
+    <author>
+      <name>Xin Men</name>
+    </author>
+    <author>
+      <name>Wayne Xin Zhao</name>
+    </author>
+    <author>
+      <name>Bingbing Wang</name>
+    </author>
+    <author>
+      <name>Zhen Tian</name>
+    </author>
+    <author>
+      <name>Weipeng Chen</name>
+    </author>
+    <author>
+      <name>Ji-Rong Wen</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2402.13753v1</id>
+    <title>LongRoPE: Extending LLM Context Window Beyond 2 Million Tokens</title>
+    <updated>2024-02-21T12:30:33Z</updated>
+    <link href="https://arxiv.org/abs/2402.13753v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2402.13753v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Large context window is a desirable feature in large language models (LLMs). However, due to high fine-tuning costs, scarcity of long texts, and catastrophic values introduced by new token positions, current extended context windows are limited to around 128k tokens. This paper introduces LongRoPE that, for the first time, extends the context window of pre-trained LLMs to an impressive 2048k tokens, with up to only 1k fine-tuning steps at within 256k training lengths, while maintaining performance at the original short context window. This is achieved by three key innovations: (i) we identify and exploit two forms of non-uniformities in positional interpolation through an efficient search, providing a better initialization for fine-tuning and enabling an 8x extension in non-fine-tuning scenarios; (ii) we introduce a progressive extension strategy that first fine-tunes a 256k length LLM and then conducts a second positional interpolation on the fine-tuned extended LLM to achieve a 2048k context window; (iii) we readjust LongRoPE on 8k length to recover the short context window performance. Extensive experiments on LLaMA2 and Mistral across various tasks demonstrate the effectiveness of our method. Models extended via LongRoPE retain the original architecture with minor modifications to the positional embedding, and can reuse most pre-existing optimizations.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2024-02-21T12:30:33Z</published>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Yiran Ding</name>
+    </author>
+    <author>
+      <name>Li Lyna Zhang</name>
+    </author>
+    <author>
+      <name>Chengruidong Zhang</name>
+    </author>
+    <author>
+      <name>Yuanyuan Xu</name>
+    </author>
+    <author>
+      <name>Ning Shang</name>
+    </author>
+    <author>
+      <name>Jiahang Xu</name>
+    </author>
+    <author>
+      <name>Fan Yang</name>
+    </author>
+    <author>
+      <name>Mao Yang</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2502.20082v1</id>
+    <title>LongRoPE2: Near-Lossless LLM Context Window Scaling</title>
+    <updated>2025-02-27T13:41:07Z</updated>
+    <link href="https://arxiv.org/abs/2502.20082v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2502.20082v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>LongRoPE2 is a novel approach that extends the effective context window of pre-trained large language models (LLMs) to the target length, while preserving the performance on the original shorter context window. This is achieved by three contributions: (1) a hypothesis that insufficient training in higher RoPE dimensions contributes to the persistent out-of-distribution (OOD) issues observed in existing methods; (2) an effective RoPE rescaling algorithm that adopts evolutionary search guided by "needle-driven" perplexity to address the insufficient training problem; (3) a mixed context window training approach that fine-tunes model weights to adopt rescaled RoPE for long-context sequences while preserving the short-context performance with the original RoPE. Extensive experiments on LLaMA3-8B and Phi3-mini-3.8B across various benchmarks validate the hypothesis and demonstrate the effectiveness of LongRoPE2. Remarkably, LongRoPE2 extends LLaMA3-8B to achieve a 128K effective context length while retaining over 98.5% of short-context performance, using only 10B tokens -- 80x fewer than Meta's approach, which fails to reach the target effective context length. Code will be available at https://github.com/microsoft/LongRoPE.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-02-27T13:41:07Z</published>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Ning Shang</name>
+    </author>
+    <author>
+      <name>Li Lyna Zhang</name>
+    </author>
+    <author>
+      <name>Siyuan Wang</name>
+    </author>
+    <author>
+      <name>Gaokai Zhang</name>
+    </author>
+    <author>
+      <name>Gilsinia Lopez</name>
+    </author>
+    <author>
+      <name>Fan Yang</name>
+    </author>
+    <author>
+      <name>Weizhu Chen</name>
+    </author>
+    <author>
+      <name>Mao Yang</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2503.15450v2</id>
+    <title>SkyLadder: Better and Faster Pretraining via Context Window Scheduling</title>
+    <updated>2025-12-02T17:19:53Z</updated>
+    <link href="https://arxiv.org/abs/2503.15450v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2503.15450v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Recent advancements in LLM pretraining have featured ever-expanding context windows to process longer sequences. However, our pilot study reveals that models pretrained with shorter context windows consistently outperform their long-context counterparts under a fixed token budget. This finding motivates us to explore an optimal context window scheduling strategy to better balance long-context capability with pretraining efficiency. To this end, we propose SkyLadder, a simple yet effective approach that implements a short-to-long context window transition. SkyLadder preserves strong standard benchmark performance, while matching or exceeding baseline results on long context tasks. Through extensive experiments, we pre-train 1B-parameter models (up to 32K context) and 3B-parameter models (8K context) on 100B tokens, demonstrating that SkyLadder yields consistent gains of up to 3.7% on common benchmarks, while achieving up to 22% faster training speeds compared to baselines. The code is at https://github.com/sail-sg/SkyLadder.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-03-19T17:31:15Z</published>
+    <arxiv:comment>Accepted to NeurIPS 2025. 10 pages</arxiv:comment>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Tongyao Zhu</name>
+    </author>
+    <author>
+      <name>Qian Liu</name>
+    </author>
+    <author>
+      <name>Haonan Wang</name>
+    </author>
+    <author>
+      <name>Shiqi Chen</name>
+    </author>
+    <author>
+      <name>Xiangming Gu</name>
+    </author>
+    <author>
+      <name>Tianyu Pang</name>
+    </author>
+    <author>
+      <name>Min-Yen Kan</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2509.21361v2</id>
+    <title>Context Is What You Need: The Maximum Effective Context Window for Real World Limits of LLMs</title>
+    <updated>2026-04-23T15:39:44Z</updated>
+    <link href="https://arxiv.org/abs/2509.21361v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2509.21361v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Large language model (LLM) providers boast big numbers for maximum context window sizes. To test the real world use of context windows, we 1) define a concept of maximum effective context window, 2) formulate a testing method of a context window's effectiveness over various sizes and problem types, and 3) create a standardized way to compare model efficacy for increasingly larger context window sizes to find the point of failure. We collected hundreds of thousands of data points across several models and found significant differences between reported Maximum Context Window (MCW) size and Maximum Effective Context Window (MECW) size. Our findings show that the MECW is, not only, drastically different from the MCW but also shifts based on the problem type. A few top of the line models in our test group failed with as little as 100 tokens in context; most had severe degradation in accuracy by 1000 tokens in context. All models fell far short of their Maximum Context Window by as much as 99 percent. Our data reveals the Maximum Effective Context Window shifts based on the type of problem provided, offering clear and actionable insights into how to improve model accuracy and decrease model hallucination rates.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-09-21T14:38:17Z</published>
+    <arxiv:comment>20 pages, 4 charts. AAIML (2026)</arxiv:comment>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Norman Paulsen</name>
+    </author>
+    <arxiv:doi>10.54364/AAIML.2026.61268</arxiv:doi>
+    <link rel="related" href="https://doi.org/10.54364/AAIML.2026.61268" title="doi"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2410.01490v2</id>
+    <title>Extending Context Window of Large Language Models from a Distributional Perspective</title>
+    <updated>2024-10-03T05:43:30Z</updated>
+    <link href="https://arxiv.org/abs/2410.01490v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2410.01490v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Scaling the rotary position embedding (RoPE) has become a common method for extending the context window of RoPE-based large language models (LLMs). However, existing scaling methods often rely on empirical approaches and lack a profound understanding of the internal distribution within RoPE, resulting in suboptimal performance in extending the context window length. In this paper, we propose to optimize the context window extending task from the view of rotary angle distribution. Specifically, we first estimate the distribution of the rotary angles within the model and analyze the extent to which length extension perturbs this distribution. Then, we present a novel extension strategy that minimizes the disturbance between rotary angle distributions to maintain consistency with the pre-training phase, enhancing the model's capability to generalize to longer sequences. Experimental results compared to the strong baseline methods demonstrate that our approach reduces by up to 72% of the distributional disturbance when extending LLaMA2's context window to 8k, and reduces by up to 32% when extending to 16k. On the LongBench-E benchmark, our method achieves an average improvement of up to 4.33% over existing state-of-the-art methods. Furthermore, Our method maintains the model's performance on the Hugging Face Open LLM benchmark after context window extension, with only an average performance fluctuation ranging from -0.12 to +0.22.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2024-10-02T12:40:11Z</published>
+    <arxiv:comment>14 pages, 8 figures, Accepted to EMNLP2024</arxiv:comment>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Yingsheng Wu</name>
+    </author>
+    <author>
+      <name>Yuxuan Gu</name>
+    </author>
+    <author>
+      <name>Xiaocheng Feng</name>
+    </author>
+    <author>
+      <name>Weihong Zhong</name>
+    </author>
+    <author>
+      <name>Dongliang Xu</name>
+    </author>
+    <author>
+      <name>Qing Yang</name>
+    </author>
+    <author>
+      <name>Hongtao Liu</name>
+    </author>
+    <author>
+      <name>Bing Qin</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2309.10400v3</id>
+    <title>PoSE: Efficient Context Window Extension of LLMs via Positional Skip-wise Training</title>
+    <updated>2024-02-21T13:37:07Z</updated>
+    <link href="https://arxiv.org/abs/2309.10400v3" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2309.10400v3" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Large Language Models (LLMs) are trained with a pre-defined context length, restricting their use in scenarios requiring long inputs. Previous efforts for adapting LLMs to a longer length usually requires fine-tuning with this target length (Full-length fine-tuning), suffering intensive training cost. To decouple train length from target length for efficient context window extension, we propose Positional Skip-wisE (PoSE) training that smartly simulates long inputs using a fixed context window. This is achieved by first dividing the original context window into several chunks, then designing distinct skipping bias terms to manipulate the position indices of each chunk. These bias terms and the lengths of each chunk are altered for every training example, allowing the model to adapt to all positions within target length. Experimental results show that PoSE greatly reduces memory and time overhead compared with Full-length fine-tuning, with minimal impact on performance. Leveraging this advantage, we have successfully extended the LLaMA model to 128k tokens using a 2k training context window. Furthermore, we empirically confirm that PoSE is compatible with all RoPE-based LLMs and position interpolation strategies. Notably, our method can potentially support infinite length, limited only by memory usage in inference. With ongoing progress for efficient inference, we believe PoSE can further scale the context window beyond 128k.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2023-09-19T08:03:38Z</published>
+    <arxiv:comment>ICLR 2024</arxiv:comment>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Dawei Zhu</name>
+    </author>
+    <author>
+      <name>Nan Yang</name>
+    </author>
+    <author>
+      <name>Liang Wang</name>
+    </author>
+    <author>
+      <name>Yifan Song</name>
+    </author>
+    <author>
+      <name>Wenhao Wu</name>
+    </author>
+    <author>
+      <name>Furu Wei</name>
+    </author>
+    <author>
+      <name>Sujian Li</name>
+    </author>
+  </entry>
+</feed>

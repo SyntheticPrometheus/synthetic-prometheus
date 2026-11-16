@@ -2,6 +2,8 @@
 Type=Application
 Name=pi session
 Comment=Open a terminal attached to the persistent pi tmux session
-Exec=xfce4-terminal --title=pi --geometry=120x40 --command=$HOME/.pi/agent/bin/pi-attach
+# No --title: a static title ignores the dynamic one, so pi's topic (OSC title) could never
+# reach the window. tmux forwards the pane title to it via ~/.tmux.conf.
+Exec=xfce4-terminal --geometry=120x40 --command=$HOME/.pi/agent/bin/pi-attach
 Terminal=false
 X-GNOME-Autostart-enabled=true

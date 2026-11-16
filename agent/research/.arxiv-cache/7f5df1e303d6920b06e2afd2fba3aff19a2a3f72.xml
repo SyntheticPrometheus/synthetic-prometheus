@@ -1,0 +1,43 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/GKbzDSajOu9nffQkQcJ7tLEiUUE</id>
+  <title>arXiv Query: search_query=&amp;id_list=2406.14497&amp;start=0&amp;max_results=1</title>
+  <updated>2026-11-15T16:08:46Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=&amp;start=0&amp;max_results=1&amp;id_list=2406.14497" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>1</opensearch:itemsPerPage>
+  <opensearch:totalResults>1</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2406.14497v2</id>
+    <title>CodeRAG-Bench: Can Retrieval Augment Code Generation?</title>
+    <updated>2025-02-26T22:10:36Z</updated>
+    <link href="https://arxiv.org/abs/2406.14497v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2406.14497v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>While language models (LMs) have proven remarkably adept at generating code, many programs are challenging for LMs to generate using their parametric knowledge alone. Providing external contexts such as library documentation can facilitate generating accurate and functional code. Despite the success of retrieval-augmented generation (RAG) in various text-oriented tasks, its potential for improving code generation remains under-explored. In this work, we conduct a systematic, large-scale analysis by asking: in what scenarios can retrieval benefit code generation models? and what challenges remain? We first curate a comprehensive evaluation benchmark, CodeRAG-Bench, encompassing three categories of code generation tasks, including basic programming, open-domain, and repository-level problems. We aggregate documents from five sources for models to retrieve contexts: competition solutions, online tutorials, library documentation, StackOverflow posts, and GitHub repositories. We examine top-performing models on CodeRAG-Bench by providing contexts retrieved from one or multiple sources. While notable gains are made in final code generation by retrieving high-quality contexts across various settings, our analysis reveals room for improvement -- current retrievers still struggle to fetch useful contexts especially with limited lexical overlap, and generators fail to improve with limited context lengths or abilities to integrate additional contexts. We hope CodeRAG-Bench serves as an effective testbed to encourage further development of advanced code-oriented RAG methods.</summary>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2024-06-20T16:59:52Z</published>
+    <arxiv:primary_category term="cs.SE"/>
+    <author>
+      <name>Zora Zhiruo Wang</name>
+    </author>
+    <author>
+      <name>Akari Asai</name>
+    </author>
+    <author>
+      <name>Xinyan Velocity Yu</name>
+    </author>
+    <author>
+      <name>Frank F. Xu</name>
+    </author>
+    <author>
+      <name>Yiqing Xie</name>
+    </author>
+    <author>
+      <name>Graham Neubig</name>
+    </author>
+    <author>
+      <name>Daniel Fried</name>
+    </author>
+  </entry>
+</feed>

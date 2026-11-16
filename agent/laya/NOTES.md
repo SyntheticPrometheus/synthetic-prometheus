@@ -69,3 +69,12 @@ and label-flip rate vs the PyTorch path on the same fixture.
 Do (done so far): PyTorch baseline installed and measured (table above).
 Study/Act: pending the ONNX export; if the hypothesis fails, keep the 2–3 s CPU path and close
 the cycle with the numbers.
+
+## Hardware gotcha: MKL must be pinned to SSE4_2
+
+The i7-3520M has SSE4.2 + AVX only (`CPUID.7.EBX = 0`; no AVX2, no AVX-512). torch 2.15.0+cpu ships
+oneMKL 2024.0, whose VML dispatcher twice picked an AVX-512 `cos` kernel (`vmovups %zmm*`) and
+SIGILLed the process at model load (1 GB core dump each). `MKL_ENABLE_INSTRUCTIONS=SSE4_2` is set
+before torch is imported in `~/.pi/agent/mcp.json` and `bin/layaq`; `pi-preflight` check `laya-vml`
+re-runs the rotary-table cos/sin call with the flag and fails if the call dies. GEMM still picks its
+own fast path (MKL reports SSE4.2 there anyway).
