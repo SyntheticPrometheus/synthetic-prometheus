@@ -728,9 +728,15 @@ def build_digests(c, min_df=4, per=6):
             continue
         body = "Extractive index over raw entries (originals kept). " + " ".join(
             f"#{m['id']} {m['title'][:90]};" for m in mems)
+        # `uid` is the unique key, not `title`: the early check above only sees live rows, so a
+        # digest that was archived and is rebuilt with the same body would collide here and abort
+        # the whole weekly consolidation (measured 2026-11-16: UNIQUE constraint on memories.uid).
+        uid = uid_for(title, body)
+        if c.execute("SELECT 1 FROM memories WHERE uid=?", (uid,)).fetchone():
+            continue
         cur = c.execute("""INSERT INTO memories(uid,ts,kind,scope,title,body,tags,importance,confidence,
             source,valid_from,checksum) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (uid_for(title, body), now(), "digest", "global", title, body, json.dumps(["digest", e["name"]]),
+            (uid, now(), "digest", "global", title, body, json.dumps(["digest", e["name"]]),
              0.55, 0.9, "consolidate", now(), hashlib.sha256(body.encode()).hexdigest()[:16]))
         did = cur.lastrowid
         index_terms(c, did, extract_terms(title, body, ["digest"]))
