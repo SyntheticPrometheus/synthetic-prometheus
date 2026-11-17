@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "note": "Pinned policy. The loop may not edit this file; audit.py refuses an arm whose diff would change it. Thresholds are the pre-registered decision rule. v2 (cycle 15): cost_win_frac 0.10 \u2014 at ceiling the gate may accept an equal-pass arm that cuts output tokens by >=10% at k>=3 with no regression; reported as ACCEPT_COST, never as a capability gain.",
+  "note": "Pinned policy. The loop may not edit this file; audit.py refuses an arm whose diff would change it. Thresholds are the pre-registered decision rule. v2 (cycle 15): cost_win_frac 0.10 \u2014 at ceiling the gate may accept an equal-pass arm that cuts output tokens by >=10% at k>=3 with no regression; reported as ACCEPT_COST, never as a capability gain. v3 (2026-11-17 review): run.py loads this run section (wall, memory, verifier timeout); max_cost_per_task_usd is a post-run acceptance limit, not a spending cap.",
   "gate": {
     "min_reps": 3,
     "min_delta": 2,
@@ -29,6 +29,8 @@
   "run": {
     "max_wall_per_task_s": 240,
     "max_cost_per_task_usd": 0.02,
-    "memory_guard_mb": 1200
+    "memory_guard_mb": 1200,
+    "memory_cap_mb": 2500,
+    "verifier_timeout_s": 60
   }
 }

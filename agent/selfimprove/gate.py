@@ -24,10 +24,21 @@ def sha(p):
 
 def load(p):
     d = json.loads(Path(p).read_text())
-    d["by_task"] = {}
+    d["by_task"], d["rep_ids"] = {}, {}
     for r in d["results"]:
         d["by_task"].setdefault(r["id"], []).append(r["pass"])
+        d["rep_ids"].setdefault(r["id"], []).append(r.get("rep"))
     return d
+
+
+def model_ident(d):
+    """The identity that determines which model produced a run. Newer runners record the
+    resolved pair (provider, model, responseModel); older ones only the --model argument. An
+    empty identity is unknown, not a match (2026-11-17 review, finding 3)."""
+    parts = [d.get("model_provider"), d.get("model_resolved"), d.get("model_response")]
+    if any(p for p in parts):
+        return "|".join("" if p is None else str(p) for p in parts)
+    return (d.get("model") or "").strip()
 
 
 def main():
@@ -38,7 +49,7 @@ def main():
     ap.add_argument("--k", type=int, default=None)
     ap.add_argument("--skip-audit", action="store_true")
     ap.add_argument("--allow-subset", action="store_true",
-                    help="diagnose a run pair whose task selections differ; never promotes (HOLD)")
+                    help="accepted for compatibility: a subset pair prints per-task detail and always HOLDs")
     ap.add_argument("--cost-win-frac", type=float, default=None,
                     help="accept an equal-pass candidate that cuts output tokens by at least this "
                          "fraction; default comes from policy.json gate.cost_win_frac, 0 = off")
@@ -80,6 +91,14 @@ def main():
     if b.get("policy_sha") != c.get("policy_sha"):
         print("VOID: different policy_sha — gate thresholds changed between runs, re-measure both")
         return 1
+    # Provenance of the model itself: a harness change credited to a stronger model is not a
+    # harness improvement, and two unknown identities do not prove the same model ran.
+    ib, ic = model_ident(b), model_ident(c)
+    model_unknown = not ib or not ic
+    if ib != ic and not model_unknown:
+        print(f"VOID: model identities differ (base {ib} vs cand {ic}) — rerun both arms on the "
+              f"same model; a model change is not a harness effect")
+        return 1
     # The audit above read arm_path now; bind it to the bytes that were actually evaluated.
     for name, d in (("base", b), ("cand", c)):
         p = Path(d.get("arm_path") or "")
@@ -105,6 +124,14 @@ def main():
             print(f"VOID: {name} declares {len(d['results'])} results for "
                   f"{len(d['by_task'])} tasks x {k} reps")
             return 1
+        # Balanced counts do not prove independent repetitions: rows carrying rep=1 three times
+        # are one observation copied, not three samples.
+        for task_id, ids in d["rep_ids"].items():
+            if (any(type(x) is not int for x in ids)
+                    or sorted(ids) != list(range(1, k + 1))):
+                print(f"VOID: {name}/{task_id} repetition IDs must be exactly 1..{k}, got {ids} "
+                      f"— repeated or missing IDs are not independent reps")
+                return 1
 
     common = sorted(set(b["by_task"]) & set(c["by_task"]))
     only_b = sorted(set(b["by_task"]) - set(c["by_task"]))
@@ -113,14 +140,10 @@ def main():
     nc = sum(sum(c["by_task"][x]) for x in common)
     delta = nc - nb
     if only_b or only_c:
-        # A shared-subset delta and a whole-run cost total are different observations. Report the
-        # subset for diagnosis and refuse to promote from it (--allow-subset makes that explicit).
+        # A shared-subset delta and a whole-run cost total are different observations. Report them
+        # for diagnosis and never promote from them: --allow-subset buys the detail, not a verdict.
         print(f"NOTE: comparing the {len(common)} shared task(s); "
               f"not in cand: {only_b or '-'}; not in base: {only_c or '-'}")
-        if not a.allow_subset:
-            print("VOID: task selections differ — rerun both arms on the same suite "
-                  "(or pass --allow-subset for a diagnostic-only HOLD)")
-            return 2
     regressed = [t for t, v in c["by_task"].items()
                  if sum(v) < sum(b["by_task"].get(t, []))]
     detail = {t: (f"{sum(b['by_task'].get(t, []))}/{len(b['by_task'].get(t, []))}",
@@ -131,6 +154,14 @@ def main():
     for t, (x, y) in detail.items():
         print(f"  {t:18s} {x} -> {y}{'  REGRESSED' if t in regressed else ''}")
 
+    if only_b or only_c:
+        print(f"HOLD: task selections differ ({len(common)} shared) — subset accuracy and "
+              f"whole-run cost totals are diagnostics only; rerun both arms on the same suite")
+        return 2
+    if model_unknown:
+        print(f"HOLD: model identity unknown (base '{ib or '-'}', cand '{ic or '-'}') — record the "
+              f"resolved provider/model before promoting; equal blanks prove nothing")
+        return 2
     if k < a.k:
         print(f"HOLD: k={k} < {a.k}; rerun both arms with --reps {a.k} before deciding")
         return 2

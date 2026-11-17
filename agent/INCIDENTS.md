@@ -1240,3 +1240,22 @@ starts, it is noise, and repeating it is the failure mode — one honest notice 
 - **Lives in**: `bin/pi-done` (`cmd_run`).
 - **Lesson**: a detached unit starts in a foreign environment; every path it needs by name has to be
   handed to it, and the guard is a real job's output, not the belief that it works.
+
+## INC-11 — a cookie wall was reported as a wall for *me* (2026-11-17)
+
+- **What happened**: the GitHub webhook was reported to the owner as "one 40 s step is left and it
+  needs a real browser: GitHub refuses cookie-authenticated writes from curl", filed as task #209 and
+  handed back. The owner answered "I am getting tired of hearing you hit an error and gave up."
+- **Cause**: the 403 was real but it was a *cookie-auth* refusal, not a permission wall. The repo
+  token already in `pi-secret github/token` carries `repo`, which covers repository hooks; the
+  token path was never tried because the first attempt had used the browser's cookie jar.
+- **Guard**: `bin/pi-github-watch setup` now creates-or-detects the hook through `api.github.com`
+  first and only prints the form when no token exists (commit 2171faf). A credential-walled write is
+  an API call, not a browser session — and a "needs a browser" claim has to name the credential it
+  tried and why that credential cannot do it.
+- **Verified**: hook 713197507 active with 6 event types; `POST .../hooks/713197507/pings` → 204 and
+  GitHub's own `last_response` 200; the ping payload landed on the ntfy topic (8239 B) and the
+  service consumed it.
+- **Lives in**: `bin/pi-github-watch` (`setup`, `api_hook`).
+- **Lesson**: "I could not" is a claim about a method, not a fact about the world. Before reporting
+  it, enumerate the credentials and interfaces still untried — the second one usually works.

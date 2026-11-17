@@ -118,3 +118,23 @@ Not done on purpose (each needs a reason, not a checkbox):
   saturation. Both now have executable signals instead of my memory.
 - `pi-delegate expire --days 7` marks dispatches nobody can judge any more as `expired`, so the
   unverified share measures what is still actionable rather than warning forever.
+
+## 2026-11-17 — Second review pass: the gate refuses silences, not just bad numbers
+
+- External review (issue #1, second comment) executed three fabricated pairs against the published
+  gate and got ACCEPT on each. All three were real: `--allow-subset` only held when the flag was
+  *absent*, balanced row counts accepted duplicate `rep` IDs, and a model change was credited to
+  the arm. Fixed in `gate.py`; `selftest_gate.py` is now 19 cases (was 10), all pinned and run by
+  `maintain.py --check`.
+- Rule that follows from the review, now in code: **a comparison the gate cannot verify is a HOLD,
+  never an ACCEPT with a caveat.** Subset pairs print per-task detail and stop (the flag buys
+  diagnosis, not a verdict); repetition IDs must be exactly 1..k; a differing or unknown resolved
+  model identity cannot promote. `run.py` now records the provider-reported model identity
+  (`provider`/`model`/`responseModel`) rather than the `--model` argument, so the gate compares what
+  answered, not what was asked for.
+- Resource contract is loaded, not hardcoded: `run.py` reads `policy.json`'s `run` section (wall
+  bound, memory guard/cap, verifier timeout). The verifier subprocess is bounded and a timeout is
+  recorded as `budget_exceeded`, separate from a task failure. `max_cost_per_task_usd` is labelled
+  a post-run acceptance limit, not a spending cap.
+- Still open (filed, not silently agreed): fresh confirmation variants after a proposal is frozen,
+  and a hidden/seeded task family. A saturated suite plus 3 reps is a screening floor, not proof.

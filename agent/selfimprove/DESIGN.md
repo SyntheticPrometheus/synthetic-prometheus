@@ -48,7 +48,7 @@ Rules taken from the literature, enforced in code:
 | propose one mechanism (weakness mining) | `propose.py` | done — mines failures from a run, asks for <= 6 lines |
 | audit before measuring (tamper check) | `audit.py` + `policy.json` | done — refuses judge-mentioning text, base-line removal, and over-budget diffs (annealed per net-accepted arm) |
 | measure with k reps + cost | `run.py` | done — default `--mode json` usage capture, memory guard, cgroup cap, `--parent` lineage, `harness_rev` |
-| decide | `gate.py` | done — runs the audit first, then policy thresholds (k>=3, delta>=2, no regression), intersection compare, hash + lineage printout |
+| decide | `gate.py` | done — audit first, then policy thresholds (k>=3, delta>=2, no regression); voids unequal reps, missing/duplicate rep IDs, suite drift, policy/task-selection mismatch and differing or unknown model identities; `selftest_gate.py` pins 19 cases |
 | archive | `arms/archive/` + `decisions.md` | done — header names parent; DECISIONS entries are append-only |
 | provenance | `git` in `~/.pi/agent` | done — harness commits, `harness_rev` recorded per run |
 | maintain | `maintain.py` + weekly timer | done — integrity, research index, lineage, proposal yield, prune |
@@ -107,11 +107,33 @@ health, skill frontmatter, publish attempt age, stale PDSA cycles. It writes `re
 a hard failure, runs weekly (`pi-review.timer`) and `pi-preflight` fails when the review is >10 days
 old. Metrics catch a system that degrades; the review catches one that stopped mattering.
 
+## Snapshot boundaries (what a reader can and cannot reproduce)
+
+Published: `agent/selfimprove/` (suite, fixtures, runner, gate, proposal + audit, maintain, the
+design and decision log) and the allowlisted harness around it. The snapshot is a working personal
+harness, not an installer.
+
+- **Environment tested:** Arch Linux, Python ≥ 3.11 (the gate and tests are stdlib-only), Pi ≥ 1.5.
+  The external review ran `selftest_gate.py` and `maintain.py --check` on Python 3.13/Windows and
+  both passed; model runs were not exercised there.
+- **Minimal checks that need no model:**
+  `python3 agent/selfimprove/selftest_gate.py` (19 gate cases) and
+  `python3 agent/selfimprove/maintain.py --check` (suite hash, ledger chain, archive completeness).
+- **Needs a model:** `run.py --arm arms/base.md --tasks <id> --reps 3` (spends tokens; `--model
+  local/<gguf>` makes it $0 when a local router is configured).
+- **Deliberately unpublished:** session logs, memory DB/journal, delegation ledger, research caches,
+  `auth.json`, the local-model router and Laya weights. The runner loads only what the suite names,
+  so their absence affects the arms, not the gate's arithmetic.
+- **A pair to inspect the gate with:** fabricate two result files (the helper in `selftest_gate.py`
+  shows every required field) and run `gate.py base.json cand.json --skip-audit`; a perfect-vs-perfect
+  unequal-rep pair must print `VOID`, not `ACCEPT`.
+
 ## Maintenance (the part that keeps it alive)
 
 - `maintain.py --check` after every session that mutates the genome; exits non-zero if the suite
   hash drifted, the ledger chain is broken, or an accepted arm is missing from `arms/archive/`.
 - Weekly: `mem consolidate --digest`, and re-read this design's PDSA cycle. Scheduled by a
   systemd --user timer (`selfimprove-maintain.timer`), no LLM calls, so it costs nothing.
-- Any accepted arm must land in `AGENTS.md`/`skills/` only via a human-visible diff in git (the
-  agent dir is not a repo yet; `git init` there is a pending decision — see PDSA cycle).
+- Any accepted arm must land in `AGENTS.md`/`skills/` only via a human-visible diff in git. The
+  agent dir is a git repo (that is the harness history this snapshot is cut from); `harness_rev`
+  records its HEAD per run, so a ledger row can always be traced to the tree that produced it.
