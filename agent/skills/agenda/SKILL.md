@@ -125,6 +125,17 @@ needs a public webhook for the reply leg, which this host cannot offer.
 `bin/pi-bg` says what is running now (background / foreground / scheduled-overdue) as panel indicators 21/22/23,
 with `bin/pi-agenda-view` and `pi-bg --watch` opening as windows from the app menu — see `skills/desktop`.
 
+## An empty queue is skipped, not spent (bug #198)
+
+A `session:` row can be due with nothing to do — `pergola-dev` on 2026-11-17 opened a session after all 19
+BACKLOG items were closed, and that session re-verified a clean tree 20 times in 70 s. Register the row's queue
+check in `agenda/session-checks.json` (`{"<obligation id>": "<shell command>"}`): exit 0 means work exists, any
+other exit means the queue is empty and its **last output line** is the reason. `pi-text dispatch --due` runs those
+checks before it opens anything, records a `due-empty` ledger row, rolls the row forward with `pi-agenda touch`,
+and spends no tokens. A check that cannot run (exit 126/127, timeout) counts as *work* — a guard that fails open
+would retire a row forever. `pi-text dispatch --due --dry-run` prints the `idle` lines, so the decision is
+inspectable without scheduling anything.
+
 ## Rules
 
 - **One recurring thing = one obligation row.** Do not create a new timer for a new cadence; add

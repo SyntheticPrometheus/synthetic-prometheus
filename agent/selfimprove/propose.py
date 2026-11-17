@@ -72,6 +72,9 @@ def main():
     ap.add_argument("--out", default="")
     ap.add_argument("--timeout", type=int, default=300,
                     help="seconds for the proposer call; a local GGUF needs more (default 300)")
+    ap.add_argument("--prompt-chars", type=int, default=12000,
+                    help="cap on the failure dump handed to the proposer; a 1.5B GGUF on this "
+                         "host prefills ~12000 chars in the time a short call allows (bug #149)")
     ap.add_argument("--dry-run-proposer", dest="unused", action="store_true", help=__import__("argparse").SUPPRESS)
     ap.add_argument("--dry", action="store_true")
     a = ap.parse_args()
@@ -81,7 +84,7 @@ def main():
     if not fails:
         print(f"no failures in {run_dir.name}; nothing to propose")
         return
-    prompt = PROMPT.format(failures=json.dumps(fails, indent=1)[:12000])
+    prompt = PROMPT.format(failures=json.dumps(fails, indent=1)[:max(2000, a.prompt_chars)])
     if a.dry:
         print(prompt[:2000])
         return
@@ -91,9 +94,17 @@ def main():
     if a.model:
         cmd += ["--model", a.model]
     cmd += ["--tools", "read", prompt]
-    p = subprocess.run(cmd,
-                       capture_output=True, text=True, timeout=a.timeout, env=env,
-                       stdin=subprocess.DEVNULL)
+    try:
+        p = subprocess.run(cmd,
+                           capture_output=True, text=True, timeout=a.timeout, env=env,
+                           stdin=subprocess.DEVNULL)
+    except subprocess.TimeoutExpired:
+        # A traceback here reached the caller as "candidate: none drafted" with no reason at all
+        # (bug #149, a 6-failure run at 100s on a local 1.5B model). The message names the knobs.
+        raise SystemExit(
+            f"propose: proposer timed out after {a.timeout}s "
+            f"(model {a.model or 'default'}, prompt {len(prompt)} chars, "
+            f"{len(fails)} failure(s)); raise --timeout or lower --prompt-chars")
     proposal = p.stdout.strip()
     if not proposal:
         raise SystemExit(f"proposal failed: {p.stderr[-500:]}")

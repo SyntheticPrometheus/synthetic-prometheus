@@ -15,6 +15,7 @@ Each check exists because something went wrong once (see INCIDENTS.md):
   frontmatter  every skill/agent/prompt frontmatter must parse as YAML (pi drops what does not)
   panel        the owner's panel indicators exist, emit valid genmon XML, and a click actually fires
 """
+import ast
 import calendar
 import json
 import os
@@ -104,6 +105,60 @@ def ledger():
     return r.returncode == 0, (r.stdout.strip().splitlines() or ["no output"])[-1]
 
 
+def allowlist():
+    """The publish allowlist, read from bin/pi-publish so there is one list, not two."""
+    src = (AGENT / "bin" / "pi-publish").read_text()
+    tree = ast.parse(src)
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and getattr(node.targets[0], "id", "") == "ALLOW":
+            return ast.literal_eval(node.value)
+    return []
+
+
+def publishable():
+    """Files that could leave this host: the publish snapshot plus what the allowlist would copy."""
+    tree = subprocess.run(["git", "-C", str(AGENT), "ls-files"], capture_output=True, text=True).stdout
+    allow = set(allowlist())
+    targets = [AGENT / f for f in tree.splitlines()
+               if f in allow or any(f.startswith(a + "/") for a in allow)]
+    if PUB.exists():
+        targets += [p for p in PUB.rglob("*")]
+    return [p for p in targets
+            if p.is_file() and ".git" not in p.parts and p.stat().st_size <= 2_000_000]
+
+
+def chat_private():
+    """The owner's chat is not publishable material.
+
+    2026-11-17: the owner's texts (and this channel's topic) sit in the local journals and in session
+    logs; a session log published by accident publishes the channel, and nothing but the publish
+    allowlist stood between those two facts. Candidate and then declined an inbound signing secret
+    (bug #214) on the basis that there is no public path to the chat, so the no-public-post promise
+    has to be a check that runs, not a policy sentence.
+    """
+    bodies = []
+    store = AGENT / "text"
+    for name in ("inbox.jsonl",):
+        p = store / name
+        if not p.exists():
+            continue
+        for line in p.read_text(errors="ignore").splitlines()[-400:]:
+            try:
+                t = " ".join(str(json.loads(line).get("text", "")).split())
+            except Exception:
+                continue
+            if len(t) >= 40:
+                bodies.append(t[:60])
+    hits = []
+    for p in publishable():
+        if store in p.parents or "sessions" in p.parts:
+            hits.append(f"{p} is publishable chat/journal material")
+            continue
+        body = p.read_text(errors="ignore")
+        hits += [f"{p.name} quotes a text message" for b in bodies[:400] if b in body][:1]
+    return (not hits), "; ".join(hits[:3]) or f"{len(bodies)} text message(s) absent from publishable files"
+
+
 def credentials():
     """Every password in the store must be absent from the git tree and the publish snapshot."""
     store = HOME / ".password-store"
@@ -117,13 +172,8 @@ def credentials():
             first = r.stdout.splitlines()[0].strip()
             if len(first) >= 8 and not first.startswith("no-password"):
                 secrets.append((str(f.relative_to(store))[:-4], first))
-    tree = subprocess.run(["git", "-C", str(AGENT), "ls-files"], capture_output=True, text=True).stdout
-    targets = [AGENT / f for f in tree.splitlines()] + (
-        [p for p in PUB.rglob("*")] if PUB.exists() else [])
     hits = []
-    for p in targets:
-        if not p.is_file() or ".git" in p.parts or p.stat().st_size > 2_000_000:
-            continue
+    for p in publishable():
         try:
             body = p.read_text(errors="ignore")
         except Exception:
@@ -780,6 +830,7 @@ def main():
     check("panel", panel)
     check("swap", swap_snapshot_guard)
     check("credentials", credentials)
+    check("chat-private", chat_private)
     check("snapshot", snapshot)
     check("resources", resources)
     check("graph", graph)

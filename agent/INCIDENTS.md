@@ -6,6 +6,23 @@ without a guard is a promise, and promises are what failed the first time.
 
 Format: what happened → root cause → guard → where the guard lives.
 
+## 2026-11-17 — a due session opened with nothing in its queue and looped (bug #198)
+
+- **What**: the 49-hour pergola pass (`01a1df87`) closed all 19 BACKLOG items and then ran 20 identical
+  `git status; git log` calls in 70 s on a tree it had already confirmed clean (504 e2e launches, 42
+  sessions), and `pergola-dev` was scheduled again the moment BACKLOG.md had no open item.
+- **Cause**: the agenda knew the *row* was due but nothing knew whether the row's **queue** held work.
+  `notes` is prose; `due_work()` opened a session on lateness alone.
+- **Guard**: a row may register a queue check in `agenda/session-checks.json`; `pi-text dispatch --due`
+  runs it before opening a session, records `due-empty`, rolls the row forward and spends nothing, and
+  the due prompt carries a stop rule (an empty queue is reported once, never re-verified). A check that
+  cannot run counts as work, so a broken guard cannot retire a row. Pergola's check is
+  `scripts/backlog-open.sh` (exit 0 + `N open`, else the reason). Measured: `--dry-run` printed
+  `idle pergola-dev: BACKLOG.md has no open item`, the real pass rolled the row to 2026-11-19 13:59 with
+  a `due-empty` ledger row and no session; `pi-tool check pi-text` green on the six new cases.
+- **Lives in**: `bin/pi-text` (`queue_state`, `split_idle`, `close_idle`), `tests/pi-text.sh`,
+  `agenda/session-checks.json`, `~/Projects/pergola/scripts/backlog-open.sh`, `skills/agenda` § empty queue.
+
 ## 2026-11-17 — a new tool shipped with a selftest nobody had run
 
 - **What**: `bin/pi-done` was in the tree with an uncommitted `--selftest`, and `pi-preflight`
@@ -787,9 +804,9 @@ Format: what happened → root cause → guard → where the guard lives.
 ## 2026-11-15 — session-watch kept texting every 15 min *after* the "fix", twice
 
 - **What**: at 18:41 the owner asked for fewer updates; `bin/pi-session-watch` was changed to text
-  on "a changed label **or real work in the window**". At 21:30 the owner repeated, more bluntly:
-  "Bro stop the updates that process already finished you don't need to keep giving me updates
-  every 15 min stop". Outbox: `[PROGRESS] pi 273962` at 02:29:29Z and `02:30:12Z` — two texts a
+  on "a changed label **or real work in the window**". At 21:30 the owner repeated, more bluntly,
+  that the process was already finished and 15-minute updates were noise (the sentence itself is
+  omitted: owner texts are not publishable material — `pi-preflight chat-private`). Outbox: `[PROGRESS] pi 273962` at 02:29:29Z and `02:30:12Z` — two texts a
   minute apart about a session doing 49 calls, plus `[IDLE] ... at the prompt 3h26m` every 20 min
   before that.
 - **Cause** (two, measured): (1) "work in the window" is true on almost every tick for a working
@@ -1201,7 +1218,7 @@ starts, it is noise, and repeating it is the failure mode — one honest notice 
 
 ## INC-9 — the same "Agenda is behind" digest was texted every 6 h (2026-11-17)
 
-- **What happened**: the owner's 13:10 text ("When the agenda is behind you should be catching up") was
+- **What happened**: the owner's 13:10 text (paraphrased: when the agenda is behind, catch up in that turn) was
   answered with a catch-up report; 30 min later they texted "This is a recurring problem look into it and
   fix it". The recurring artefact was the phone nudge: `text/outbox.jsonl` shows the body at
   2026-11-16T08:40:52Z and 2026-11-16T14:50:53Z byte-identical (`p1 due #86 cadence-measure failed`), and
