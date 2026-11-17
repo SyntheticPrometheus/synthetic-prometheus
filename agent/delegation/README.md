@@ -8,7 +8,8 @@ Small directory on purpose: three documents and one append-only log.
 | `contracts.md` | copy-paste six-field contracts (scout/worker/verifier/bulker/integrator) + DoR/DoD |
 | `ledger.jsonl` | append-only evidence: one row per dispatch, one row per verdict |
 | `routes.jsonl` | routing decisions (regex + optional Laya) for the fit-readiness report |
-| `route-eval.py` | the 24-case benchmark that decides whether Laya may route (policy §1c) |
+| `route-eval.py` | routing benchmark: 24 tuning cases, or any held-out set via `--cases` (policy §1c) |
+| `route-eval-heldout.json` + `-result.json` | 22 fresh cases + the run that promoted inkling to decider (§1c) |
 | `README.md` | this file |
 
 Related code, deliberately outside this directory so the log stays data:
@@ -54,9 +55,14 @@ pi-delegate verdict pass --last --note "digest matched the code I re-read"
 pi-delegate report                                               # posteriors + proposals
 pi-delegate flow --days 30 [--json]                              # cycle time, yield, $/pass
 pi-delegate targets                                             # agents/models + local rails
-pi-delegate route --laya "<task>"                                # regex decision + Laya second opinion
+pi-delegate route "<task>"                                       # inkling decides (regex fallback, cached)
+pi-delegate route --no-inkling "<task>"                          # regex decides, offline
+pi-delegate route --laya "<task>"                                # + Laya second opinion
 pi-delegate route-report                                         # labels/route, fit readiness
 python3 delegation/route-eval.py                                 # 24-case routing benchmark
+python3 delegation/route-eval.py --cases delegation/route-eval-heldout.json \
+  --inkling thinkingmachines/inkling-2-small \
+  --json-out delegation/route-eval-heldout-result.json           # held-out re-check (falsifier)
 ```
 
 In an interactive session the same decisions are made with the `subagent` tool (it streams in the

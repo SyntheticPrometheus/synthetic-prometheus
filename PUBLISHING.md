@@ -9,7 +9,8 @@ no GitHub password — see `PASSWORDS.md`). The working tree is
 
 1. **Allowlist, never denylist.** `bin/pi-publish` copies an explicit list of paths. Anything not on
    the list cannot leak by being forgotten. Excluded by construction: `auth.json`, `sessions/`,
-   `memory/` (journal + DB), `delegation/ledger.jsonl`, `laya/.venv`, run directories.
+   `memory/` (journal + DB), `delegation/ledger.jsonl`, `laya/.venv`, run directories, and
+   raw research caches (`research/.litwalk-cache`, `research/cc`) — only the digests ship.
 2. **Scan before every push.** The script refuses on: API-key shapes (`sk-`, `ghp_`, `github_pat_`,
    `xox*`, `AKIA`), private-key headers, inline `api_key = "…"` style assignments, any file over
    512 KB, or a snapshot over 20 MB.

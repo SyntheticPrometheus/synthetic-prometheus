@@ -66,7 +66,13 @@ def failures(run_dir):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default="")
+    ap.add_argument("--model", default="",
+                    help="pi --model pattern for the proposer (e.g. a local GGUF: costs $0 "
+                         "and can run unattended overnight; default = pi's own model")
     ap.add_argument("--out", default="")
+    ap.add_argument("--timeout", type=int, default=300,
+                    help="seconds for the proposer call; a local GGUF needs more (default 300)")
+    ap.add_argument("--dry-run-proposer", dest="unused", action="store_true", help=__import__("argparse").SUPPRESS)
     ap.add_argument("--dry", action="store_true")
     a = ap.parse_args()
 
@@ -81,9 +87,12 @@ def main():
         return
 
     env = {k: v for k, v in __import__("os").environ.items() if not k.startswith("PI_")}
-    p = subprocess.run([PI, "--print", "--no-session", "-ne", "-ns", "-nc", "-np", "--no-mcp",
-                        "--tools", "read", prompt],
-                       capture_output=True, text=True, timeout=300, env=env,
+    cmd = [PI, "--print", "--no-session", "-ne", "-ns", "-nc", "-np", "--no-mcp"]
+    if a.model:
+        cmd += ["--model", a.model]
+    cmd += ["--tools", "read", prompt]
+    p = subprocess.run(cmd,
+                       capture_output=True, text=True, timeout=a.timeout, env=env,
                        stdin=subprocess.DEVNULL)
     proposal = p.stdout.strip()
     if not proposal:
@@ -94,7 +103,7 @@ def main():
     base_text = (HERE / "arms" / "base.md").read_text().rstrip() + "\n"
     out.write_text(base_text + "\n" + proposal + "\n")
     (out.with_suffix(".rationale.md")).write_text(
-        f"# Proposal {stamp}\n\nmined from: {run_dir.name}\nfailures: "
+        f"# Proposal {stamp}\n\nmodel: {a.model or 'default'}\nmined from: {run_dir.name}\nfailures: "
         f"{', '.join(f['task'] for f in fails)}\n\n## Edit\n\n{proposal}\n")
     print(f"wrote {out}\n\n--- proposed edit ---\n{proposal}")
 

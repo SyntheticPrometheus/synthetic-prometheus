@@ -13,6 +13,7 @@ Each check exists because something went wrong once (see INCIDENTS.md):
   resources    enough RAM and disk to run a loop without OOM-killing the session
   graph        the percolation model of the machine must not get more fragile than its baseline
   frontmatter  every skill/agent/prompt frontmatter must parse as YAML (pi drops what does not)
+  panel        the owner's panel indicators exist, emit valid genmon XML, and a click actually fires
 """
 import calendar
 import json
@@ -22,6 +23,7 @@ import shutil
 import subprocess
 import time
 import sys
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 HOME = Path.home()
@@ -197,7 +199,24 @@ def units():
                            capture_output=True, text=True)
         bad += [l.split()[0].lstrip("\u25cf\u00d7*") for l in r.stdout.splitlines()
                 if l.strip() and l.split()[0].lstrip("\u25cf\u00d7*") not in harness]
-    return (not bad), ("failed: " + ", ".join(bad) if bad else "no failed units")
+    # a test that installs a unit and forgets it leaves a live ExecStart behind: 2026-11-17 found
+    # done@.service and marker@.service from an OnSuccess experiment, both writing to /tmp/ntest.
+    stray = []
+    for u in sorted((Path.home() / ".config" / "systemd" / "user").glob("*.service")):
+        try:
+            body = u.read_text(errors="ignore")
+        except OSError:
+            continue
+        if re.search(r"(?m)^ExecStart=.*\s/tmp/", body):
+            stray.append(u.name)
+    if bad or stray:
+        detail = []
+        if bad:
+            detail.append("failed: " + ", ".join(bad))
+        if stray:
+            detail.append("stray test unit(s): " + ", ".join(stray))
+        return False, "; ".join(detail)
+    return True, "no failed units, no stray test units"
 
 
 def windows():
@@ -516,6 +535,133 @@ def text_channel():
     return r.returncode == 0, detail or "ok"
 
 
+def cost_cap():
+    """Is the context ceiling that is configured the one that is running?
+
+    2026-11-16: 62% of a $14/day burn sat above a 248k-token ceiling that settings.json claimed to
+    enforce, while the observed compactions fired at 676k-1.11M tokensBefore — the setting had never
+    applied to a live session, and nothing compared the two numbers. `pi-burn --cap` does that
+    comparison offline (no network, no completion); it fails only when a compaction *after* the
+    setting's mtime fired above the ceiling, and says "unverified" until one does.
+    """
+    tool = AGENT / "bin" / "pi-burn"
+    if not tool.exists():
+        return False, "bin/pi-burn missing"
+    r = subprocess.run([str(tool), "--cap", "3"], capture_output=True, text=True, timeout=180)
+    lines = [l for l in (r.stdout + r.stderr).splitlines() if l.strip()]
+    detail = ""
+    for l in lines:
+        if l.startswith(("ceiling", "above", "guard", "fail")):
+            detail += (l.split(None, 1)[1] if " " in l else l) + " | "
+    return r.returncode == 0, detail.strip(" |")[:220] or "no output"
+
+
+def control():
+    """The reactive controller must still be able to refuse: per-subsystem caps, event thresholds,
+    decision TTL. 2026-11-17 (task #1985): a cap or a TTL that parses but never fires is the failure
+    this host keeps repeating (pi-burn's ceiling that no session could reach), so the gate is the
+    instrument's own 11-case selftest, run here, not a spend number.
+    """
+    tool = AGENT / "bin" / "pi-control"
+    if not tool.exists():
+        return False, "bin/pi-control missing"
+    r = subprocess.run([str(tool), "doctor"], capture_output=True, text=True, timeout=120)
+    out = (r.stdout + r.stderr).strip().splitlines()
+    bad = [l.split(None, 1)[-1] for l in out if l.startswith("fail")]
+    return r.returncode == 0, "; ".join(bad)[:220] or "ok"
+
+
+def audit_pack():
+    """The audit's own evidence pack must still answer, and must still catch its boundary cases.
+
+    2026-11-16: `skills/audit/scripts/window.py` shipped with 24 defects that a two-tester panel
+    found in the first hour (a truncated ledger erasing itself, an unreadable instrument reading as
+    a real finding, crashes exiting 1 which is the same code as "suspects found"). The selftest
+    re-proves each class in ~0.2 s with no network, so the guard runs on every publish rather than
+    waiting for the next audit to notice.
+    """
+    tool = AGENT / "skills" / "audit" / "scripts" / "window.py"
+    if not tool.exists():
+        return False, "skills/audit/scripts/window.py missing"
+    r = subprocess.run([sys.executable, str(tool), "selftest"], capture_output=True, text=True,
+                       timeout=120)
+    out = (r.stdout + r.stderr).strip().splitlines()
+    cases = [l for l in out if l.startswith("selftest ")]
+    bad = [l for l in out if l.rstrip().endswith("FAIL")]
+    return r.returncode == 0, (f"{len(cases)} case(s): " + "; ".join(l[:90] for l in bad)) if bad \
+        else f"{max(len(cases) - 1, 0)} boundary case(s) re-proved"
+
+
+def decisions():
+    """A decision past its review date is a decision nobody re-measured.
+
+    2026-11-17: the earning-rail decision was recorded in four places and none of them could say
+    when it would be read again. `bin/pi-decide` refuses a record with no runnable guard and no
+    dated falsifier, and this check makes the review date real: an open record past `review-by`
+    blocks publish until it is closed kept/reverted/superseded.
+    """
+    tool = AGENT / "bin" / "pi-decide"
+    if not tool.exists():
+        return False, "bin/pi-decide missing"
+    r = subprocess.run([str(tool), "due"], capture_output=True, text=True, timeout=30)
+    out = (r.stdout + r.stderr).strip().splitlines()
+    if r.returncode == 0:
+        return True, out[-1] if out else "no records"
+    return False, "; ".join(l[:100] for l in out if l.startswith("OVERDUE")) or "pi-decide due failed"
+
+
+def tools():
+    """A tool is only a capability if it is pinned and deterministic.
+
+    2026-11-17: 49 of 52 scripts in bin/ had no test and no selftest, so every session re-derived
+    the same command with slightly different flags and nothing compared the runs. `pi-tool check`
+    runs each pin twice and diffs the output; `pi-tool lint` fails on a polling loop (a sleep
+    standing in for an event — use bin/pi-wait). Both are blocking here.
+    """
+    tool = AGENT / "bin" / "pi-tool"
+    if not tool.exists():
+        return False, "bin/pi-tool missing"
+    r = subprocess.run([str(tool), "check", "--quiet"], capture_output=True, text=True, timeout=600)
+    if r.returncode != 0:
+        bad = [l for l in (r.stdout + r.stderr).splitlines() if l.startswith("FAIL")]
+        return False, "; ".join(l[:90] for l in bad[:3]) or "pi-tool check failed"
+    lst = subprocess.run([str(tool), "list", "--json"], capture_output=True, text=True, timeout=60)
+    try:
+        n = len([x for x in json.loads(lst.stdout or "[]") if x.get("pinned") != "-"])
+    except (ValueError, TypeError):
+        n = 0
+    l = subprocess.run([str(tool), "lint", "--quiet"], capture_output=True, text=True, timeout=300)
+    if l.returncode != 0:
+        err = [x for x in (l.stdout + l.stderr).splitlines() if ": error " in x]
+        return False, "; ".join(x[:90] for x in err[:3]) or "pi-tool lint failed"
+    # the ratchet: the unpinned set is recorded once and may shrink, never grow. Without this the
+    # "every tool is pinned" rule was prose — 48 of 52 scripts had no pin and nothing blocked.
+    p = subprocess.run([str(tool), "pins", "--quiet"], capture_output=True, text=True, timeout=60)
+    if p.returncode != 0:
+        bad = [x for x in (p.stdout + p.stderr).splitlines() if x.startswith("FAIL")]
+        return False, "; ".join(bad[:3])[:200] or "pin ratchet failed"
+    return True, f"{n} pinned tool(s) green, no polling loop, pin ratchet holds"
+
+
+def map_index():
+    """The index must describe the tree that exists.
+
+    MAP.md is generated from map.json plus a scan. A directory that appears with no purpose, a
+    pointer to a path that was deleted, or a map rendered before the last rename is the same
+    failure: the index says something false and a session trusts it instead of looking. The check
+    is cheap (sorted path set, no content hashes) and blocks publish like every other guard.
+    """
+    tool = AGENT / "bin" / "pi-map"
+    if not tool.exists():
+        return False, "bin/pi-map missing"
+    r = subprocess.run([str(tool), "--check"], capture_output=True, text=True, timeout=120)
+    out = (r.stdout + r.stderr).strip().splitlines()
+    if r.returncode != 0:
+        bad = [x for x in out if x.startswith("FAIL")]
+        return False, "; ".join(x[:90] for x in bad[:3]) or "pi-map --check failed"
+    return True, (out[-1] if out else "map fresh")
+
+
 def claims():
     """Parallel sessions must not own the same path, and the registry must be readable.
 
@@ -542,6 +688,58 @@ def claims():
     if leaked:
         return False, f"{leaked} unreadable lease file(s) in {rp}"
     return True, f"{live} live lease(s), no overlapping reservations"
+
+
+def panel():
+    """A panel indicator the owner asked for must be on the panel, its XML must parse, and a click
+    must actually be executed — genmon 4.3.0 fires <txtclick>/<iconclick> and silently ignores a
+    bare <click>, which is what the agenda and runtime indicators shipped with (touch probes: the
+    tag never ran, so those clicks had never once worked, 2026-11-16). The mem indicator added that
+    day is what made the class visible; this check is its guard.
+    """
+    kinds = ("bg", "fg", "due", "mem")
+    problems = []
+    # Deterministic half of the guard: the live loop below only meets a hostile name while such a
+    # process happens to be resident (2026-11-16: a background job whose argv held `2>&1 &`
+    # blanked the mem indicator). This one renders every panel against that text every time.
+    st = subprocess.run([str(AGENT / "bin" / "pi-bg"), "--selftest"],
+                        capture_output=True, text=True, timeout=60)
+    if st.returncode != 0:
+        problems.append("selftest: " + (st.stdout.strip() or st.stderr.strip() or "failed"))
+    for kind in kinds:
+        r = subprocess.run([str(AGENT / "bin" / "pi-bg"), "--panel", kind],
+                           capture_output=True, text=True, timeout=30)
+        if r.returncode != 0:
+            problems.append(f"{kind}: pi-bg --panel {kind} exited {r.returncode}")
+            continue
+        try:
+            root = ET.fromstring("<r>" + r.stdout + "</r>")
+        except ET.ParseError as e:
+            problems.append(f"{kind}: genmon XML does not parse ({e})")
+            continue
+        if root.find("click") is not None:
+            problems.append(f"{kind}: bare <click> is ignored by genmon 4.3 - use <txtclick>")
+        for tag in ("txtclick", "iconclick"):
+            el = root.find(tag)
+            if el is not None and not (el.text or "").strip():
+                problems.append(f"{kind}: empty <{tag}>")
+    if not os.environ.get("DISPLAY"):
+        return not problems, "; ".join(problems) or "genmon XML ok (no DISPLAY: layout not read)"
+    ids_txt = subprocess.run(["xfconf-query", "-c", "xfce4-panel", "-p", "/panels/panel-1/plugin-ids"],
+                             capture_output=True, text=True, timeout=20).stdout
+    ids = [int(l) for l in ids_txt.splitlines() if l.strip().isdigit()]
+    if not ids:
+        return False, "panel-1 has no plugin-ids (is xfce4-panel configured?)"
+    on_panel = set()
+    for pid in ids:
+        cmd = subprocess.run(["xfconf-query", "-c", "xfce4-panel", "-p", f"/plugins/plugin-{pid}/command"],
+                             capture_output=True, text=True, timeout=20).stdout.strip()
+        if "pi-bg --panel" in cmd:            # `pi-bg --panel` with no kind is the background view
+            on_panel.add(cmd.split()[-1] if len(cmd.split()) > 2 else "bg")
+    for kind in kinds:                        # every class the owner asked for must be on the panel
+        if kind not in on_panel:
+            problems.append(f"{kind} indicator is not on panel-1")
+    return not problems, "; ".join(problems) or f"{len(ids)} plugins, indicators {sorted(on_panel)}"
 
 
 def delegation():
@@ -579,6 +777,7 @@ def main():
     check("ledger", ledger)
     check("delegation", delegation)
     check("windows", windows)
+    check("panel", panel)
     check("swap", swap_snapshot_guard)
     check("credentials", credentials)
     check("snapshot", snapshot)
@@ -591,8 +790,14 @@ def main():
     check("skills", skills)
     check("repomap", repomap)
     check("web", web)
+    check("decisions", decisions)
+    check("tools", tools)
+    check("map", map_index)
     check("claims", claims)
     check("text", text_channel)
+    check("cost cap", cost_cap)
+    check("audit pack", audit_pack)
+    check("control", control)
     # non-fatal: mail transport is a capability, not a publish gate — but silent expiry is how the
     # Google login wall hurt the first time, so say it out loud every run
     try:
@@ -666,6 +871,29 @@ def main():
         print(("ok   local     " if good else "warn local     ") +
               f"router {'up' if up else 'DOWN'}, {gguf} GGUF, laya {'ok' if laya else 'BROKEN'}, "
               f"{freshness}")
+        # Guard (2026-11-16): a router-spawned model child sat in swap for 32 h holding 1.109 GB
+        # of anon memory (14% of the box) while idle, and nothing was watching per-model
+        # processes. A model nobody is asking must not stay resident, so it is checked.
+        reap = subprocess.run([str(AGENT / "bin/pi-local-reap"), "--check", "--quiet"],
+                              capture_output=True, text=True, timeout=120)
+        if reap.returncode == 1:
+            print("warn local     idle llama-server holding RAM - run bin/pi-local-reap")
+        # Guard (2026-11-16): models.json declared 16384 ctx while the router served 8192, and
+        # every turn of a session on a local model died with "request (12924 tokens) exceeds
+        # the available context size (8192)". The declaration was the only number Pi read, and
+        # nothing compared it to the prompt Pi actually sends. Both are checked now, and the
+        # check sends no completion, so it cannot hang or cost anything.
+        ctx = subprocess.run([str(AGENT / "bin/pi-local-ctx")],
+                             capture_output=True, text=True, timeout=60)
+        for line in (ctx.stdout.strip().splitlines() or ["ctx check produced no output"]):
+            line = line.replace("ok   local ctx: ", "").replace("FAIL ", "")
+            print(("ok   local ctx " if ctx.returncode == 0 else "warn local ctx ") + line)
+        # The technology watch is the thing that keeps the independence verdict from going stale, so
+        # a watch that silently stopped must be as visible as a stopped router.
+        tw = subprocess.run([str(AGENT / "bin/pi-techwatch"), "--check"],
+                            capture_output=True, text=True, timeout=120)
+        print(("ok   watch     " if tw.returncode == 0 else "warn watch     ") +
+              tw.stdout.strip().replace("techwatch: ", "") if tw.stdout.strip() else "warn watch     no output")
     except Exception as e:
         print(f"warn local     offline path unavailable: {e}")
     failed = [r for r in results if not r[1]]

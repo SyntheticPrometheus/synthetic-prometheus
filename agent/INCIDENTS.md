@@ -6,6 +6,195 @@ without a guard is a promise, and promises are what failed the first time.
 
 Format: what happened → root cause → guard → where the guard lives.
 
+## 2026-11-17 — a new tool shipped with a selftest nobody had run
+
+- **What**: `bin/pi-done` was in the tree with an uncommitted `--selftest`, and `pi-preflight`
+  failed `tools` with `pi-done test failed: rc=1`. The selftest crashed on `A.all` (the fixture's
+  fake argparse object had no attribute `all`) and, once that was fixed, still failed because it
+  asserted `pi-done check` exits 1 for a *successful* unseen event — the opposite of the documented
+  contract (only a failed job raises the agenda's priority; `--all` is the inbox view).
+- **Cause**: the selftest was written from the tool's *intent* and never executed, so it encoded a
+  contract the implementation had already moved away from. A test is evidence only if it has run.
+- **Guard**: the selftest was made to assert both halves (`check` quiet on success, `check --all`
+  exits 1, `check` exits 1 on a failure), and `pi-tool check` runs every pin twice inside
+  `pi-preflight tools`, so a selftest that was never run blocks publish. Measured: 1 failure before,
+  all cases pass after; the systemd round trip (OnSuccess/OnFailure) fires with nobody waiting.
+- **Lives in**: `bin/pi-done` (`selftest`), `bin/pi-tool check`, `pi-preflight` check `tools`.
+
+## 2026-11-17 — the "every tool is pinned" rule was prose
+
+- **What**: `AGENTS.md` said "`pi-preflight`'s `tools` check makes an unpinned tool block publish",
+  and `pi-preflight` was green — while `pi-tool list` reported **48 of 54** scripts with no test and
+  no selftest. `tools()` ran `check` and `lint` and then returned success on the pinned count it
+  had computed but never gated on.
+- **Cause**: a policy written as a sentence and a check written as a report. The check read the
+  number; nothing compared it to a threshold, and no baseline existed to say which debt was old and
+  which was new.
+- **Guard**: `pi-tool pins` (a ratchet against `tests/pins-baseline.json`): a tool that is not in
+  the baseline and has no pin fails, and the unpinned count may not rise; `--update` is the only way
+  to record a smaller baseline after pinning. `pi-preflight tools` now runs `pi-tool pins --quiet`
+  and fails on new debt. Measured: baseline 46 unpinned, a new unpinned fixture tool fails the
+  check, pinning one passes and reports it.
+- **Lives in**: `bin/pi-tool` (`cmd_pins`, `unpinned`), `tests/pins-baseline.json`,
+  `pi-preflight` check `tools`.
+
+## 2026-11-17 — an index that described itself and so described nothing
+
+- **What**: the tree had 22 areas, 55 tools, 20 skills, eight agents and eight top-level docs, each
+  documented in its own README, and no single index — a session had to read forty files to learn
+  what existed. Building `bin/pi-map` exposed two bugs in the index's own checks: the generated
+  `MAP.md` was in the reference corpus, so it listed every tool and no tool could ever be an orphan;
+  and the orphan regex required the next character to be `[\w.-]`, so a tool named at the end of a
+  sentence (`bin/loose.`) was invisible. Stray artifacts also survived: `~/ok`, `themes/`, and two
+  test units (`done@.service`, `marker@.service`) writing to `/tmp/ntest`.
+- **Cause**: a generated artifact counted as source, which is the same class as a check reading its
+  own output. The regex boundary was written for path names, not prose.
+- **Guard**: `map.json` (curated purpose per area/doc) plus `bin/pi-map --check` fails on an
+  undocumented path, a stale pointer, an empty unacknowledged dir, or an orphan tool; generated
+  files are excluded from the reference corpus; the trailing boundary allows sentence punctuation;
+  `pi-preflight map` blocks publish on staleness. `pi-preflight units` now fails on a user unit whose
+  `ExecStart` writes to `/tmp/`. The strays were removed. Measured: `pi-map --check` green over 22
+  areas / 55 tools, and the selftest proves each failure mode (undocumented dir, stale fingerprint,
+  empty dir, orphan, self-reference).
+- **Lives in**: `bin/pi-map`, `map.json`, `MAP.md`, `pi-preflight` checks `map` and `units`.
+
+## 2026-11-16 — a 16k local context that "filled up immediately and timed out"
+
+- **What**: every `pi` session on a `local/*` model died or crawled. The router serves `-c 16384`
+  and models.json declares 16384, so the numbers agreed — and the session still ran out of context on
+  the first tool result and took 25-30 min per turn.
+- **Cause**: two failures stacked. (1) The harness prompt Pi sends is **12,588 tokens** (AGENTS.md
+  2.9k, skills list 3.8k, MCP tool declarations + server blurb 4.0k, memory brief + subagent 0.7k,
+  base prompt + 4 tools + cwd 1.2k), so with `maxTokens` 2048 the session had 1.4k tokens of headroom,
+  overflowed at the first tool result, and each compaction re-prefilled the whole prompt at 7.8 tok/s
+  at depth. The context size was never the problem — the prompt was 77% of it. (2) Once the prompt
+  fit, the model still burned the turn: `Llama-3.2-3B` asked to "reply with exactly: ready" called
+  `read` on a directory (EISDIR), `read` on an invented path (ENOENT), then sent an invented `edit`
+  payload — ~20 s per round.
+   
+  Measured cause of the slow start: prefill is `54 ms/token` (1.5B) and `190 ms/token` (3B) at
+  depth, so 13k tokens is 12-24 minutes before the first token.
+- **Fix**: a local model gets a ~1.5k-token harness instead — four tools (bash, read, edit, write),
+  a short instruction card, the short memory brief, no skills list, no MCP, no AGENTS.md. Cloud
+  models are untouched (verified: same dump-server run keeps 15 tools and the full 32.5k-char prompt).
+- **Guard**: `extensions/local-slim.ts` applies the profile automatically to any local/loopback
+  model, and refuses the loop classes (identical repeat; 3 consecutive failed calls → terminate;
+  12 calls per run). `bin/pi-local-ctx` now **fails** if the measured local prompt is above 4,000
+  tokens (i.e. the profile is not in effect) as well as on declared-vs-served mismatch, and
+  `pi-preflight` runs it. Numbers: `local/prompt-layers.json`.
+- **Measured after**: 12,588 → 1,409 tokens of prompt + tools (1,663 for the whole first request
+  on the 3B, 1,524 on the 1.5B), ~13.7k tokens of working room in 16k, one turn 94 s (1.5B) /
+  182 s (3B) cold, 79 s for a full tool cycle, and turn 2+ re-prefill 23 tokens.
+- **Lives in**: `extensions/local-slim.ts`, `extensions/memory-boot.ts` (200-token brief for local),
+  `models.json` (maxTokens 1024 for local), `bin/pi-local-ctx`, `skills/local-models`.
+
+## 2026-11-16 — a perfectly tiled screen that the harness called empty
+
+- **What**: four terminals were tiled 2×2 on workspace 3 and the screenshot showed all four,
+  but `pi-tile` printed `tiled 0/4` with every window flagged `parked`, `pi-tile status` said
+  `hidden`, and `pi-shot` logged *"0 windows in shot"* — exit 0, no warning. The picture was
+  right and every number attached to it was wrong.
+- **Cause**: `visible` in `bin/pi-tile` was `win["desktop"] == 0`, a literal first-workspace
+  test. Work here runs on workspace index 2, so the whole protocol was blind on every desktop
+  but the first: `pi-shot --expect N`, `win-log.jsonl` and the `hidden` list all inherit it.
+- **Guard**: `current_desktop()` (parsed from `wmctrl -d`, the `*` row) replaces the literal at
+  every gate (`tile`, `status`, `describe`, `park`, `unpark`), rows carry `current`, and
+  `pi-shot` now **exits 4** with *"N window(s) sit on this desktop but none landed in the shot
+  — the picture is blind, not empty"* instead of writing a silent 0-window record.
+- **Measured**: with `inside()` stubbed to False, `pi-shot --no-tile` exited 4 and named the
+  windows; unpatched it exited 0. On the real desktop `pi-tile` went `0/4 parked` → `4/4 shown`
+  and `pi-shot --expect 4` exited 0.
+- **Lives in**: `bin/pi-tile` (`current_desktop`, `tile`, `status`, `park`, `unpark`),
+  `bin/pi-shot` (blind-shot refusal), `skills/windows` (pitfall).
+
+## 2026-11-16 — `pi-tile --park` booked a desktop the window never reached
+
+- **What**: `pi-tile --park <id>` moved a window, wrote `parked.json` (desktop 3), printed
+  `parked 0x… (desktop 1)`, and the window was back on the current desktop one `arrange` later —
+  still in the shot, still called parked. `--unpark` then had nothing real to undo.
+- **Cause**: pergola 0.4.0-dev re-applies a docked panel to the current desktop and `arrange`
+  runs over the daemon's whole tree, so a bare `wmctrl -t` is undone; `park()` waited for
+  `not in_tree` (5 s), ignored the failure and booked anyway. The printed desktop (`1`) was a
+  hardcoded default, unrelated to where it was sent.
+- **Guard**: `park()` floats the panel first (`pergola float --window`), then moves it; `main`
+  re-checks every requested window **after** `tile()` and, if one came back, appends
+  `did not park …` to `problems` and exits **3** — a park that did not happen is now a red run,
+  not a sentence.
+- **Measured**: `pi-tile --park 0x03167127` → `parked … (desktop 3)` then `PROBLEM did not park`,
+  exit 3, window still at `+803 +466` on desktop 2. Raw `pergola float` + `wmctrl -t 3` alone
+  *does* hold for ≥3 s, so the re-homing is the daemon's doing, not the WM's.
+- **Measured 2026-11-17, second hole**: the first fix re-ran the repro and the window still came
+  back. A debug build showed `arrange` re-docking the *floating* window into the tree; the
+  geometry move was skipped (guard working) but the raise that follows a fresh dock was not, and
+  xfwm4 answers a raise for a window on another desktop by mapping it on the current one. The
+  daemon's own reads showed `_NET_WM_DESKTOP = 1` right after `arrange` and the window at `0` a
+  moment later, with no `move_resize` in the log — the raise, not the move, was the culprit. The
+  original diagnosis ("the daemon's reconcile") was wrong.
+- **Fixed in pergola 0.5.0-dev**: the daemon now leaves a window alone when its `_NET_WM_DESKTOP`
+  is another host desktop (or a sticky `0xFFFFFFFF`) — in `apply` (both the tiled and floating
+  passes), `park_inactive`, the raise after a dock, and adoption; a newly opened window on another
+  desktop is not adopted. The predicate is unit-tested and the e2e moves a **tiled** and a
+  **floating** window to a second host desktop, runs `arrange`, and asserts each stays there.
+  With the daemon no longer dragging it back, a bare `pergola float` + `wmctrl -t` holds, and the
+  live `pi-tile --park` repro exits 0.
+- **Lives in**: `bin/pi-tile` (`park`, `main`), `skills/windows`; the daemon side in
+  `crates/pergola/src/daemon.rs` (`on_another_desktop`, `foreign_desktop`).
+
+## 2026-11-16 — my commit carried three other sessions' edits
+
+- **What**: the panel commit staged five paths; two of them (`INCIDENTS.md`, `bin/pi-preflight`)
+  were *already* carrying work by other live sessions — three incident entries and the `local ctx`
+  check — so that commit documents and ships work its author did not write. Nothing was lost, but
+  the message lies and the review boundary is wrong.
+- **Cause**: `git add <path>` stages a whole file. `pi-claim check` said `free` (the other sessions
+  held no lease), and the commit gate only refuses a path another session reserved or touched within
+  its recency window — an edit made two hours earlier is neither, yet its hunks are still there.
+- **Guard**: `pi-claim reserve` now warns per requested path that already has uncommitted changes
+  (`NOTE already modified before this reservation — … stage only your lines`) and logs a
+  `reserve-dirty` event, so the split is visible before the edit instead of after the commit.
+- **Measured**: reserving `bin/pi-agenda` (dirty from another session) printed the NOTE; a clean path
+  (`bin/pi-mem-view`) printed nothing; the event appears in `claims/claim-log.jsonl`.
+- **Lives in**: `bin/pi-claim` (`cmd_reserve`), `CONCURRENCY.md` (§ The five-line protocol), this
+  file. The commit itself was amended to say which files carried foreign hunks.
+
+## 2026-11-16 — every panel indicator's click was dead, and the tag was why
+
+- **What**: adding the RAM indicator meant exercising its click, so `xdotool click 1` was pointed at
+  the two indicators already on the panel — *due* and *bg* — and nothing happened:
+  `pi-term --list` stayed empty. A probe click of `<click>touch /tmp/memclick.log</click>` never
+  created the file; the same probe as `<txtclick>` did, immediately.
+- **Cause**: two faults stacked, either one enough to kill the interaction. genmon 4.3.0 executes
+  `<txtclick>`/`<iconclick>` and silently ignores a bare `<click>`; and genmon runs a click **with
+  no terminal**, so even a firing bare view (`pi-runtime-view`, `pi-agenda-view`) had nowhere to
+  print. The click targets were documented in `skills/desktop` from the day they were written and
+  had never once been used.
+- **Guard**: `bin/pi-preflight` check `panel` runs `pi-bg --panel bg|fg|due|mem` and fails on a bare
+  `<click>`, on genmon XML that does not parse, on an empty `<txtclick>`, and on any of those four
+  indicator classes missing from `panel-1`'s `plugin-ids`. It runs on publish and weekly maintenance.
+- **Measured**: with the tags fixed, clicking *mem*/*due*/*bg* opened `pi: mem`, `pi: agenda` and
+  `pi: runtime` and `pi-term --list` reported each `open` before `pi-term --close <slug>`; the mem
+  tooltip and its amber/red thresholds were verified by screenshot on the live panel.
+- **Lives in**: `bin/pi-bg` (three `<txtclick>` tags), `bin/pi-mem-view`, `bin/pi-preflight`
+  (`panel`), `skills/desktop/SKILL.md` (§ *What the machine is doing*).
+
+## 2026-11-16 — a model process nobody asked for held 1.1 GB of RAM for 32 hours
+
+- **What**: killing one orphaned `llama-server` (a child of the router, 32 h old, idle) returned
+  **1102 MB**: `used` 3007 → 1905 MB, MemAvailable 4832 → 5933 MB, zram DATA 809 → 239 MB. That was
+  14% of a 7.8 GB box, and every summary I had was blind to it — top-PSS did not show it at all
+  (RSS 2 MB, VmSwap 1109 MB): an RSS ranking cannot see a completely swapped-out process.
+- **Cause**: `--models-autoload` spawns one `llama-server` child per model and only the *router* is
+  supervised by systemd. Nothing watched per-model processes. This host's measured policy is one
+  model at a time (two resident = 51.9 s per trivial request vs 2.1 s), so a second child is always
+  waste, and a router child that keeps its KV/heap after the router stops using it is a leak.
+- **Guard**: `bin/pi-local-reap` reaps a `llama-server` only when it holds ≥200 MB of anon+swap, has
+  <1% lifetime CPU duty and is older than 2 h; it matches `/proc/pid/exe` (so a `bash -c` wrapper that
+  merely mentions llama-server is never killed), keeps the busiest router child, and exits 1 under
+  `--check`. Wired as a `warn local` line in `pi-preflight` and as the 2 h `local-reap` agenda row.
+  Verified by starting a real `llama-server` (296 MB anon), reaping it, and by a `--check` exit of 1.
+- **Lives in**: `bin/pi-local-reap`, `bin/pi-preflight` (`local`), `pi-agenda` row `local-reap`,
+  `skills/local-models/SKILL.md` (*Disk-paged big models*).
+
 ## 2026-11-14 — a skill vanished from the prompt because of one colon
 
 - **What**: every pi session started with `~/.pi/agent/skills/local-models/SKILL.md — Nested mappings
@@ -663,3 +852,391 @@ Format: what happened → root cause → guard → where the guard lives.
   (before: a p1 task per run); the 13 bogus tasks were dropped and `due-dispatch` strikes reset to 0,
   then `pi-agenda run due-dispatch` recorded `ok` and `pi-agenda next` shows no due-dispatch strike.
 - **Lives in**: `bin/pi-agenda` (`IDLE_EXIT`, `run_exec`, `cmd_tick`/`_run_one`), this file.
+
+## 2026-11-16 — every turn on a local model died with "exceeds the available context size"
+
+- **What happened**: a session was routed to `local/Llama-3.2-3B-Instruct-Q4_K_M` (then
+  `local/qwen2.5-1.5b-instruct-q4_k_m`) and each turn failed instantly with
+  `400 request (14552 tokens) exceeds the available context size (8192 tokens)`; the prompt could
+  not be reduced by talking differently, so the session was unusable.
+- **Cause**: two numbers disagreed and neither was checked. `models.json` declared
+  `contextWindow: 16384` for all four local models, while `llama-router.service` served
+  `-c 8192`, so Pi emitted requests the server could never accept (measured full-harness prompt:
+  **12,924 tokens**; a minimal invocation is **363**). One layer up, `settings.json` had the stock
+  `compaction.reserveTokens: 16384` with no local override, and auto-compaction fires at
+  `context > window - reserve` = **0** on a 16384 window — so even with ctx fixed the session would
+  have compacted on every turn, and each compaction is another 12.9k CPU prefill.
+- **Guard**: `bin/pi-local-ctx` compares declared vs served ctx and served ctx vs the recorded
+  harness-prompt size **and** the compaction reserve in force for each local model; it sends no
+  completion, so it cannot hang on a 30-minute prefill. `bin/pi-preflight` runs it on every check and
+  prints `ok   local ctx` / `warn local ctx`. Both failure paths were exercised by kill test:
+  `--served 8192` → FAIL on declared≠served and ctx<prompt; dropping the local compaction overrides
+  → FAIL with "compaction reserve 16384 leaves 0 ctx". Measurement is stored in
+  `local/harness-prompt.json` and `--measure` refreshes it.
+- **Measured after the fix**: router `-c 16384 -ctk q8_0 -ctv q8_0 --models-max 1`; children report
+  `n_ctx_slot = 16384`; 3B RSS 2.53 GB (fits the 3.4 G cgroup; f16 KV would have been 1.7 GB of it),
+  1.5B 1.44 GB. The full harness then **ran end to end**: 12,931 input tokens on the 1.5B, `rc=0`,
+  reply `ready`, **wall 2,318 s (38.6 min, ~1,800 s prefill)** with three other pi sessions competing
+  for the two cores. Prefill degrades with depth (12.8 tok/s at 2k → 6.7 at 10.2k). So the honest
+  answer is "it works, and the first turn is ~40 minutes": bulk work belongs in `local-gen` /
+  `local-batch` / `selfimprove/run.py`, which issue 363-token prompts and finish in seconds.
+- **Also reaped**: an orphaned `llama-server` on port 5601 (ppid 1, `-c 2048`) had held 1.21 GB for
+  an hour, and the router was keeping **two** children resident (2.72 GB) on a box that gives the
+  desktop ~5 GB — hence `--models-max 1`.
+- **Lives in**: `bin/pi-local-ctx`, `bin/pi-preflight` (local ctx line), `models.json`,
+  `~/.config/systemd/user/llama-router.service` + `.d/memory.conf`, `settings.json`
+  (`compaction.modelOverrides` for `local/*`), `local/harness-prompt.json`, `skills/local-models`.
+
+## 2026-11-16 — a text message could run shell as `host` before pi started
+
+- **What**: the resume path (`pi-text` FOLLOWUP → `write_resume_script`) built a `/bin/sh` script
+  by embedding the inbound message with `json.dumps(prompt)` inside double quotes. JSON escaping is
+  not shell escaping. A message containing `$(cmd)` or a backtick executed as this user — before
+  the model saw the prompt, with no confirmation and no tool policy. The transport is
+  `ntfy.sh/<topic>`, where the topic name is the only secret; anyone who learns it can publish.
+- **Cause**: one function conflated two encodings, and nothing exercised it with hostile input. A
+  second, smaller hole sat beside it: `text/pending/{id}.json` used the transport's message id as a
+  filename unchecked (`../x`, `None`).
+- **Guard**: the prompt is written to a 0600 file and the script reads it with
+  `-p "$(cat <file>)"`; the session id and path go through `shlex.quote`; `safe_id()` strips a
+  message id to `[A-Za-z0-9_-]{1,64}`; inbound text is capped at 20 000 chars. `pi-text check`
+  now **re-proves it on every run**: it builds a script with a `$(touch …)` / backtick / `";`-break
+  payload, runs it against `PI_BIN=/bin/echo`, and fails if the marker file appears.
+- **Measured**: the old construction (kept verbatim in the repro) created `PWNED_OLD` on this host;
+  the new one passed the payload as one literal argv and created nothing. `pi-text check` exits 1
+  on a copy patched back to the old `json.dumps` form and exits 0 on the fixed file.
+- **Not fixed here**: the channel still authenticates a sender by topic secrecy alone, so a text
+  can still *ask* the agent to do something (that is the feature). The design fix — an ntfy access
+  token for publish, or a shared secret in the message — needs the owner's phone client, so it is
+  filed as a task, not silently changed.
+- **Lives in**: `bin/pi-text` (`write_resume_script`, `safe_id`, `MAX_INBOUND_CHARS`, `cmd_check`),
+  this file.
+
+## 2026-11-16 — the agenda's cadence verdict was arithmetic, and `n/a` hid a dead row
+
+- **What**: `pi-cadence` reported `WORST text-dispatch 1.30x (19.5m vs 15.0m)` and exited 1 for
+  hours, filing a p1 task, while the row was working. In the same report `local-reap` (2 h cadence)
+  had run **once in 25 h** and printed `n/a` with exit 0.
+- **Cause**: two errors of method. (1) The ratio was `median gap / cadence`. A 15-min row on the
+  10-min tick can only land on every second tick, so its gaps are bimodal 10/20 min and the median
+  is 20 by construction — the *rate* was 15.9 min (1.06x). (2) A row with too few gaps and a row
+  that has stopped running both printed `n/a`, which on screen is the same as healthy.
+- **Guard**: the fail test is the **mean** gap (the rate) with median and p90 printed beside it;
+  `DEAD` = nothing recorded within 3x the cadence (evidence is the latest of `last_run`, the
+  journal, and the obligation's new `created` column); a gross lateness now fails at any `n >= 1`
+  instead of hiding behind `min_n`; duplicate timestamps are collapsed (they produced 0-second gaps
+  that halved the mean); a row whose `every_s` is missing falls back to its `cadence` string and
+  otherwise reports `BADCFG`; a disabled row no longer prints `overdue`. Self-test grew from 2 to 6
+  cases including a bimodal 15-min row, a 2-h row silent for 25 h, and a disabled overdue row.
+- **Measured**: `text-dispatch` 1.30x FAIL → 1.06x PASS; the new metric surfaced two rows the
+  median hid — `due-dispatch` 12.6m vs 10m (13 skipped slots, most before 02:50Z) and
+  `window-reap` 7.4h vs 6h (1 of 4 slots). `--self-test` 6/6.
+- **Lives in**: `bin/pi-cadence` (`cadence_seconds`, `gaps`, `verdict_for`, `self_test`),
+  `bin/pi-agenda` (`created` column + migration), this file.
+
+## 2026-11-16 — the brief's fixed shares dropped 4 of 7 pinned rules
+
+- **What**: `mem brief` allocated CORE 30% / KEY 34% / RECENT 22% / PDSA 14% and silently skipped
+  rows that did not fit. At the live 900-token budget it printed 3 of 7 pinned rules and 3 of 10
+  key lessons, while RECENT showed all 8 — the cheapest, most disposable section lost nothing.
+  A superseded pin still appeared, because the CORE query was the one query without a
+  `valid_to`/`superseded_by` filter.
+- **Cause**: a fixed share per section is not a priority order. The cap was never the constraint
+  (pinned + KEY + RECENT ≈ 1105 tokens against 830 usable) — the split was.
+- **Guard**: pinned takes its real cost first (up to `CORE_SHARE = 0.80`), the rest splits what is
+  left; every section prints `kept/total` and prints its header even when nothing fits; if the
+  pinned set does not fit, optional sections are withheld with a one-line reason instead of being
+  shown while a rule is missing; CORE/KEY/RECENT all filter superseded rows and `digest` kinds; the
+  footer reports the measured `used` instead of `used + 40` (which printed `~54/0` at `--budget 0`).
+  A budget below 120 now says so in one line instead of printing headers.
+- **Measured**: at 900 → CORE 7/7 (was 3/7), KEY 2/10, RECENT 3/8; at the new 1100 default →
+  CORE 7/7, KEY 4/10, RECENT 6/8, STATS 1051/1100. `--budget 0/100` → one honest line.
+- **Lives in**: `bin/mem.py` (`cmd_brief`, `CORE_SHARE`), this file.
+
+## 2026-11-16 — `pi-percolate accept --help` recorded a baseline, and the gate flapped on rank
+
+- **What**: the fragility gate failed on "new single point(s) of failure" for two different
+  resources on runs minutes apart, and `accept --help` did not print usage — it recorded a new
+  baseline. The baseline then stored only the top 3 names.
+- **Cause**: three mistakes in one gate: `accept` parsed no arguments; the gate compared top-3
+  *names*, where ranks 3 and 4 sat 0.122 vs 0.119 apart, so a tie shuffle read as a regression; and
+  `harden` was truncated to 8 rows, so a genuinely new hub at rank 9 could never fail anything.
+- **Guard**: `accept` requires `--reason` (≥12 chars, `--help` prints usage and writes nothing),
+  stores the **full** blast-radius table (`resource → weight`) plus the reason and an atomic write;
+  `check` compares weights for known resources (`WORSENED = 0.02`) and full-table membership for
+  new ones (`NEW_HUB = 0.05`); an unreadable baseline fails with a message instead of a traceback.
+- **Measured**: a new resource at 0.06 fails (`new hub`), 0.049 passes, a 0.3-point rank shuffle
+  passes, a truncated baseline fails cleanly, `accept --help` exits 2 and leaves the file untouched.
+- **Lives in**: `bin/pi-percolate` (`WORSENED`, `NEW_HUB`, `accept`, `check`), `percolation/baseline.json`
+  (reason field), this file.
+
+## 2026-11-16 — 62% of the bill sat above a context ceiling that was never in force
+
+- **What**: `pi-burn --drivers 7` put 62% of a $14/day burn in the `>250k` replayed-context band.
+  `settings.json` declared a 248,576-token compaction ceiling for the default model, so the band
+  was supposed to be impossible. The logged compactions fired at 676k–1.1M `tokensBefore`.
+- **Cause**: the ceiling is a setting and the bill is a log, and nothing compared them. Hand-checking
+  also found the first version of the check looked up `modelOverrides["deepseek/x"]` while
+  settings.json keys them `openrouter/deepseek/x`, so it reported a 1,032,192 ceiling that no
+  session could reach — a guard that could not fail.
+- **Guard**: `bin/pi-burn --cap` resolves the override (exact key, then a suffix match) against
+  `models-store.json`'s window, prints the effective ceiling and the calls/dollars above it, and
+  **fails** when a compaction after `settings.json`'s mtime fired above 1.1× the ceiling; it says
+  `unverified` (exit 0) until such a compaction is observed. It runs before the API-key check, so
+  it is offline and writes no spend sample, and `pi-preflight` runs it as `cost cap`.
+- **Measured**: `--cap 3` on 104 sessions → ceiling 248,576, 4,631 calls and $20.61 of replayed
+  context above it, 8 compactions all before the setting, `guard unverified`. Fault cases: reserve 0
+  → fail "no usable ceiling"; reserve > window → fail; truncated settings → fail with a message;
+  a compaction in a fabricated session above the ceiling → exit 1 (and exit 0 under
+  `TZ=America/New_York` only after the UTC epoch fix — `mktime(...) - timezone` shifted it an hour).
+- **Lives in**: `bin/pi-burn` (`--cap`), `bin/pi-preflight` (`cost_cap`), this file.
+
+## 2026-11-16 — the audit shipped an evidence pack with 24 defects, found by two testers in an hour
+
+**What happened.** `skills/audit/scripts/window.py` (new) was written and self-tested in one pass,
+then scanned the real tree successfully. A two-tester panel with disjoint lenses (boundaries+oracle;
+faults+hostile-input) found 24 defects in it: a truncated ledger line made the whole ledger look
+empty and the next `--record` appended onto the same broken line; `parse_when` read `2026`, `NaN`
+and `inf` as epochs and traced back inside `money_section`; a failed `pi-cadence`/`pi-burn`/
+`pi-delegate` read as a *real* finding (or as "every agent never dispatched"); `pi-preflight`
+timing out produced a green-looking pack; uncaught crashes exited **1**, the same code as "suspects
+found"; `score` never fired its REPEAT rule because it only compared *closed* pairs; a corrupt
+`lenses.json` was silently overwritten with `{retire, double}`, deleting the roster.
+
+**Cause.** Same shape as the audit's own five findings: the pack reported verdicts it could not
+support — silence read as health, a tool failure read as a measurement, and an exit code that made
+a crash indistinguishable from a discovery.
+
+**Guard.** Every class is a case in `window.py selftest` (27 cases, 0.1 s, no network), run by
+`pi-preflight` as **`audit pack`** on every publish, and mutation-checked: reintroducing the
+closed-pairs REPEAT bug turns `score-repeat-on-second-unclosed-scan` red (verified on a /tmp copy).
+Exit codes are now contractual: 0 clean, 1 suspects, 2 "could not produce an honest answer", with
+`main()` converting an unexpected exception into 2 so a crash can never be read as a finding.
+`append_ledger` never writes on top of a truncated tail; `read_ledger` counts bad lines instead of
+erasing; a corrupt lens roster is refused rather than replaced; every instrument failure raises
+`instrument:<name>-unreadable` instead of an empty section.
+
+**Lives in**: `skills/audit/scripts/window.py` (`selftest`, `read_ledger`, `append_ledger`,
+`parse_when`, `main`'s 0/1/2 exit contract), `bin/pi-preflight` (`audit_pack`, check name
+`audit pack`), `skills/audit/SKILL.md` (the mutation rule), `skills/audit/lenses.json`.
+
+**Lesson.** A self-test written by the same pass that wrote the code tests the author's assumptions.
+A panel with a hostile lens found 24 defects in 10 minutes of wall-clock — and the *verifier* then
+found one of the 27 selftest cases was theatre. Both are cheaper than the first wrong audit.
+
+## 2026-11-17 — a 6-hourly session row re-opened for four days of unchanged work
+
+**What happened.** The `frantic-queue` agenda row (6 h, p1, `session`) opened a full agent session to
+triage the Frantic board. Three sessions in a row reported the same thing — 4 claimable bounties, all
+`description=null`/`required_artifacts=[]`, wallet 0 USDC — and each closed the row; the row then went
+overdue again (22 min at the last attempt) and the dispatcher re-opened it, until sessions started
+refusing the row and the owner was asked to decide. Meanwhile `pi-frantic watch` re-queued #97 on
+every poll: it is a `p-` *house rebate*, delivered by funding a posting, not by claiming one, so the
+queue never emptied and every triage part-read dead work.
+
+**Cause.** Two things the row could not see: (a) an agenda row whose work is *reading a feed* was
+written as a session, so each poll paid ~$0.25 and 240 s for a report that a HTTP call answers; (b)
+the "claimable" filter tested `work_status` and free slots but not *kind*, so a rebate posting looked
+like work. A cadence that cannot make progress also has no way to say so — it just repeats.
+
+**Guard.** `frantic-queue` is disabled; `frantic-watch` (6 h, `exec:pi-frantic watch --quiet`) polls
+for free and queues only new claimable work, and `frantic-triage` (7 d, `session`) carries a written
+claim rule in its notes — price ≥ 5× session cost, the contract or description names the acceptance
+checks, delivery fits the 1 h claim window — so the honest "no claim" is a *conclusion* the row can
+reach once a week instead of a session it rediscovers four times a day. `bin/pi-frantic watch` now
+excludes `/v1/bounties/p-` posting ids from the queue and prunes them (verified: queue went from two
+entries to one, #147, on the first run). PDSA cycle 40 holds the falsifier: if two weekly triages find
+no claimable work, the row drops to monthly and earning effort moves to venue discovery (#99).
+
+**Lives in**: `bin/pi-frantic` (`watch`'s two jq filters), agenda rows `frantic-watch`/`frantic-triage`,
+`self-funding/FRANTIC.md` ("Decision 2026-11-17"), memory #256, `mem pdsa` cycle 40.
+
+**Lesson.** If a scheduled row's job is to *check* something, make it an `exec` check and let only a
+state change open a session. A session is a procurement of judgement; polling for it is how a feed
+reader becomes four daily tokens sinks and a p1 strike.
+
+## 2026-11-17 — a decision recorded four times, with nothing that would ever read it again
+
+**What happened.** The earning-rail restructure (disable `frantic-queue`, add `frantic-watch`,
+write a claim rule) was recorded in `self-funding/FRANTIC.md`, `INCIDENTS.md`, memory #256 and
+`mem pdsa` cycle 40 — four copies, no canonical one. The falsifier ("two weekly triages with no
+claim → drop to monthly") had a condition but no mechanism: nothing would read it, and the claim
+rule itself is prose in an agenda row's notes, so a future session can ignore it without any check
+failing. The cost figure that motivated the decision (~$0.25, 240 s per report) was an estimate
+never measured from the logs.
+
+**Cause.** The decision was handled as an *event* (measure, choose, write it down) rather than as a
+*record with a lifecycle*. Nothing in the harness could answer "which decisions are open, and which
+are past the date they were supposed to be re-measured?" — so the honest answer was "unknown", and
+an unknown is how a decision quietly becomes folklore.
+
+**Guard.** `DECISIONS.md` (protocol D1–D8, one canonical record per decision, others link) and
+`bin/pi-decide`: `new` refuses a missing field, a non-date review, a guard that names no existing
+path or command, and a falsifier with no date; `due` exits 1 on an open record past `review-by` and
+runs as the `decisions` check in `pi-preflight`, so an un-re-measured decision blocks publish.
+`skills/decide/SKILL.md` is the routing surface. Verified: selftest 9/9, both refusals exit 2,
+`pi-preflight` reports `ok decisions: 1 open, none overdue`.
+
+**Lives in**: `DECISIONS.md`, `bin/pi-decide`, `bin/pi-preflight` (`decisions`), `skills/decide/`,
+memory #259, `mem pdsa` cycle 41.
+
+**Lesson.** A decision is not finished when it is made; it is finished when the thing that would
+prove it wrong has been measured. If the record cannot name a guard that runs and a date it will be
+read, it is a wish with a timestamp.
+
+## 2026-11-17 — the harness babysat its own jobs, and every session re-derived the same command
+
+**What happened.** Measured over the session logs: 1,009 of 13,303 bash tool calls (7.6 %) contained
+a `sleep`; 352 were `while ! …; do sleep …; done` watch loops, 45 were literally `sleep N; <check>`,
+and the declared sleeps totalled ~84.8 h of requested wall clock. Separately, 49 of the 52 scripts in
+`bin/` had no test and no selftest, so a procedure was re-improvised each session with different
+flags and nothing compared two runs of the same intent.
+
+**Cause.** Two habits with the same root: waiting was expressed as a *duration* rather than as an
+*event*, and a procedure was treated as a *performance* rather than as an *artifact*. The kernel
+already reports process exit (pidfd), file close/rename (inotify) and a unit's MainPID exit; the
+subprocess and systemd primitives this tree already used (`subprocess.run(timeout=)`,
+`systemd-run --wait`) were never the problem — the session's own loop was.
+
+**Guard.** `bin/pi-wait` blocks on the event (pidfd poll, inotify with a `--stable` coalescer,
+append-stream regex, MainPID, connect-backoff) and prints the event plus elapsed time, so a wait is
+observable. `bin/pi-tool check` runs every pin twice and diffs the output, `pi-tool lint` fails a
+`sleep` inside a loop or a `sleep N; <cmd>` (with a deliberate, greppable `pi-tool: allow <reason>`
+opt-out), and `pi-tool new` scaffolds a tool with its contract and golden test. Both run as the
+`tools` check in `pi-preflight`, so an unpinned tool or a new polling loop blocks publish. Verified:
+`pi-wait --selftest` 10/10 (0.0 ms CPU per second waited); injecting
+`while ! test -f /tmp/x; do sleep 5; done` into `bin/` makes `pi-tool lint` exit 1 and `pi-preflight`
+report `FAIL tools`; the first `pi-tool check` found three real defects in existing selftests
+(`pi-claim` printed a temp path, `pi-preflight` had no `--selftest` and the loose match ran live
+checks, `pi-wait` printed elapsed times) — all normalised, none adjudicated by a model.
+
+Blocking was only half the fix: a session that blocks is still occupied. `bin/pi-done` closes the
+loop from the other side — `run` starts a detached transient user unit and returns in ~51 ms, and
+systemd itself fires `pi-done-notify@<id>` through `OnSuccess=`/`OnFailure=` when the job ends, so
+the completion *arrives* (`events/done.jsonl`, desktop, optionally a text and an agenda task)
+instead of being asked for. Measured traps that shaped it: `%n` does not expand inside a transient
+property (the notifier must be addressed by job id), the notifier inherits the *manager's*
+environment rather than the caller's (so `PI_AGENT_DIR` cannot be passed through it), and `--collect`
+unloads the unit at exit (so the job records its own rc before it dies, and the notifier reads that,
+never `systemctl show`). Verified end to end: a 6 s job returned immediately and its ledger row
+appeared 6.0 s later with no process watching it.
+
+**Lives in**: `bin/pi-wait`, `bin/pi-done` (+ `~/.config/systemd/user/pi-done-notify@.service`),
+`bin/pi-tool`, `tests/`, `bin/pi-preflight` (`tools`), agenda row `job-done`, `AGENTS.md`
+(Engineering defaults), `research/event-driven-waits.md`,
+`research/llm-to-deterministic-tools.md`, memory #270/#271/#273.
+
+**Lesson.** Waiting is a question about *state*, so it should be answered by whoever changes the
+state, not by asking again on a timer. And a procedure with no test is not owned by anyone: the
+next session will write a slightly different one, and nothing will notice.
+
+## 2026-11-17 — the text channel refused the owner at a cap that guarded nothing
+
+**What happened.** Five messages in 40 minutes produced three identical texts that each read
+"Not started yet: the hourly cap (6 background sessions) is spent; yours starts at the next slot" —
+no waiting count, no time, indistinguishable from a stuck queue. The owner's reply: *"there doesn't
+need to be an hourly cap that's really annoying and unnecessary (isn't it?)"*. Two more messages got
+"a session is already running; yours is queued behind it". Meanwhile `due-busy` (a lock that was
+held, so nothing ran) and `due-escalated` (a stop-trying marker) were counted against the same
+MAX_PER_HOUR, and a scheduled `session:` row could take the slot the owner's message was waiting for.
+
+**Cause.** Three failures stacked. (1) A *count* was standing in for *money*: measured on
+`text/dispatch.jsonl`, a text session costs a median $0.012 and runs a median 66 s, so 6/h is
+~$0.07/h while `pi-control cap text` ($1.00/24h, then at $0.42) binds ~14x further out — and it was
+never the guard that tripped. (2) The refusal was a per-batch template, so N messages meant N copies
+of a sentence that named neither the queue nor the clock ("yours starts at the next slot" is not a
+time). (3) The ledger's rows and the "has anything started" question were conflated: bookkeeping
+spent budget, and nothing ranked the owner above the schedule.
+
+**Guard.** `rate_brake()` in `bin/pi-text` asks `pi-control cap text`: over → refuse with the number;
+blind → the 6/h count applies (a broken controller must not brick the channel, and six sessions an
+hour bounds unpriceable damage to cents); otherwise no refusal at all. `wait_notice()` sends at most
+one "not started yet" per reason per 15 min, carrying the waiting count and the *clock time* the slot
+opens, computed by `next_slot_s()` from the oldest in-window session; `describe_state()` turns every
+internal code into that sentence. `SESSION_ROUTES` keeps `due-busy`/`due-escalated` out of the
+counter. `cmd_dispatch_due` yields a tick while a text message was filed in the last 30 min
+(`--force` overrides), and `pi-text check` fails when tasks wait over 90 min with no session opened
+in the last hour (dead dispatcher, not busy one). Pinned by `tests/pi-text.sh` (12 checks, run twice
+and diffed by `pi-tool check`): 3 real + 2 bookkeeping rows count as 3, the slot is a duration, a
+repeat within the window is silent, a notice names the count and a clock time, due work defers and
+`--force` does not. Verified live: the 03:20 tick's receipt read "6 messages waiting: a session is
+already running, and the next one starts when it finishes. Answered in order — no need to resend."
+
+**Lives in**: `bin/pi-text` (`rate_brake`, `spend_cap_state`, `wait_notice`, `describe_state`,
+`next_slot_s`, `SESSION_ROUTES`, `cmd_dispatch_due`, `cmd_check`), `tests/pi-text.sh`, `AGENTS.md`
+(Texts), `bin/pi-control` (`cap text`), memory #275.
+
+**Lesson.** A rate limit is a claim about the scarce resource; when the resource is money, count
+dollars. And a refusal is a message: if it cannot say how many are waiting and when the next one
+starts, it is noise, and repeating it is the failure mode — one honest notice beats five statuses.
+
+## INC-8 — the agenda fell behind because each tick filed a new p1 task (2026-11-17)
+
+- **What happened**: `pi-agenda show` carried 37 open `job-done failed: 1 completion event(s) nobody has
+  read` tasks and 7 `control-wake failed: wake cap-backstop: $26.72 over $12.00/24h`, one per tick since
+  the previous night, while the machine had no overdue session work at all. `pi-agenda next` answered
+  "due now: nothing" — the backlog was entirely self-made noise, and the owner's read was "the agenda is
+  behind, so catch up".
+- **Cause**: two rows fail *repeatedly and identically* by design. (1) `pi-done check` exits 1 until a
+  session runs `pi-done seen`; until then every 15-min tick files another task. (2) `pi-control wake`
+  exits 2 when a cap is over — over-cap means "refuse new work", which is the backstop working, not a
+  broken probe, but the exec runner scored any non-zero as a failure (INC-7's class again). A third
+  contributor: `route-inkling-check` had a relative `exec:delegation/route-heldout-check.sh`, so it could
+  never run.
+- **Guard**: `file_failure()` in `bin/pi-agenda` is the single path both callers (`tick --run`, `run <id>`)
+  use: an open task for that ref is re-annotated with the newest detail instead of duplicated (same shape
+  as the timer-failure dedupe). `pi-control wake` now exits 3 (`IDLE_EXIT`) when the only finding is an
+  over-cap backstop and prints `over cap, nothing woken (idle)`; exit 2 stays for armed events. The row's
+  command is absolute; AGENTS.md says behind-ness is caught up in the turn it is seen.
+- **Measured**: three consecutive failing runs of a throwaway row (`exec:sh -c "echo boom; exit 1"`) left
+  one open task (id 191) and `strikes=3`; `pi-agenda run control-wake` recorded `ok (idle (exit 3): …)`
+  with `strikes=0` and filed nothing; `pi-agenda run job-done` → `ok`, `strikes=0`;
+  `route-inkling-check` → `ok (inkling route 100% vs regex 41% on 22 held-out cases)`, `strikes=0`, and
+  40 stale p1 tasks were dropped (37 job-done, 5 cap-backstop), leaving 2 real `tool-errors` ones.
+- **Lives in**: `bin/pi-agenda` (`file_failure`), `bin/pi-control` (`cmd_wake`), `AGENTS.md` (agenda
+  paragraph), agenda rows `route-inkling-check`/`control-wake`/`job-done`.
+- **Lesson**: a row that strikes is a signal; a row that files the same p1 task every tick is the agenda
+  reporting its own heartbeat as an emergency. Repeated identical failure means "re-annotate", never "file
+  again" — and "behind" has to be measurable (strikes, unread events, unrunnable command), not felt.
+
+## INC-9 — the same "Agenda is behind" digest was texted every 6 h (2026-11-17)
+
+- **What happened**: the owner's 13:10 text ("When the agenda is behind you should be catching up") was
+  answered with a catch-up report; 30 min later they texted "This is a recurring problem look into it and
+  fix it". The recurring artefact was the phone nudge: `text/outbox.jsonl` shows the body at
+  2026-11-16T08:40:52Z and 2026-11-16T14:50:53Z byte-identical (`p1 due #86 cadence-measure failed`), and
+  2026-11-17T03:30 / 09:40 differing only by one extra bug row.
+- **Cause**: `cmd_tick --notify` paged on `late_session or stale_now or soon`, where `soon` is "a p1 due
+  within 24 h" and `bugs_now` is every open bug. Those conditions are true for days at a time, so the only
+  thing limiting repeats was the 6-hour `phone_nudge` throttle — the trigger never had to describe
+  anything *new*. A chronic list therefore became wallpaper, and the owner could not tell a new problem
+  from an old one.
+- **Guard**: `phone_digest()` in `bin/pi-agenda` diffs the digest against `agenda/last-phone-digest.json`,
+  the item list the owner already saw. New items text immediately and carry only the new lines (plus a
+  `cleared: N` count); an unchanged list is silent until `PHONE_DIGEST_STALE` (24 h) and then says
+  "Still open, unchanged for …"; a list that shrank says nothing. A bug that is also a p1 due tomorrow is
+  one line, not two.
+- **Measured**: `tests/pi-agenda.sh` (new, in the pinned suite) drives a stub `pi-text` in a temp
+  `PI_AGENT_DIR`: new item → 1 message, identical → still 1, second new item → 2 with only the new line,
+  shrink → unchanged. Seven assertions pass and two consecutive runs diff identical. On the live store,
+  after seeding the digest with the current list, `pi-agenda tick --notify` left `text/outbox.jsonl`
+  mtime unchanged (1794921262) and wrote no throttle stamp — no repeat.
+- **Lives in**: `bin/pi-agenda` (`phone_digest`, `PHONE_DIGEST_STALE`), `tests/pi-agenda.sh`.
+- **Lesson**: an alert must be a diff, not a state. If the trigger can be satisfied by a condition that
+  persists, the message will repeat — dedupe against what the owner last saw, and let silence mean
+  "nothing changed".
+
+## INC-10 — a detached job could not find its own tools (2026-11-17)
+
+- **What happened**: `pi-done run ... pi-delegate run ...` finished in 0.0 s with `bash: line 1:
+  pi-delegate: command not found` (j43301298), and the retry with an absolute path died as "unit
+  failed to start" (j76556415). The pergola gate work then had to be relaunched by hand.
+- **Cause**: `systemd-run` units inherit the *manager's* environment, not the shell's, so PATH was
+  `/usr/local/bin:/usr/bin:/bin`. `PI_AGENT_DIR` was already passed for exactly this reason; PATH
+  was not.
+- **Guard**: `pi-done run` now sets `--setenv=PATH=<agent bin>:<caller PATH>`. Verified by a real
+  job whose tail reads `$HOME/.pi/agent/bin/pi-delegate` — the class cannot repeat for any
+  pi tool, not just this one. `pi-done --selftest` still passes (20/20).
+- **Lives in**: `bin/pi-done` (`cmd_run`).
+- **Lesson**: a detached unit starts in a foreign environment; every path it needs by name has to be
+  handed to it, and the guard is a real job's output, not the belief that it works.

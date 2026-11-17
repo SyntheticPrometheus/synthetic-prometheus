@@ -83,14 +83,31 @@ def s_suite():
     same = [r for r in rows if r.get("suite_sha") == cur and r.get("arm") == "base"]
     last = same[-1] if same else rows[-1]
     age = days(__import__("datetime").datetime.strptime(last["stamp"], "%Y%m%dT%H%M%S").timestamp())
-    n_tasks = len(json.loads((SI / "suite" / "suite.json").read_text())["tasks"])
+    ids = [t["id"] for t in json.loads((SI / "suite" / "suite.json").read_text())["tasks"]]
+    n_tasks = len(ids)
+    # coverage comes from the run's own results: a run may exercise a subset, and reporting
+    # today's suite size next to an old subset's pass count claims coverage it never had.
+    covered = set()
+    try:
+        rp = SI / "runs" / f"{last['stamp']}-{last['arm']}" / "result.json"
+        covered = {r["id"] for r in json.loads(rp.read_text()).get("results", [])}
+    except Exception:
+        pass
     pr = last["pass_rate"]
-    detail = f"{n_tasks} tasks, last base {last['passed']}/{last['n']} ({pr:.2f}) {age:.1f}d ago"
+    detail = (f"{n_tasks} tasks, last base {last['passed']}/{last['n']} ({pr:.2f}) "
+              f"on {len(covered & set(ids))}/{n_tasks} tasks {age:.1f}d ago")
+    missing = [i for i in ids if i not in covered]
+    if missing:
+        shown = ", ".join(missing[:4]) + (" …" if len(missing) > 4 else "")
+        detail += f" — uncovered: {shown}"
     if age > 21:
         add("suite", "warn", detail + " — stale evidence", "re-run base on the pinned suite")
-    elif pr >= 0.999 and last.get("suite_sha") == cur:
+    elif pr >= 0.999 and last.get("suite_sha") == cur and not missing:
         add("suite", "warn", detail + " — saturated: gate can accept only non-inferiority on cost",
             "at ceiling only cost moves: either add a task class base fails, or A/B a cost arm (gate accepts ACCEPT_COST at >=10% fewer output tokens)")
+    elif pr >= 0.999 and last.get("suite_sha") == cur:
+        add("suite", "warn", detail + " — saturated on the covered tasks only; the rest are unproven",
+            f"cover the remaining {len(missing)} task(s) at k>=3 before reading this as a ceiling")
     else:
         add("suite", "pass", detail)
 
@@ -149,12 +166,24 @@ def s_memory():
     used, budget = (int(m.group(1)), int(m.group(2))) if m else (0, 0)
     n_live = int(live.group(2)) if live else 0
     ratio = used / budget if budget else 0
+    # What matters is not how full the brief is but what it dropped. Since 2026-11-16 the brief
+    # prints `kept/total` per section (and withholds the optional sections when a pinned rule does
+    # not fit), so a full working set is a signal, and a *pinned* drop is the failure: recency means
+    # a new memory is always in RECENT, so "full" no longer implies "new memories will not reach it"
+    # (the old text said so and was wrong).
+    drops = re.findall(r"^## (.+?) (\d+)/(\d+)$", out, re.M)
+    pinned_drop = re.search(r"budget too small for (\d+) pinned", out)
+    dropped = "; ".join(f"{name} {kept}/{total}" for name, kept, total in drops)
     detail = (f"brief {used}/{budget} tok ({ratio:.0%}), {n_knowledge if n_knowledge is not None else n_live} "
-              f"knowledge row(s) + {n_live - (n_knowledge or 0)} digest(s), last digest {digest_age:.0f}d ago")
+              f"knowledge row(s) + {n_live - (n_knowledge or 0)} digest(s), last digest {digest_age:.0f}d ago"
+              + (f"; cut {dropped}" if dropped else ""))
     if not m or not live:
         add("memory", "fail", "mem brief/stats did not answer", "bin/mem doctor")
+    elif pinned_drop:
+        add("memory", "fail", detail + f" — {pinned_drop.group(1)} pinned rule(s) do not fit the "
+            "brief: raise --budget or unpin`, never let a rule fall out", "bin/mem brief --budget 1400")
     elif ratio > 0.92:
-        add("memory", "warn", detail + " — working set is full; new memories will not reach the brief",
+        add("memory", "warn", detail + " — working set is full (sections are cutting rows, listed above)",
             "mem consolidate --digest, or archive what no longer matters")
     elif (n_knowledge if n_knowledge is not None else n_live) > 150 or digest_age > 21:
         add("memory", "warn", detail + " — consolidation due",

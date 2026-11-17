@@ -1,0 +1,17 @@
+{
+ "note": "Lenses the audit dispatches per fix. 'retire' and 'double' are written by window.py score from measured yield (0 findings twice = retire, >=2 = dispatch twice); the auditor prunes retired entries once they are gone from the roster.",
+ "lenses": {
+  "tester/boundaries": "empty / 0 / 1 / negative / very large / unicode / exactly-at-threshold inputs",
+  "tester/state": "duplicate events, out-of-order timestamps, partial writes, re-entry, migration of old data",
+  "tester/oracle": "an independent recomputation of the same number by a different method or source",
+  "tester/faults": "missing file, unreadable file, truncated JSON, killed process, no network, permission denied",
+  "tester/hostile-input": "paths with spaces/quotes/newlines, shell metacharacters, absurd lengths, injection",
+  "tester/recovery": "does the failure leave the system worse: half-written baselines, locked rows, orphaned timers",
+  "redteam/abuse": "trust boundary and blast radius: what an attacker who reaches this input can do as this user"
+ },
+ "retire": [],
+ "double": [
+  "tester/boundaries",
+  "tester/state"
+ ]
+}

@@ -1,6 +1,6 @@
 ---
 name: local-models
-description: Run small GGUF models locally on this host (llama.cpp router as a systemd user service, `bin/local-gen` one-shot batch, `bin/local-batch` unattended resumable runner with the corroboration gate, `local/*` models in Pi). Read this when the goal is offline independence rather than cost — the measured verdict is that local time is cheap and unattended wall-clock is free, so the way to cut cloud reliance is local-does-the-bulk + escalate-only-the-residue, gated by cross-model agreement (16/16 precise at 40% coverage). Every frontmatter value must avoid a colon followed by a space inside an unquoted plain scalar, because YAML reads that as a nested mapping and the loader silently drops the skill. Never run a Pi session or subagent on a local model here (measured 397 s for a 2-token reply, 6.9k-token harness prompt).
+description: Run small GGUF models locally on this host (llama.cpp router as a systemd user service, `bin/local-gen` one-shot batch, `bin/local-batch` unattended resumable runner with the corroboration gate, `local/*` models in Pi). Read this when the goal is offline independence rather than cost — the measured verdict is that local time is cheap and unattended wall-clock is free, so the way to cut cloud reliance is local-does-the-bulk + escalate-only-the-residue, gated by cross-model agreement (16/16 precise at 40% coverage). Every frontmatter value must avoid a colon followed by a space inside an unquoted plain scalar, because YAML reads that as a nested mapping and the loader silently drops the skill. A Pi session on a local model now fits a measured 1,409-token prompt (extensions/local-slim.ts, guarded by bin/pi-local-ctx) so a turn is 1-3 min instead of a 25-minute prefill, but batch tools are still the default for volume.
 ---
 
 # Local models on this host
@@ -97,13 +97,149 @@ kinds — zero-shot accuracy on a novel, overlapping label set is exactly where 
 `laya` skill's own Limits), so that task is a candidate for `laya.fit()` on the stored labels, not for
 a bigger GGUF.
 
+## An interactive Pi session on a local model (fixed 2026-11-16)
+
+The earlier record here said a Pi session fits 16k but a cold turn costs ~25 min of prefill, and
+blamed the context size. Both halves were wrong: the failure looked like a context problem and was
+a prompt problem.
+
+| layer | tokens |
+|---|---|
+| AGENTS.md | 2,875 |
+| skills list (one description per skill) | 3,771 |
+| MCP tool declarations + server blurb (laya/web/repomap) | 3,992 |
+| memory brief + subagent tool | 704 |
+| base prompt + 4 core tools + cwd | 1,246 |
+| **full harness prompt** | **12,588** |
+
+Against `-c 16384` with `maxTokens` 2048 that is 1.4k tokens of headroom: the first tool result
+forced compaction, and every compaction re-prefills 12.6k tokens at 7.8 tok/s. That is the whole
+"16k fills up immediately and then times out". Context size was never the cause.
+
+`extensions/local-slim.ts` now applies a local profile automatically (provider `local`/`llama.cpp`
+or any loopback `baseUrl`): four tools (`bash read edit write`), a 1,200-character instruction card,
+the 200-token memory brief, no skills list, no MCP, no AGENTS.md. **Measured: 1,409 tokens of
+prompt + tools, 1,524-1,663 tokens counted by the provider for a whole first request**
+(1,205 with `pi --no-mcp`, which is the only way to drop the built-in MCP extension's own 204-token
+section — it writes `<mcp_servers>` after every other `before_agent_start` handler). Cloud models are
+untouched: same request keeps 15 tools and the 32.5k-char prompt.
+
+`bin/pi-local-ctx` is the guard: it fails when the measured local prompt is above 4,000 tokens (so a
+silently disabled profile is a red run, not a slow session), when models.json and the router disagree
+on context, and when the compaction reserve leaves no room. `pi-preflight` runs it.
+
+Measured wall clock with the profile, full harness request (`pi -p --mode json "hi"`):
+
+| model | cold turn | prefill | turn 2+ re-prefill |
+|---|---|---|---|
+| qwen2.5-1.5B | 94 s | 1,436 tok at 19.2 tok/s = 75 s | n/a (new process per run) |
+| Llama-3.2-3B | 182 s | 1,220 tok at 7.0 tok/s = 174 s | 23 tok (llama.cpp slot cache), seconds |
+| 1.5B tool cycle | 79 s | bash `wc -l` → answer, two requests | |
+
+So: a session is usable for small tasks now, and the 3B is 2x slower per turn than the 1.5B for
+better formatting. Two caveats, both measured:
+
+- **The 3B invents tool calls.** Asked to "reply with exactly: ready” it called `read` on a directory
+  (EISDIR), then `read` of an invented path (ENOENT), then sent an invented `edit` payload — ~60
+  requests at ~20 s each before answering. `local-slim` refuses an identical repeat, ends the run
+  after 3 consecutive failed calls and after 12 calls, which turns that 20-minute hang into one
+  refused round + an answer. Prompt rules help but are not a guarantee; the refusal is.
+- **Batch tools remain the default for volume.** The profile fixes interactive stalls, not throughput:
+  one turn is still 0.5-3 min of wall clock, so `bin/local-batch` (0.96 s/item) stays the way to run
+  bulk work.
+
+Numbers, method and the raw layer deltas: `local/prompt-layers.json`. Failure record and guard:
+`INCIDENTS.md` (2026-11-16).
+
 ## Standing (no supervision)
 
+- `bin/pi-selfimprove-local` (agenda row `local-selfimprove`, 1d) — the self-improvement loop's
+  free half: measures the base arm on a cheap 6-task subset with a local GGUF and drafts a
+  candidate from the failures, $0, detached via `pi-done`. The gate (k≥3, real model) stays
+  cloud, because the 1.5B scores 0/3 on those tasks (`selfimprove/DESIGN.md`, v1.1).
 - `systemctl --user list-timers local-audit` — weekly 04:20 audit of the live memory rows through the
   full pipeline; report at `~/.pi/agent/local/audit-<date>.md` with retag candidates, residue ids and
   the log. Cheap (`Nice=10`, idle IO), ~20 min, no cloud call.
 - `bin/pi-preflight` prints `ok local` / `warn local` (router up, N GGUFs, Laya importable) on every
   run, so a stopped router or a broken venv cannot silently turn "offline capable" into "offline".
+
+## Disk-paged big models (colibri) — evaluated, and the answer is no
+
+2026-11-16, asked whether paging weights from disk (`JustVugg/colibri`, 51.5k★, Apache-2.0, pure C:
+hot experts VRAM, warm RAM, cold streamed from disk; the same idea as llama.cpp's mmap, AirLLM's
+layer streaming and Apple's *LLM in a flash* paper, plus a learned LRU/pinned expert cache).
+I ran **its own planner** against this box (`c/setup_catalog.py` + `assess()` over MemTotal):
+
+| | value |
+|---|---|
+| catalog rows that fit | **1 of 12**: only `qwen3-coder-30b` is "tight" (needs 8 GB, best 18 GB, 19.4 GB disk) |
+| the other 11 | `needs-ram` — floors are 10 GB (qwen36), 16 GB (deepseek/glm), 24 GB+, i.e. dense part alone ≥3.5 GB |
+| this machine | 8.2 GB total, **~2.5 GB actually free** with the desktop up |
+
+Three blockers, each measured here:
+
+- **RAM**: the floors are above our total, not above our free.
+- **ISA**: `flags` = ssse3 sse4_1 sse4_2 avx, no AVX2/FMA. colibri's IDOT ladder is
+  `avx512-vnni → avx-vnni → avx2 → (NEON/VSX) → scalar`; prebuilt engines need AVX2, and the
+  grouped-int4 path (`IDOT_GS`) requires it outright (#2106, #2694).
+- **Disk**: `/dev/sda` is a WD3200BEVT 5400 rpm HDD at **59.7 MB/s** measured sequential read
+  (`dd` over the 3B GGUF). Their reference datapoints run on NVMe (Kimi K3: experts at 6.3 GB/s).
+
+Arithmetic for the one candidate, Qwen3-Coder-30B-A3B (≈15.8 GB of experts / 48 layers / 128
+experts ≈ 2.6 MB per expert, 8 routed × 48 layers ≈ **1 GB of expert bytes per token**):
+
+| cache hit rate | disk time/token | tok/s |
+|---|---|---|
+| 0% | 16.6 s | 0.06 |
+| 50% | 8.3 s | 0.12 |
+
+Measured neighbours: the same model on a **12 GB tablet with UFS flash** = 0.33 tok/s (#2283);
+GLM-5.2 on a Sandy Bridge W520 with 32 GB = 618 s per prompt (#2106); GLM-5.3-Flash on a 6-core,
+25 GB box with an ordinary disk = 20 s/token warm, 44 s cold. Also #2831 (open): colibri's CPU
+K-quant matvec is **2-5x behind ggml on the same bytes**, so even inside the RAM budget llama.cpp
+is the faster engine here.
+
+GLM-5.3 is in the catalog (`glm-5.3`, 419 GB disk, 16/24 GB RAM) — it changes nothing for us, the
+RAM floor is the same 16 GB as 5.2.
+
+### The cliff, measured here (2026-11-16)
+
+Do not argue about this from theory: a cgroup that forces the page cache out measures it directly.
+`systemd-run --user --scope -p MemoryMax=<X> -p MemorySwapMax=0 -- bash -c 'drop_caches; llama-bench -m <3B Q4, 1925 MiB> -p 0 -n 4 -t 4 --no-warmup'`
+(the model's pages must be first-touched *inside* the scope, or they are charged to whoever
+faulted them first and the limit does nothing — a naive run shows only 2.4× at 1.2 GB and is wrong):
+
+| MemoryMax | tok/s (tg4) | RAM saved | slowdown | reclaim events |
+|---|---|---|---|---|
+| 3 G (fits) | 2.12 cold / 4.2 warm | 0 | 1× | 0 |
+| 1500 M (78 % of the model) | **0.03** | 425 MiB | **70×** (141× vs warm) | 12 454 |
+| 1000 M (52 %) | **0.02** | 925 MiB | 105× (210× vs warm) | 32 521 |
+
+**A dense model has no graceful degradation.** Saving a quarter of the memory costs two orders of
+magnitude, because every weight is needed by every token — the working set is the whole file, and an
+LRU cache one byte smaller than the working set misses every time. This is why MoE pages well and
+dense does not: the only models worth streaming are ones whose *per-token working set* is a small
+fraction of their bytes, and among models that already fit in 8 GB there are none (the smallest MoE
+worth paging, qwen3-coder-30b, needs an 8 GB RAM floor). To make a small model smaller, quantize it
+(Q4 → IQ3/IQ2) or make it sparse at the *neuron* level (PowerInfer, ZipLM); paging a dense 1–3 B buys
+nothing and costs everything.
+
+What would change the verdict, and by how much: a MoE whose dense trunk is small, on a machine with
+≥16 GB **and** an SSD. Then 16 GB + 400 MB/s gives ~2.5 s/token on I/O and ~0.3-0.5 tok/s after the
+2-core AVX1 ceiling — a 3-minute answer, versus 25 s from the 1.5B. Paging buys *capability*, never
+speed. Re-open only above those floors, and measure `COLI_MODEL_MIRROR`/`DIRECT=1` rather than
+trusting the README table.
+
+## Keeping the verdict current
+
+The independence case rests on measurements that go stale, so the watch is scheduled, not remembered:
+`bin/pi-techwatch` (arXiv/HN/GitHub primary APIs, deduped, screened against the bar above) runs on the
+weekly `techwatch` agenda row; the monthly `techwatch-review` session turns each hit into
+test/watch/no in `~/.pi/agent/techwatch/verdicts.md`; `pi-preflight` prints `warn watch` when the last
+report is >10 days old or every source failed. Full protocol: `~/.pi/agent/techwatch/PROTOCOL.md`.
+First sweep's thesis (2026-11-16): the field's answer to big-model-small-machine is **fewer bits per
+weight** (ternary, BITCOS, multiplication-free CPU kernels), not streaming — which is the same
+conclusion our own 70x paging cliff forces.
 
 ## Why this is not a cost lever
 
@@ -116,19 +252,35 @@ Cheaper cloud levers that actually move the bill: the `:batch` tier of the same 
 ($0.2/M out, 2.5x cheaper), cache reads ($0.005/M), and a cheap model for bulk work at all
 (`bulker` already pins `~deepseek/deepseek-v4-flash-latest`).
 
-**Never** run a Pi session or subagent on a local model on this host: Pi's own harness prompt is
-6.9k tokens, which took **397 s to answer "ok"** (2 output tokens, measured 2026-11-15). An earlier
-3.2k-prompt attempt prefilled at 7.3 tok/s and had not finished after 7 minutes. `pi-delegate run`
-refuses `local/*` for this reason; use `local-gen` / `local-batch` (no harness).
+### The knobs a local session depends on (verified 2026-11-16)
+
+The router used to serve `-c 8192` while `models.json` declared 16,384, so every turn died with
+`400 request (12924 tokens) exceeds the available context size (8192)`. That is fixed, and the
+prompt is now ~1.5k tokens instead of 12.6k (the section *An interactive Pi session on a local
+model* above has the layer-by-layer measurement):
+
+| knob | now | why |
+|---|---|---|
+| `llama-router.service` | `-c 16384` (14.9k usable after 1024 output) | headroom for the 1.4k prompt plus a real conversation |
+| ...`-ctk q8_0 -ctv q8_0` | KV at 16k: 3B 0.87 GB instead of 1.7 GB | 3B RSS 2.53 GB, fits the 3.4 G cgroup |
+| ...`--models-max 1` | one child resident | two children cost 2.72 GB on a box with ~5 GB for the desktop |
+| `settings.json` `compaction.modelOverrides[local/*]` | `reserveTokens: 2048` | auto-compaction fires at `ctx - reserve`; the stock 16384 reserve on a 16384 window is **0**, i.e. compact every turn, each one another full prefill |
+| `models.json` `maxTokens` | 1024 for local models | bounds the worst case (1,024 tok at ~12 tok/s is ~85 s); an answer needing more is a cloud task |
+
+The guard is `bin/pi-local-ctx` (also run by `pi-preflight` as `ok local ctx`): declared vs served
+ctx, served ctx vs the measured local prompt in `local/harness-prompt.json`, the compaction reserve
+in force, and a 4,000-token ceiling on the prompt that fails when `local-slim` is not in effect. It
+sends no completion, so it cannot hang; `--measure` records a new prompt size and `--served N`
+exercises the failure path.
 
 ## What is set up
 
 - Router: `systemctl --user status llama-router` (unit at
   `~/.config/systemd/user/llama-router.service`), models in `~/models/*.gguf`,
-  `-c 8192 --parallel 1 -t 4` on `127.0.0.1:9931`. Concurrency is a *loss* here
+  `-c 16384 --parallel 1 -t 4` on `127.0.0.1:9931`. Concurrency is a *loss* here
   (0.56x for 4 slots — generation is bandwidth bound), hence one slot.
-- Pi sees them as `local/<file basename>` via `~/.pi/agent/models.json` (only for one-off
-  single-turn use; see the harness-prompt warning above).
+- Pi sees them as `local/<file basename>` via `~/.pi/agent/models.json`, and gets the ~1.5k-token
+  local profile from `extensions/local-slim.ts` (section above). `pi --no-mcp` drops the last 204.
 - `~/.pi/agent/bin/local-gen` — one-shot: stdin items → JSONL on stdout. Unloads other models first
   (two resident models swap) and retries twice on a restart.
 - `~/.pi/agent/bin/laya-label` — bulk typed labelling with Laya (`--labels`, `--instructions`,

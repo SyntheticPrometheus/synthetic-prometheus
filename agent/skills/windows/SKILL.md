@@ -26,6 +26,12 @@ is evidence only if the session knows what it contains.
    Floating a window does **not** remove it — `arrange` tiles floating windows too.
 5. **Verify before you capture.** `pi-tile status` classifies every managed window as `shown`,
    `MAXIMIZED`, `OFF-SCREEN` or `FLOATING`; `pi-shot --expect N` exits 4 when the shot lost windows.
+6. **"Make it a grid" is `pi-tile grid`, and the shape is verified, not hoped for.** `arrange` is a
+   balanced fractal tree: four panels happen to come out 2×2 (mid = n/2, alternating axis), three
+   come out half column + split, five come out ragged. `pi-tile grid` adds the check `tile` cannot
+   do — one window per cell, no overlaps, equal areas, union covers the work area — so a grid claim
+   is a measurement (`~/.local/state/pi-win/events.jsonl`, `"event": "grid"`). The owner's own key
+   for it is **Super+g** (xfconf `/commands/custom/<Super>g`, `--quiet --notify`).
    If a window is not in the log, it is not in the shot, and the reply must not imply it is.
 
 ## Lifecycle: open → tile → name → close
@@ -65,7 +71,8 @@ pi-term --reap                                         # gone/expired targets + 
 |---|---|
 | 1 window, need the content | `pergola frame-window` (or `pi-shot --window ID`) |
 | 2 windows | `pi-shot` — `arrange` gives two equal columns |
-| 3–4 windows | `pi-shot` — balanced tree: half column + half split, or a 2×2 grid |
+| 4 windows, wants a grid | `pi-tile grid` — tiles, then *proves* 2×2 (exit 3 + PROBLEM when not) |
+| 3–4 windows, general | `pi-shot` — balanced tree: half column + half split, or a 2×2 grid |
 | 5+ windows | `pi-shot`, then `pergola zoom-in` if only one group matters |
 | a window must not appear | `pi-tile --park ID` before the shot |
 | two pi sessions share the screen | tile immediately before capture; the other session re-arranges too |
@@ -79,6 +86,13 @@ pi-term --reap                                         # gone/expired targets + 
 - **The work area is not the display.** With a 27 px top panel the display is 1600×900 but
   `_NET_WORKAREA` is 1600×873 at y=27. Laying out against the display pushes the bottom 27 px of
   every window off-screen. `pi-tile` and `pergola 0.1.1+` use the work area.
+- **The work area is not the workspace either.** Nothing may test `desktop == 0`: work runs on
+  workspace index 2 here, and that literal made `pi-tile` report a tiled 2×2 as `0/4 parked` and
+  `pi-shot` log *0 windows in shot* with exit 0. `pi-tile` uses `current_desktop()` (`wmctrl -d`)
+  and `pi-shot` refuses a blind shot with exit 4 — if you see that refusal, believe it.
+- **`--park` is checked after the tile, not before.** pergola 0.4.0-dev re-homes a floating panel
+  on reconcile, so a park that did not stick now fails the run (`did not park …`, exit 3) instead
+  of printing a desktop number nobody reached (bug #114).
 - **Terminals snap their size** to `WM_NORMAL_HINTS` increments (10×23 here), so a tile is expected
   to be a few pixels short of its rect. Compare with the increment as tolerance, never exact.
 - **`arrange` includes floating windows and every managed window**, so "show only these three" is
@@ -87,6 +101,9 @@ pi-term --reap                                         # gone/expired targets + 
   end up at ¼ width); `arrange` with `desktop_share: 0` is the equal-area primitive.
 - **The overlay is drawn into the root window**, so pergola's structure borders appear in every
   capture. That is useful; `pergola overlay off` for a clean image.
+- **A tile that matches its own rect can still not be a grid.** Per-window verification says
+  "this window took its tile"; a half column, a squatter over two cells and a ragged 5-window
+  layout all pass that and still look wrong. Use `pi-tile grid` when the *shape* is the claim.
 - **Unmanaged ≠ absent.** A window pergola has not adopted lists as `unmanaged`: run `pi-tile` again
   (adoption happens on the next reconcile).
 

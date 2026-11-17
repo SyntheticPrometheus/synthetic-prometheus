@@ -46,7 +46,8 @@ ALLOW = [
     "selfimprove/DESIGN.md", "selfimprove/decisions.md", "selfimprove/suite", "selfimprove/arms",
     "selfimprove/audit.py", "selfimprove/gate.py", "selfimprove/maintain.py",
     "selfimprove/policy.json", "selfimprove/propose.py", "selfimprove/run.py",
-    "selfimprove/selftest.py", "selfimprove/fixtures.py", "selfimprove/review.md",
+    "selfimprove/selftest.py", "selfimprove/selftest_gate.py", "selfimprove/fixtures.py",
+    "selfimprove/review.md",
 ]
 DOTFILES = [
     ".bashrc", ".bash_profile",
@@ -56,7 +57,11 @@ DOTFILES = [
     ".config/systemd/user/pi-review.timer",
     ".config/autostart/pi-terminal.desktop",
 ]
-EXCLUDE_NAMES = {".git", "__pycache__", "runs", "auth.json", "state.json", ".venv"}
+# `.litwalk-cache` holds raw OpenAlex/arXiv batches (13 MB, single files up to 641 KB): cache
+# material, never snapshot material, and it is inside the allowlisted `research/`. The digests
+# beside it are what gets published.
+EXCLUDE_NAMES = {".git", "__pycache__", "runs", "auth.json", "state.json", ".venv",
+                 ".litwalk-cache"}
 TEXT_EXT = {".md", ".py", ".sh", ".ts", ".json", ".service", ".timer", ".desktop", ".toml",
             ".yaml", ".yml", ".txt", ""}
 

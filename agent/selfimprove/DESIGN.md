@@ -57,11 +57,34 @@ Rules taken from the literature, enforced in code:
 Still open (deliberately): branching/dev-subset evolution (2609.37834), a judge-based screening
 layer for expensive evaluation (2609.19526), and automated run-end memory capture.
 
+## The free half runs offline (v1.1, 2026-11-17)
+
+Owner, 2026-11-16: "more of the self-improvement work done in the background by local models
+without using cloud tokens, even if it's really slow." Measured what that can and cannot cover:
+
+| half of the loop | who runs it | measured |
+|---|---|---|
+| mine failures → draft one candidate | local GGUF, `propose.py --model local/...` | 1m43s, **$0**, produced a readable 1-line edit from a 3-failure run |
+| measure an arm against the suite | cloud (`pi --print`, default model) | a local run is possible (`run.py --model`) but the 1.5B scored **0/3** on accounting-sum, fix-check, stated-vs-true at 59-116 s/task — it cannot do the tasks, so a local pass rate is not a capability measurement |
+| gate (k≥3, δ≥2) | cloud | unchanged; a weak model's pass rate says nothing about the harness |
+
+So the split is **local = breadth (mining, drafting, screening), cloud = the one decision worth
+paying for**. `bin/pi-selfimprove-local` is the job: it checks the router is up and the model is
+loaded (a refusal, not 30 minutes of timeouts), runs the base arm on a cheap 6-task subset with
+`--model local/...`, drafts a candidate from the failures, writes `local-<stamp>.md`, and exits 0
+at cost $0. Agenda row `local-selfimprove` (1d, priority 3) runs it detached via `pi-done run`, so
+it needs no session and no clock of mine. Pins: `tests/pi-selfimprove-local.sh` (`pi-tool check`).
+
+Refusals are the point: the tool exits 1 with one line if the router is down, the model is not
+loaded, or `run.py` fails — an offline loop that silently does nothing would look like progress.
+
 ## Files
 
 - `suite/suite.json` — tasks: prompt, seeded files, verifier shell command (exit 0 = pass).
 - `arms/base.md`, `arms/*.md` — harness specs.
-- `run.py` — runs an arm over the suite; writes `runs/<stamp>-<arm>.json`; appends the ledger.
+- `run.py` — runs an arm over the suite; writes `runs/<stamp>-<arm>.json`; appends the ledger;
+  `--model local/<gguf>` for a $0 run (screening only, see above).
+- `bin/pi-selfimprove-local` (in `bin/`) — the offline pass: local measure + local draft, weekly/daily row.
 - `gate.py` — compares two run files under the k-aware rule; prints accept/hold/reject + reasons.
 - `ledger.jsonl` — append-only: arm hash, parent, suite hash, reps, per-task results, decision.
 - `maintain.py` — housekeeping: prune `runs/` beyond N, verify ledger chain, report drift.

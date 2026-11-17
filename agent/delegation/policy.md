@@ -36,23 +36,57 @@ never for role-play. Output tokens are the expensive ones; children return folds
 30-shard aggregate was solved solo in 5–7 s; an arm told to delegate it dispatched nothing and ran
 slower. Counting is not a reading problem.
 
-## 1c. Routing signals: the regex decides, Laya advises (measured)
+## 1c. Routing signals: Inkling decides the route, the regex is the fallback, Laya advises (measured)
 
 The three decisions — *when* (solo / delegate / window), *how* (which route), *who* (which agent) —
-are made by the cue classifier in `decide()` plus the ledger posterior. **Laya is not in the decider
-path**, because it lost the only fair comparison available (`delegation/route-eval.py`, 24
-hand-labeled tasks, 2026-11-15):
+are made by the cue classifier in `decide()` plus the ledger posterior. **Since 2026-11-17 the 7-way
+route is decided by `inkling-2-small`** (`pi-delegate route`), not by the regex: it won a 22-case
+held-out set 21/22 (95%) to the regex's 9/22 (41%), with 12 discordant pairs and inkling right on all
+twelve (sign test p≈2.4e-4). The rule was written before the run (`delegation/route-eval-heldout.json`
+`_rule`) and every clause was met. **Laya is still not in the decider path** — it lost the only fair
+comparison (25%, `delegation/route-eval.py`, 24 tasks, 2026-11-15).
 
-| signal | Laya zero-shot | regex | note |
-|---|---|---|---|
-| 7-way route | **25%** (6/24) | **62%** (15/24) | regex was 54% before the `window` cue; Laya's errors are confident (bulker→worker 0.62/0.59) |
-| `visible` (window?) | **88%** (21/24) | cue added | balanced 93%, both positives ≥0.83, 3 false positives at p≥0.5 |
-| `wide_reading` | 62% (15/24) | — | balanced 76%; false positives on 6–7-file edits |
-| `splittable` | 29% (7/24) | — | balanced 63%; predicts true for 17 of 18 negatives |
+| signal | Laya zero-shot | inkling-2-small | regex | note |
+|---|---|---|---|---|
+| 7-way route | 25% (6/24) | **79–83%** (19–20/24) | 62% (15/24) | pairs disagree on 7 cases, inkling ahead 6:1 (sign test p=0.125 — direction, not proof) |
+| `visible` (window?) | 88% (21/24) | **100%** (24/24) | cue added | both positives caught, no false positive |
+| `wide_reading` | 62% (15/24) | **88–96%** (21–23/24) | — | the use that pays today: raw 1M ctx, no subagent prompt |
+| `splittable` | 29% (7/24) | **79–88%** (19–21/24) | — | Laya's worst gate; the model's best argument |
+
+Held-out run, authored fresh on 2026-11-17 and never used for tuning (`route-eval-heldout.json` +
+`-result.json`): 7-way **inkling 21/22 (95%) vs regex 9/22 (41%)**, identical over two runs;
+`visible` 22/22, `wide_reading` balanced 0.80 (2 misses, both many-small-file bulk work),
+`splittable` balanced 0.87–0.89 with **4 false positives, all on many-small-file work** (h14 h15 h18
+h19: "1,200 tickets", "300 markdown files", "8 vendored libraries"). Latency p50 2.5 s / p90 8.0 s,
+$0.00018 per case. The regex's failure is structured, not noise: on the held-out set it missed **all
+four** `worker` cases (said solo), **all three** `parallel_workers` cases (said solo/scout), 2 of 3
+`bulker` and 2 of 3 `window` — the routes where a wrong decision costs the most.
 
 So: **the `visible` probe is the one usable Laya signal.** `pi-delegate route --laya` prints it and
 suggests `pi-term` at p≥0.7; the `window` regex cue remains the decider, and a disagreement is logged,
 not obeyed. The 7-way answer is printed for the record and never overrides the regex.
+
+**Inkling's place now (the route decider, with guards):**
+- `pi-delegate route "<task>"` calls `inkling-2-small` (2.5 s p50, ~$0.0002) and uses its answer as
+  `route:`; the regex and its buckets are printed under it, and a disagreement says so. Guards, all
+  exercised: any call error/timeout/neutralised answer (not one of the 7 routes) falls back to the
+  regex and the command still exits 0; `routes.jsonl` memoises by `task_sha`, so a repeat task is
+  0.2 s and offline (the first call is the only one that pays); `PI_ROUTE_INKLING=0` or
+  `--no-inkling` restores the regex decider for offline work and for the local rails.
+- **Not promoted:** the binary gates. `splittable` stays advisory because its held-out false positives
+  are all cheap-to-fan-out bulk work — obeying it would buy parallel workers for a `bulker` job.
+  `visible` is already fully caught by the regex cue plus Laya's advisory probe. `wide_reading` is
+  good enough (0.80 balanced) to *suggest* `scout` on big-text work, not to override the route.
+- **Wide reading / bulk typing**: where Laya was wrong by design (`splittable` 29%, `wide` 62%), one
+  Inkling call on the whole text beats Laya plus a subagent prompt — a 200k-token read costs ~$0.03 at
+  1M ctx. Reach for it before `laya-label` when the items are few and the cost of a wrong label is high.
+- It does **not** replace `local-batch`: that rail is offline and free, and independence from cloud
+  models is the point of it; Inkling is escalation residue, in the same rung as `bulker` and below it.
+- The bar it cleared is the bar a `fit()` must still clear: ≥5 labels/route from `routes.jsonl`
+  **and** a held-out win, with the rule written before the run. A future demotion needs the same
+  evidence in reverse — `pi-review` re-runs `route-eval.py` and `--cases route-eval-heldout.json`
+  and compares against `route-eval-heldout-result.json`; a held-out drop below the regex for two
+  runs reverts `PI_ROUTE_INKLING=0` and files a bug (`pi-agenda bug`).
 
 How Laya earns the route later: every `route --laya` appends to `delegation/routes.jsonl`;
 `pi-delegate route-report` reports labels per route and says when there are ≥5 per option (the
@@ -75,6 +109,14 @@ across families, and the machine has local targets that do not pay for tokens at
 | `bulker` | `~deepseek/deepseek-v4-flash-latest` | one rule, many rows; the rule is in the contract |
 | `tester` | `anthropic/claude-haiku-5.5` | break-it lens; read-only on product code, writes only scratch tests |
 | `redteam` | `~google/gemini-flash-latest` | different family again: abuse/threat-model lens, proof-of-concept only |
+| `debator` | `~google/gemini-flash-latest` (opposing side run on `anthropic/claude-haiku-5.5` via `--model`) | adjudicates a *design* choice: steel-mans both sides from numbers, names the falsifier and the decision rule. Measured 2026-11-16: 6 dispatches, $0.36, and two of three planned fixes were changed by the opposing side's arithmetic (a median-of-bimodal FAIL was an artefact; raising the brief budget was the wrong lever) |
+
+Roster discipline, measured 2026-11-16: `bulker` and `redteam` had **never been dispatched** in the
+week after they were written, and `pi-review` proposed deleting them. One real dispatch each —
+bulker classifying the window's 57 agenda rows, redteam threat-modelling the text channel — found
+a CRITICAL shell injection that four tester panels and six debators had not (their lenses were
+correctness and design, not abuse). An unused agent is a hypothesis, not a capability: dispatch it
+once on real work or delete it.
 
 **A model change is a policy change.** The ledger posterior is per model and context bucket
 (CADMAS-CTX 2604.17950); swapping a child's model silently invalidates the cell. `pi-delegate run`

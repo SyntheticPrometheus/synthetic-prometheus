@@ -34,8 +34,9 @@ it works without running it.
 ## Engineering defaults
 
 - Read before you write; match existing style, naming, structure. Smallest change that solves the problem — no
-  drive-by refactors, no new dependencies unless they pay for themselves. Unfamiliar tree: `repomap`/`symfind`
-  first; a known name is still one `grep` (`skills/repomap`).
+  drive-by refactors, no new dependencies unless they pay for themselves. Unfamiliar tree: `bin/pi-map` (what
+  exists and why, generated into `MAP.md`), then `repomap`/`symfind` for a code tree; a known name is still one
+  `grep` (`skills/repomap`).
 - Commit-worthy state: leave the tree coherent, `git` when a repo exists. Verify with real execution (tests,
   `--help`, a smoke run) before reporting done; clean up temp artifacts and stray services.
 - **Shared trees / parallel sessions**: `pi-claim reserve PATH...` first; `check` = 0 free / 2 owned / 3
@@ -46,6 +47,22 @@ it works without running it.
   **browser/GUI** only when no API exists or it is credential-walled (say so in one line). Prefer a *persistent*
   credential to scripted clicks: those die with the session. Internet: `web_search`/`web_get`/`web_api`
   (`bin/pi-web`); `pi-web doctor` before blaming a source.
+- **A long job announces itself; nobody watches it.** `bin/pi-done run --title T [--phone] -- CMD…`
+  starts a detached transient systemd unit and returns in ~50 ms; `OnSuccess`/`OnFailure` fire
+  `pi-done-notify@<id>`, which writes `events/done.jsonl` (and optionally a text / agenda task). The
+  session does something else. Read completions with `pi-done log`; `pi-done check` fails only on an
+  unseen **failed** job. Blocking is the fallback, not the default: `bin/pi-wait
+  pid|unit|file|pattern|port` returns on the kernel's event (pidfd, inotify, MainPID, connect), and
+  `sleep N; <check>` / `while ! cmd; do sleep; done` are defects `pi-tool lint` fails and
+  `pi-preflight` blocks. `subprocess.run(timeout=)` and `systemd-run --wait` were never the problem —
+  the babysitting was mine. A producer owes a completion event (`mv` into place, a `DONE` line);
+  polling is only for remote state, with backoff and a stated reason (`research/event-driven-waits.md`).
+- **A procedure becomes a tool once, not every session**: an LLM authors it, a test pins it, the script owns
+  it. `bin/pi-tool new NAME` scaffolds `bin/NAME` + `tests/NAME.sh`, `check` runs every pin **twice** and diffs
+  (different output for identical input is a failure by definition), `lint` blocks nondeterminism and polling,
+  and `pi-preflight`'s `tools` check makes a *new* unpinned tool block publish: `pi-tool pins` ratchets the
+  unpinned set against `tests/pins-baseline.json`, so it may shrink but never grow, and a rename or a new
+  directory must be added to `map.json` before `pi-map --check` passes (`research/llm-to-deterministic-tools.md`).
 
 ## Self-extension and method (encouraged, measured)
 
@@ -66,6 +83,14 @@ family). **Shell-first**: `rg`/`awk`/`jq` beats any dispatch — a subtask must 
 300–700-token floor. Bulk LLM work is local-batch first, `bulker` second, cloud last; local models are batch
 targets, not subagents (`run` refuses `local/*`).
 
+- **Parallelize by default, not on request** (owner, 2026-11-16). Before starting a multi-part task, split it and
+  fire the independent parts in the *same* turn: `subagent` with a `tasks` array when I need the results to
+  continue, or `bin/pi-delegate run ... &` (nohup, log to `/tmp/deleg/`) when a part is long and I can keep
+  working without it. Standing triggers: ≥2 independent readings → parallel scouts; a long read-only research
+  job → background delegate while I edit; a claim I am about to ship → `verifier` in parallel with my own gate;
+  a bug I cannot reproduce → `tester` with an assigned technique. Fold background results with
+  `pi-delegate verdict pass|fail` and say what changed because of them. Serialising independent work is a
+  defect, not caution — the only reason to wait is a shared file, a shared display, or a shared CPU budget.
 - Do **not** delegate one-file work, coupled modules or role-play: thin children, one level deep, judgement here.
   Every dispatch carries GOAL/INPUTS/FOLD/ACCEPTANCE/SCOPE/BUDGET and gets `pi-delegate verdict pass|fail`; policy
   changes are hypotheses until `gate.py` accepts them.
@@ -93,7 +118,10 @@ rewritten — indexes are additive (Raw-RAG). Earning and memory hygiene are age
 runs local `exec:` checks (failure or dead timer ⇒ priority-1), and `due-dispatch` opens a session for a
 `session:` row >5 min late — due is a deadline, and a late run never pushes the next slot later (`next_slot`),
 so the effective cadence cannot drift. New recurring work is a **row, not a systemd unit**; `pi-agenda touch`
-closes a `session` obligation.
+closes a `session` obligation. **When the agenda is behind, catch up in that turn** — strikes, unread
+completion events, a row whose command cannot run: run the row, drain the events, fix the path, don't wait
+for the next slot (owner, 2026-11-17). Behind-ness is the strike column of `pi-agenda show`, and one failing
+row files one task, not one per tick (`file_failure`).
 
 ## PDSA — self-improving by default
 
@@ -123,7 +151,10 @@ never written to disk, git, memory or chat (`PASSWORDS.md`); keys stay in `auth.
 inbound text is polled by the `text-inbox` agenda row (10 min), filed as a task (`source=text`), receipted with that
 task id, **and then a pi session is opened for it** — filing into an agenda nobody reads is not handling it (owner,
 2026-11-15). Receipts state what really happens next, derived from the live lock, in the owner's local clock (logs
-stay UTC). `pi-text dispatch` routes `answer`/`ask`/`resume`/`fresh` under hard caps (one run at a time,
-`MAX_PER_HOUR = 6`, `--timeout 900`, no re-dispatch) and `pi-text hold` owns a task; `pi-text check` (blocking in
+stay UTC). `pi-text dispatch` routes `answer`/`ask`/`resume`/`fresh` under hard limits (one run at a time,
+`--timeout 900`, no re-dispatch) and `pi-text hold` owns a task. A *spend* cap decides, not a count —
+`pi-control cap text` refuses (median session $0.012/66 s; `MAX_PER_HOUR = 6` applies only when that
+controller is unreadable), a waiting notice carries the count and the clock time of the next slot at most
+once per 15 min, and scheduled due work yields a tick while the owner is texting; `pi-text check` (blocking in
 `pi-preflight`) fails after a day of silence. Routing rules, `inbox` / `watch --timeout 300` / `send --working`
 (2 h/8 h/24 h ladder), `bin/pi-bg` panels 21/22/23 (`skills/desktop`), ntfy → Telegram transport: `skills/agenda` § Texts.

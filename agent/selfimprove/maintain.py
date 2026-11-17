@@ -11,6 +11,7 @@ comparisons), every referenced arm file still exists, and the ledger parses line
 import argparse
 import json
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -54,6 +55,15 @@ def check():
     accepted = [p for p in (HERE / "arms").glob("*.md")]
     if accepted and not archive.exists():
         problems.append("arms/archive/ does not exist; accepted arms have no lineage home")
+    # The gate is the thing that decides whether the harness may change, so its own rules are a
+    # pinned test, not a promise (external review 2026-11-17: an unequal-reps pair read as +3).
+    st = subprocess.run([sys.executable, str(HERE / "selftest_gate.py")],
+                        capture_output=True, text=True)
+    tail = (st.stdout or st.stderr).strip().splitlines()
+    if st.returncode != 0:
+        problems.append(f"gate selftest failed: {tail[-1] if tail else 'no output'}")
+    else:
+        print(f"gate selftest: {tail[-1] if tail else 'ok'}")
     print(f"suite {cur[:12]}  runs {len(rs)}  arms {len(accepted)}")
     for p in problems:
         print("DRIFT:", p)

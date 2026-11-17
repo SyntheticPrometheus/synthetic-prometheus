@@ -77,7 +77,7 @@ def mem_available_mb():
     return 10_000
 
 
-def run_task(task, workdir, arm_text, timeout, subagent=False, usage_mode=False):
+def run_task(task, workdir, arm_text, timeout, subagent=False, usage_mode=False, model=None):
     workdir.mkdir(parents=True, exist_ok=True)
     task = fixtures.task(task)          # expand large generated inputs, judge files, verifier
     for name, content in task.get("files", {}).items():
@@ -90,6 +90,8 @@ def run_task(task, workdir, arm_text, timeout, subagent=False, usage_mode=False)
         # delegation arm: the only enabled extension is the subagent tool + the agents/ roster
         tools += ",subagent"
         cmd += ["-e", str(SUBAGENT_EXT)]
+    if model:                      # --model local/<gguf> runs the suite offline ($0)
+        cmd += ["--model", model]
     cmd += ["--tools", tools, "--mode", "json" if usage_mode else "text",
             "--append-system-prompt", arm_text, task["prompt"]]
     # memory guard: a global OOM on this 7.8 GB box killed the X session once (2026-11-14).
@@ -142,6 +144,9 @@ def main():
     ap.add_argument("--usage", action="store_true", default=True,
                     help="capture token/cost usage via --mode json (default on)")
     ap.add_argument("--no-usage", dest="usage", action="store_false")
+    ap.add_argument("--model", default="",
+                    help="model pattern passed to pi (e.g. local/qwen2.5-1.5b-instruct-q4_k_m) "
+                         "— a loopback model makes a run cost $0; default = pi's own default")
     ap.add_argument("--dry", action="store_true")
     a = ap.parse_args()
 
@@ -163,7 +168,7 @@ def main():
     for rep in range(a.reps):
         for t in tasks:
             r = run_task(t, outdir / f"{t['id']}-r{rep+1}", arm_text, a.timeout,
-                         subagent=a.subagent, usage_mode=a.usage)
+                         subagent=a.subagent, usage_mode=a.usage, model=a.model or None)
             r["rep"] = rep + 1
             print(f"{arm_name:16s} {t['id']:16s} r{rep+1} {'PASS' if r['pass'] else 'FAIL'} "
                   f"{r['wall_s']:6.1f}s", flush=True)
@@ -174,6 +179,7 @@ def main():
         "stamp": stamp,
         "policy_sha": sha(HERE / "policy.json") if (HERE / "policy.json").exists() else None,
         "tag": a.tag,
+        "model": a.model or None,
         "arm": arm_name,
         "arm_path": str(arm),
         "arm_sha": sha(arm),
@@ -195,7 +201,7 @@ def main():
     (outdir / "result.json").write_text(json.dumps(record, indent=1))
     with LEDGER.open("a") as fh:
         fh.write(json.dumps({k: record[k] for k in
-                             ("stamp", "tag", "arm", "arm_sha", "parent", "harness_rev",
+                             ("stamp", "tag", "model", "arm", "arm_sha", "parent", "harness_rev",
                               "suite_sha", "policy_sha", "reps", "n", "passed", "pass_rate",
                               "wall_s", "tokens_in", "tokens_out", "cost_usd")}) + "\n")
     print(f"\n{arm_name}: {passed}/{len(results)} pass, {record['wall_s']}s, "

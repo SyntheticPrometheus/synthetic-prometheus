@@ -49,9 +49,13 @@ record a `mem` decision), 2 hold (rerun with more reps, or the effect is too sma
 3. context/compaction rules (what goes to disk vs context);
 4. skills / templates as reusable mechanisms — PluginRSI 2609.32423.
 
-## Known state (2026-11-14)
+## Known state (2026-11-16)
 
-Suite is 3 tasks and saturated: base 9/9, `cand-verify` 9/9 at +27% wall → HOLD. The next honest
-hypothesis is difficulty, not protocol: add tasks where the base arm actually fails (long-context
-retrieval, multi-step file surgery, a task that punishes unverified claims) before accepting any
-harness change.
+Suite is 15 tasks. The hard class was added 2026-11-14 (semantic-shards, chain-40, join-60 — long
+context, 40-module chain, 60-row join) and base passed all 9 at k=3, so difficulty did not buy
+headroom. 12 tasks remain uncovered, which is why `bin/pi-review` no longer prints "saturated" from
+a subset run: it reports coverage (`9/9 on 3/15`). `cand-verify` 9/9 at +27% wall → HOLD.
+
+Next in order of proof, not preference: (1) cover the remaining tasks at k≥3 — until then the
+ceiling is unproven; (2) if still 1.00, only a cost arm can move the gate (`ACCEPT_COST`, ≥10%
+fewer output tokens); (3) a new task class that base *fails* is an owner decision, not a loop edit.

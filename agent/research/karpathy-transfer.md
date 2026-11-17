@@ -1,0 +1,67 @@
+# What transfers from Karpathy's repos to this host (measured 2026-03-27)
+
+Asked by the owner 2026-03-27: "look into karpathy's repos and his explanations of auto research …
+see if there is anything useful there we can use".
+
+Repo inventory read from `api.github.com/users/karpathy/repos` (stars as of the fetch):
+autoresearch 100.1k, nanoGPT 64.8k, nanochat 60.6k, LLM101n 37.5k, llm.c 31.5k,
+llm-council 26.6k, nn-zero-to-hero 25.8k, minGPT 25.0k, llama2.c 20.3k, micrograd 19.0k,
+minbpe 11.1k, arxiv-sanity-preserver 5.8k, reader3 3.9k, rendergit 2.5k, jobs 2.1k.
+`autoresearch` (Mar 2026, MIT, last push 2026-03-26) is the "auto research" one; README read in full.
+
+## What autoresearch actually is
+
+Not a framework — five decisions:
+
+1. **One file is mutable** (`train.py`); `prepare.py` is frozen. The diff is always reviewable.
+2. **A fixed wall-clock budget per experiment** (5 min, startup excluded), identical for every
+   variant, so a 4-layer and a 12-layer run are comparable on the same clock.
+3. **One scalar, vocabulary-independent metric**: `val_bpb` (validation bits per byte), lower better.
+   The vocab-independence is the trick — it makes architectural changes comparable.
+4. **Keep/discard hill-climb, logged**: modify → train → check → keep or revert → repeat (~12/h).
+5. **The human edits `program.md`, the agent edits code.** The "research org" is prose you iterate on
+   with the same metric; the agent never gets to edit its own score.
+   Parallel extension (SkyPilot, 16 GPUs): *factorial waves* instead of greedy steps, and
+   screen-cheap/validate-expensive when hardware is heterogeneous — 9× faster to the same val_bpb.
+
+## Fit check against this host
+
+Already present (no work needed): pinned suite + k≥3 reps + gate (`selfimprove/gate.py`), archive with
+parent pointers, frozen judge (`policy.json`, audit.py), cost as a recorded metric, one mechanism per
+arm. That is a *stricter* evaluation rig than autoresearch has.
+
+Not viable here, with the reason: `nanochat` ($100 of H100 — no GPU); `llm.c` CPU path (needs
+AVX2/FMA, this box is AVX1+SSSE3, 2 cores); `llm-council` (5+ cloud calls per question — money, and a
+local council runs at ~7 tok/s); `minbpe` (we consume GGUFs, we never train the tokenizer);
+`rendergit` / `reader3` (repomap + pi-web already cover the read path).
+
+The gap autocresearch names that we do have: `selfimprove`'s metric saturates (15/15 at base 1.0), so
+the gate can only accept cost wins at a 10 % token threshold. Karpathy's answer to a saturated
+scoreboard is not a harder test — it is **fix the clock and score work per clock**.
+
+## The one thing worth porting: val_bpb for the local stack
+
+The independence track (`techwatch`) ranks models by tok/s and RAM, i.e. cost with no quality term.
+`val_bpb` gives the missing half, is vocabulary-independent, and is computed by a binary this host
+already ships (`/usr/bin/llama-perplexity`). Recipe, fixed for comparability: same corpus file,
+`-c 256 --chunks 1 -t 2`, bpb = log2(PPL) × (file_tokens / file_bytes).
+
+Measured (held-out 6000 B of this repo's own AGENTS.md + skills, sha256 1d974fa4…):
+
+| model | PPL | bits/token | **bits/byte** | eval tok/s |
+|---|---|---|---|---|
+| Qwen3-0.6B-Q8_0 | 94.62 | 6.56 | **1.681** | 31.1 |
+| qwen2.5-1.5b-instruct-Q4_K_M | 59.78 | 5.90 | **1.511** | 21.0 |
+
+So the 1.5B-Q4 is 10 % better per byte for 32 % less throughput — a trade the current ranking
+(tok/s only) cannot express. That is the useful part: it turns "which local model" from a speed race
+into a quality-per-second decision, computable offline, free, in ~25 s per model.
+
+## Next actions (owned in the agenda)
+
+- `bin/local-bpb` — wrap the recipe (one JSON line: ppl, bpb, tok/s, sha of corpus), with a pin in
+  `tests/` and a `map.json` entry, so the number is reproducible and ratified by `pi-tool check`.
+- `selfimprove`: report `pass@240s` (tasks verified inside the run's existing `max_wall_per_task_s`)
+  alongside `pass_rate`, so the ceiling is a curve, not 15/15.
+- `techwatch`: rank candidates by bpb/tok-s instead of tok/s alone (learned taste à la
+  `arxiv-sanity-lite` is a second-order idea, not worth a loop yet).

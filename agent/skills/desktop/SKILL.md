@@ -44,6 +44,54 @@ xset q | grep -E 'timeout|Standby|Suspend|Off:|DPMS is'
 Battery settings are left alone: DPMS still blanks on battery, which is the point. To apply the
 xorg file without a reboot, `xset s off` is enough for the current session.
 
+## Lid closed on AC: keep running (owner request, 2026-11-16)
+
+Closing the lid must not suspend, hibernate or blank while plugged in. Blanking on AC was already
+zero (above); the missing layer was the lid switch. **systemd-logind owns it**, and
+xfce4-power-manager had grabbed it with a `handle-lid-switch` block inhibitor.
+
+```bash
+export DISPLAY=:0
+# 1. logind decides: external power = ignore, battery = suspend
+sudo tee /etc/systemd/logind.conf.d/50-lid-external-power.conf >/dev/null <<'EOF'
+[Login]
+HandleLidSwitchExternalPower=ignore
+HandleLidSwitchDocked=ignore
+HandleLidSwitch=suspend
+LidSwitchIgnoreInhibited=yes
+EOF
+systemd-analyze cat-config systemd/logind.conf | grep -E 'HandleLid|LidSwitchIgnore'
+# 2. xfpm hands the lid to logind (it then drops its inhibitor)
+xfconf-query -c xfce4-power-manager -p /xfce4-power-manager/logind-handle-lid-switch -n -t bool -s true
+sudo systemctl reload systemd-logind        # SIGHUP; sessions survive
+systemd-inhibit --list | grep handle-lid-switch   # expect NO xfpm row
+# 3. belt-and-braces if xfpm ever takes it back: AC = nothing, battery = suspend
+xfconf-query -c xfce4-power-manager -p /xfce4-power-manager/lid-action-on-ac -n -t uint -s 4
+xfconf-query -c xfce4-power-manager -p /xfce4-power-manager/lid-action-on-battery -n -t uint -s 1
+```
+
+**The enum is not 0-based by intuition.** `XfpmLidTriggerAction` (upstream
+`common/xfpm-enum-glib.h`, 4.20 branch): `0` DPMS/switch-off-display, `1` suspend, `2` hibernate,
+`3` lock screen, **`4` nothing**, `5` hybrid sleep, `6` shutdown. Writing `0` for "nothing"
+turns the display off on lid close — read the enum, do not guess.
+
+**Test it without touching the lid.** `lid-probe.py` (in this directory) creates a uinput device
+with `EV_SW`/`SW_LID`, closes it, holds 12 s and reopens. logind logs `Lid closed.` / `Lid opened.`
+and the `LidClosed` property on `org.freedesktop.login1.Manager` flips, so the event is genuinely
+seen — a probe that does not flip that property proves nothing. Arm an RTC alarm first, so a wrong
+config self-recovers instead of leaving the machine asleep:
+
+```bash
+sudo sh -c 'echo 0 > /sys/class/rtc/rtc0/wakealarm; echo +180 > /sys/class/rtc/rtc0/wakealarm'
+timeout 60 sudo python3 ~/.pi/agent/skills/desktop/lid-probe.py
+cat /proc/sys/kernel/random/boot_id; journalctl --since -2min | grep -i lid   # same boot id + 'Lid closed.' = pass
+sudo sh -c 'echo 0 > /sys/class/rtc/rtc0/wakealarm'
+```
+
+Measured 2026-11-16 on AC: `Lid closed.` at 13:25:15, `Lid opened.` at 13:25:27, uptime and boot
+id unchanged, session `State=active`, `xset q` timeouts still 0. On battery the default suspend
+is untouched, which is the point.
+
 ## Panel indicators (battery, volume)
 
 The panel stores plugin ids in `/panels/panel-1/plugin-ids`; each plugin is a string under
@@ -72,6 +120,13 @@ pgrep -a xfce4-panel || nohup xfce4-panel --disable-wm-check >/tmp/panel.log 2>&
 ```
 
 **Gotchas (measured):**
+- **Writing the `plugin-ids` array needs one `-t int` per value.** xfconf 4.20 rejects a single
+  `-t int -s 1 -s 2 -s 3` with *"There are 3 new values, but only 1 types could be determined"*;
+  the form that works is `-t int -s 1 -t int -s 2 …`. (The older one-`-t` form in this file never
+  ran.)
+- **Set a plugin property and restart the panel too quickly and the restart clobbers it**: `-r`
+  makes the panel save its in-memory config on the way out, so a write it had not yet observed is
+  overwritten with the old value. Write, confirm with `xfconf-query -p …`, *then* restart.
 - `xfce4-panel -r` can leave **no panel running**. Always `pgrep -a xfce4-panel` after a restart;
   if it is gone, start it with `nohup xfce4-panel --disable-wm-check &`.
 - The battery plugin's `~/.config/xfce4/panel/battery-19.rc` is rewritten from the running panel's
@@ -79,6 +134,16 @@ pgrep -a xfce4-panel || nohup xfce4-panel --disable-wm-check >/tmp/panel.log 2>&
   stopped (`xfce4-panel -q`, edit, start), then verify with a screenshot.
 - Screenshots: `ffmpeg -f x11grab -video_size 1600x60 -i :0.0+0,0 -frames:v 1 /tmp/panel.png`
   (no `scrot`/`import` on this host).
+- **A new keyboard shortcut is not live until `xfsettingsd --replace`.** Custom commands live in
+  `xfce4-keyboard-shortcuts` at `/commands/custom/<Super>g` (write with `-n -t string -s "cmd"`);
+  `xfconf-query -lv` shows it immediately and the key still does nothing, because xfsettingsd
+  bound the old set at start. Measured 2026-11-16: the Super+g grid shortcut fired only after the
+  replace, then produced the expected `grid` event on the first press. Verify a shortcut by pressing
+  it over a throwaway window (`xfce4-terminal --command "sh -c 'cat >/dev/null'"`), never over a
+  chat terminal where a stray keystroke lands as prompt text.
+- **A stale notification pile is a desktop state, not a bug to ignore.** `wmctrl -l | awk
+  '/xfce4-notifyd/{print $1}'` then `wmctrl -ic` each id clears the popups (`CloseNotification`
+  needs ids nobody published; killing xfce4-notifyd replays nothing but leaves the popups).
 
 ## Autologin + a terminal that resumes the pi session
 
@@ -145,20 +210,35 @@ Two measured traps:
   `--display :70` test servers) means a stale WM displaced the real one. One `xfwm4 --replace`
   fixes it, and `pi-preflight` check `windows` now fails on that state.
 
-## What the machine is doing: three indicators, two windows
+## What the machine is doing: four indicators, three windows
 
-`bin/pi-bg` reports from live sources only, and the panel shows three of its views as genmon
-plugins on `panel-1` (`period = 5`, panel order `1 2 3 4 5 6 20 19 21 22 23 7 8 9 10`):
+`bin/pi-bg` reports from live sources only, and the panel shows four of its views as genmon
+plugins on `panel-1` (`period = 5`, panel order `1 2 3 4 5 6 20 24 19 21 22 23 7 8 9 10` —
+volume, mem, battery, then bg/fg/due):
 
 | plugin | command | shows | click |
 |---|---|---|---|
-| 21 | `pi-bg --panel bg` | every background thing: text-dispatch sessions, other live `pi` sessions, `pi-term` targets, work units (`pi-*`, `local-*`, `llama-*`, `pergola`), and known job processes (`local-batch`, `cargo`, `llama-server`…) | runtime window |
+| 24 | `pi-bg --panel mem` | host RAM in use (`total - MemAvailable`, amber ≥75 %, red ≥90 %), tooltip with the top 6 processes by RSS; read straight from `/proc`, so it costs 0.13 s and not the 0.85 s background snapshot | **Memory** window (`pi-mem-view`) |
+| 21 | `pi-bg --panel bg` | every background thing: text-dispatch sessions, other live `pi` sessions, `pi-term` targets, work units (`pi-*`, `local-*`, `llama-*`, `pergola`), and known job processes (`local-batch`, `cargo`, `llama-server`…) | **Runtime** window (`pi-bg --watch`) |
 | 22 | `pi-bg --panel fg` | the active window and every process that is the *foreground* process group of a desktop tty (`pgrp == tpgid` in `/proc/<pid>/stat`, shells excluded) | — |
-| 23 | `pi-bg --panel due` | overdue agenda obligations + overdue tasks; warning icon when non-zero | `bin/pi-agenda-view` |
+| 23 | `pi-bg --panel due` | overdue agenda obligations + overdue tasks; warning icon when non-zero | **Agenda** window (`pi-agenda-view`) |
 
-Both windows are `pi-term --keep`-free: they page (`less`) and the window closes when you quit.
-`.desktop` entries in `~/.local/share/applications/`: **Agenda — due and overdue**
-(`pi-agenda-view`) and **Runtime — what is running** (`pi-bg --watch`).
+All three windows are `pi-term --keep`-free: they page (`less`) and the window closes when you
+quit. `.desktop` entries in `~/.local/share/applications/`: **Agenda — due and overdue**,
+**Runtime — what is running**, **Memory — what is holding the RAM**.
+
+**The click tag is `<txtclick>`, and the click must open its own window.** genmon 4.3.0 executes
+`<txtclick>`/`<iconclick>` and silently ignores a bare `<click>`, and it runs the command with no
+terminal. Both were wrong here: every indicator advertised a click that had never fired, and the
+targets were bare views that would have printed into nowhere anyway. So each click is
+`pi-term --name <slug> --exec <view>`: it fires and it has somewhere to draw.
+
+**Memory numbers that matter:** `MemFree` counts page cache and reads a 44 %-used machine as full;
+`MemAvailable` is what new work can actually have, so that is what the indicator shows. `--mem`
+lists `VmRSS` from `/proc/<pid>/statm` (identical to `VmRSS` in `status`, 27 ms vs 92 ms for 230
+processes — the panel builds this tooltip every 5 s). Verify a change with `pi-bg --panel mem`, a
+hover screenshot for the tooltip, and a click test: `xdotool mousemove <x> 14 click 1`, then
+`pi-term --list` must show the window as `open`.
 
 Two rules the code enforces, both learned by getting them wrong: a process's display is read from
 `--display` or `/proc/<pid>/environ` (test sandboxes on `:78/:79` are not desktop work), and a

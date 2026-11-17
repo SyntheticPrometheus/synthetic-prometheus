@@ -659,55 +659,104 @@ def agenda_line() -> str:
     return "; ".join(parts) + tail
 
 
+# A pinned row is the one thing a session must not miss, so pinned comes first — but not without a
+# ceiling, or the pinned set would grow until the brief is only pins. 0.80 measured 2026-11-16: the
+# 7 live pinned rows cost 565 tokens, so at the 1100 default the floor is 880 and every pin fits
+# while KEY/RECENT/PDSA still share 220 (at 0.62 the floor cut one pin at 1100 and three at 900).
+CORE_SHARE = 0.80
+
+
 def cmd_brief(a, c):
     """session-start working set: pinned core + top lessons/decisions + recent, in slices.
 
-    Each section gets a fixed share of the budget instead of taking whatever is left, so a growing
-    store degrades the *bottom* of every section rather than silently dropping RECENT entirely.
+    Allocator, measured 2026-11-16: fixed shares (CORE 30%, KEY 34%, RECENT 22%, PDSA 14%) cut the
+    pinned set at 3 of 7 rows and KEY at 3 of 10 while RECENT (8/8, the cheapest and most
+    disposable section) lost nothing — the cap was never the constraint, the split was. Pinned rows
+    now take their real cost first (up to CORE_SHARE of the budget), and the rest split what is left
+    in proportion. Every section states how many rows it dropped, so a truncated brief is visible
+    instead of silent; a section whose rows were all dropped still prints its header, and if the
+    pinned set itself does not fit, the optional sections are withheld rather than shown while a
+    pinned rule (the thing a session must not miss) is missing.
     """
     budget = a.budget
-    budget -= 70                      # reserve for the AGENDA + STATS footer
-    slices = [("CORE", 0.30), ("KEY", 0.34), ("RECENT", 0.22), ("PDSA", 0.14)]
+    if budget < 120:
+        # below this no pinned rule fits, so printing headers would be a lie about what a session
+        # knows: say the one true thing and stop (tester finding: --budget 0 printed ~54/0)
+        print(f"brief: --budget {budget} is too small for one pinned rule (the 7 live pins cost "
+              f"~565 tok); use --budget 1100")
+        return 0
+    reserve = min(70, max(0, budget // 8))     # footer room, scaled: never make `used` exceed it
+    budget -= reserve
+    rest = {"KEY": 0.63, "RECENT": 0.25, "PDSA": 0.12}
     blocks, used = [], 0
 
-    def section(title, rows, fmt, frac):
+    def section(title, rows, fmt, cap):
+        """Print a section with first-fit rows under `cap`; return (spent, dropped).
+
+        The header prints even when nothing fits: a section with 0 lines and no header hid both the
+        section and its drops (tester finding, 2026-11-16).
+        """
         nonlocal used
-        cap = int(budget * frac)
-        spent, lines = 0, []
+        spent, lines, dropped = 0, [], 0
         for r in rows:
             txt = fmt(r)
             cost = est_tokens(txt)
             if spent + cost > cap:
+                dropped += 1
                 continue
             lines.append(txt)
             spent += cost
-        if lines:
-            head = f"## {title}"
+        if rows:
+            head = f"## {title}" + (f" {len(lines)}/{len(rows)}" if dropped else "")
             blocks.append(head)
             used += est_tokens(head)
             blocks.extend(lines)
             used += spent
+        return spent, dropped
 
-    core = c.execute("SELECT * FROM memories WHERE pinned=1 AND archived=0 ORDER BY importance DESC LIMIT 8").fetchall()
-    section("CORE (pinned)", core,
-            lambda r: f"[#{r['id']}] {r['title'][:150]}: {re.sub(r'\s+', ' ', r['body'])[:260]}", slices[0][1])
+    # a superseded or archived pin is not a rule any more: #19 was superseded and still printed in
+    # CORE because this query, unlike the KEY one, never filtered it (tester finding, 2026-11-16)
+    core = c.execute("""SELECT * FROM memories WHERE pinned=1 AND archived=0
+        AND valid_to IS NULL AND superseded_by IS NULL AND kind != 'digest'
+        ORDER BY importance DESC LIMIT 8""").fetchall()
+    spent_core, dropped_core = section(
+        "CORE (pinned)", core,
+        lambda r: f"[#{r['id']}] {r['title'][:150]}: {re.sub(r'\\s+', ' ', r['body'])[:260]}",
+        int(budget * CORE_SHARE))
+    left = max(budget - spent_core, 0)
+    if dropped_core:
+        blocks.append(f"(budget too small for {dropped_core} pinned rule(s); optional sections "
+                      f"withheld — raise --budget)")
+        used += 20
+        left = 0
+    # digests are an index over raw rows, not a memory to act on: they belong in `mem search`,
+    # never in the 8-row RECENT window (tester hypothesis, confirmed by the query having no filter)
     imp = c.execute("""SELECT * FROM memories WHERE archived=0 AND pinned=0 AND kind IN ('lesson','decision','playbook','pref')
         AND valid_to IS NULL AND superseded_by IS NULL
         ORDER BY importance DESC, ts DESC LIMIT 10""").fetchall()
-    section("KEY LESSONS / PREFERENCES", imp,
-            lambda r: f"[#{r['id']}] ({r['kind']}) {r['title'][:120]}: {re.sub(r'\s+', ' ', r['body'])[:200]}", slices[1][1])
-    rec = c.execute("SELECT * FROM memories WHERE archived=0 ORDER BY ts DESC LIMIT 8").fetchall()
-    section("RECENT", rec, lambda r: f"[#{r['id']}] {r['title'][:110]} ({age_days(r['ts']):.0f}d)", slices[2][1])
-    pd = c.execute("SELECT cycle,plan FROM pdsa WHERE status='open' ORDER BY cycle DESC LIMIT 2").fetchall()
-    section("OPEN PDSA", pd, lambda r: f"cycle {r['cycle']}: {re.sub(r'\s+', ' ', r['plan'] or '')[:180]}", slices[3][1])
+    if left:
+        section("KEY LESSONS / PREFERENCES", imp,
+                lambda r: f"[#{r['id']}] ({r['kind']}) {r['title'][:120]}: {re.sub(r'\\s+', ' ', r['body'])[:200]}",
+                int(left * rest["KEY"]))
+        rec = c.execute("""SELECT * FROM memories WHERE archived=0 AND kind != 'digest'
+            ORDER BY ts DESC LIMIT 8""").fetchall()
+        section("RECENT", rec, lambda r: f"[#{r['id']}] {r['title'][:110]} ({age_days(r['ts']):.0f}d)",
+                int(left * rest["RECENT"]))
+        pd = c.execute("SELECT cycle,plan FROM pdsa WHERE status='open' ORDER BY cycle DESC LIMIT 2").fetchall()
+        section("OPEN PDSA", pd,
+                lambda r: f"cycle {r['cycle']}: {re.sub(r'\\s+', ' ', r['plan'] or '')[:180]}",
+                int(left * rest["PDSA"]))
     line = agenda_line()
-    if line:
+    if line and used + est_tokens(line) + 8 <= budget + reserve:
         blocks.append("## AGENDA")
         blocks.append(line)
         used += est_tokens(line) + 3
     st = c.execute("SELECT COUNT(*) n, SUM(archived) ar FROM memories").fetchone()
     print("\n".join(blocks))
-    print(f"## STATS {st['n']} memories ({st['ar'] or 0} archived), budget ~{used + 40}/{a.budget} tok")
+    # measured, not a fudge: `used` is the estimated tokens actually printed (the old footer added a
+    # hard-coded 40, so --budget 0 reported "~54/0" — tester finding, 2026-11-16)
+    print(f"## STATS {st['n']} memories ({st['ar'] or 0} archived), "
+          f"budget ~{used}/{a.budget} tok")
     return 0
 
 
@@ -1054,7 +1103,9 @@ def main():
     s.add_argument("--no-dense", dest="dense", action="store_false")
 
     s = add_cmd("brief", cmd_brief, help="session-start working set")
-    s.add_argument("--budget", type=int, default=900)
+    # 1100: measured pinned+KEY+RECENT content is ~1105 tokens (2026-11-16). Growth beyond this is
+    # absorbed by the allocator (pinned first, then proportional) and printed as drops, not silent.
+    s.add_argument("--budget", type=int, default=1100)
 
     s = add_cmd("get", cmd_get); s.add_argument("id")
     s = add_cmd("pin", cmd_pin); s.add_argument("id", type=int); s.add_argument("--off", action="store_true")

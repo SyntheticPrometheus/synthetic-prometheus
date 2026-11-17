@@ -33,6 +33,7 @@ import shlex
 import subprocess
 import sys
 import time
+import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -583,12 +584,111 @@ def laya_ask(task: str) -> dict | None:
         return None
 
 
+# Inkling is THE route decider since 2026-11-17 (`pi-delegate route`; policy §1c).
+# Evidence: 24 tuning cases inkling-2-small 19-20/24 (79-83%) vs regex 15/24 (62%), then a 22-case
+# HELD-OUT set authored fresh (delegation/route-eval-heldout.json): 21/22 (95%) vs regex 9/22 (41%),
+# discordant pairs 12:0 for inkling (sign test p≈2.4e-4), stable over two runs. That met every part of
+# the rule written before the run: ≥regex+10pp and ≥75% (yes), splittable/wide balanced ≥0.80
+# (0.89/0.80), p50 ≤6 s and ≤$0.001/call (2.5 s, $0.00018).
+# Guards, because a cloud call is now on a decision: regex is the fallback on any error/timeout, a
+# neutralised answer (not one of the 7 routes) falls back too, routes.jsonl memoises by task_sha so a
+# repeat task is free and offline, and PI_ROUTE_INKLING=0 / --no-inkling restores the regex decider.
+# The binary gates stay advisory: splittable fired 4/22 false positives, all on many-small-file work.
+INKLING_MODEL = "thinkingmachines/inkling-2-small"
+ROUTES7 = ("solo", "scout", "worker", "verifier", "bulker", "parallel_workers", "window")
+
+
+def inkling_prompt() -> str:
+    """Built from LAYA_QUESTIONS so this probe and delegation/route-eval.py cannot drift."""
+    rq, vq, wq = (LAYA_QUESTIONS[k] for k in ("route", "visible", "wide_reading"))
+    bq = LAYA_QUESTIONS["splittable"] if "splittable" in LAYA_QUESTIONS else None
+    lines = ["You route coding-agent work. Answer with STRICT JSON only, no prose.", "", "route: one of"]
+    lines += [f" {k} - {v}" for k, v in rq["criteria"].items()]
+    lines += [f"visible: {vq['instructions']} (A yes / B no)",
+              f"wide_reading: {wq['instructions']} (A yes / B no)"]
+    if bq:
+        lines.append(f"splittable: {bq['instructions']} (A yes / B no)")
+    else:
+        lines.append("splittable: Can it be split into 2+ independent items on disjoint files? "
+                     "(A yes / B no)")
+    lines += ["", "JSON keys: route, visible, wide_reading, splittable."]
+    return "\n".join(lines)
+
+
+def inkling_ask(task: str) -> dict | None:
+    """One OpenRouter call to inkling-2-small (~2-3 s); returns the parsed answers or None."""
+    try:
+        key = json.loads((AGENT_DIR / "auth.json").read_text())["openrouter"]["key"]
+        body = {"model": INKLING_MODEL, "temperature": 0, "max_tokens": 2000,
+                "reasoning": {"effort": "low"},
+                "messages": [{"role": "user",
+                              "content": inkling_prompt() + "\n\nTask: " + task}]}
+        req = urllib.request.Request(
+            "https://openrouter.ai/api/v1/chat/completions", json.dumps(body).encode(),
+            {"Authorization": f"Bearer {key}", "Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=90) as r:
+            ch = json.load(r)["choices"][0]
+        raw = (ch["message"].get("content") or "").strip()
+        if not raw:
+            return None
+        return json.loads(raw[raw.find("{"): raw.rfind("}") + 1])
+    except Exception:
+        return None
+
+
+def inkling_cached(sha: str) -> dict | None:
+    """Reuse the last logged inkling answer for this exact task — a repeat costs nothing."""
+    p = AGENT_DIR / "delegation" / "routes.jsonl"
+    if not p.exists():
+        return None
+    hit = None
+    for line in p.read_text().splitlines():
+        try:
+            r = json.loads(line)
+        except Exception:
+            continue
+        if r.get("task_sha") == sha and r.get("ink_route"):
+            hit = {"route": r["ink_route"], "visible": r.get("ink_visible"),
+                   "wide_reading": r.get("ink_wide"), "splittable": r.get("ink_splittable")}
+    return hit
+
+
+def inkling_decides() -> bool:
+    return os.environ.get("PI_ROUTE_INKLING", "1").strip().lower() not in ("0", "false", "no", "off")
+
+
 def cmd_route(args) -> int:
-    """Show the regex decision and, with --laya, the local second opinion; log both for the eval."""
+    """Route decision: inkling-2-small decides (policy §1c), regex is the fallback; Laya advises."""
     task = " ".join(args.task)
     regex, cues = decide(task)
-    row = {"ts": now(), "task_sha": task_sha(task), "task": " ".join(task.split())[:200],
+    sha = task_sha(task)
+    row = {"ts": now(), "task_sha": sha, "task": " ".join(task.split())[:200],
            "buckets": cues, "regex": regex}
+    ask = args.inkling or (inkling_decides() and not args.no_inkling)
+    decision, how = regex, "regex"
+    if ask:
+        t0 = time.time()
+        ans = None if args.inkling else inkling_cached(sha)
+        row["ink_cached"] = bool(ans)
+        if not ans:
+            try:
+                ans = inkling_ask(task)
+            except Exception:  # noqa: BLE001  inkling_ask already swallows; the decider must never raise
+                ans = None
+        if ans:
+            row.update({"ink_model": INKLING_MODEL, "ink_route": ans.get("route"),
+                        "ink_visible": ans.get("visible"), "ink_wide": ans.get("wide_reading"),
+                        "ink_splittable": ans.get("splittable"),
+                        "ink_s": row.get("ink_s") or round(time.time() - t0, 2)})
+        if ans:
+            r = str(ans.get("route") or "").strip().lower().replace("delegate:", "")
+            row["ink_s"] = row.get("ink_s") or round(time.time() - t0, 2)
+            if r == "window":
+                decision, how = "WINDOW", "inkling"
+            elif r in ROUTES7:
+                decision, how = (r.upper() if r == "solo" else f"DELEGATE:{r}"), "inkling"
+    row["decided_by"] = how
+    row["decision"] = decision
     if args.laya:
         ans = laya_ask(task)
         if ans:
@@ -603,7 +703,20 @@ def cmd_route(args) -> int:
         print(json.dumps(row, indent=1))
         return 0
     print(f"task:   {task[:160]}")
+    print(f"route:  {decision}  (by {how})")
     print(f"regex:  {regex}  (buckets: {', '.join(cues)})")
+    if "ink_route" in row:
+        print(f"inkling:{(' ' if len(row['ink_route']) > 6 else '')}{row['ink_route']} "
+              f"({row['ink_model'].split('/')[-1]}, {row['ink_s']}s"
+              f"{', cached' if row.get('ink_cached') else ''}) | visible {row['ink_visible']} "
+              f"| wide {row['ink_wide']} | splittable {row['ink_splittable']}")
+        if how == "regex":
+            print("note:   inkling answered but not with one of the 7 routes — regex decided")
+        elif (row["ink_route"] or "").lower() != re.sub(r"^DELEGATE:", "", regex).lower():
+            print("note:   regex disagreed — inkling decides (95% vs 41% on 22 held-out cases, "
+                  "delegation/route-eval-heldout.json); check by hand if the task is unusual")
+    elif ask:
+        print("inkling:unavailable (auth.json key or OpenRouter call failed); regex decides")
     if "laya_route" in row:
         print(f"laya:   {row['laya_route']} (conf {row['laya_conf']:.2f}) | "
               f"visible {row['laya_visible']:.2f} | wide {row['laya_wide']:.2f}")
@@ -1100,6 +1213,11 @@ def main() -> int:
     p = sub.add_parser("route")
     p.add_argument("task", nargs="+")
     p.add_argument("--laya", action="store_true")
+    p.add_argument("--inkling", action="store_true",
+                   help="force a fresh inkling-2-small call (default: it decides, cached by task_sha; "
+                        "95%% vs regex 41%% on 22 held-out cases, ~2.5 s, ~$0.0002)")
+    p.add_argument("--no-inkling", action="store_true",
+                   help="regex decides, no cloud call (same as PI_ROUTE_INKLING=0)")
     p.add_argument("--no-log", action="store_true")
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=cmd_route)
