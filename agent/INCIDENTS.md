@@ -1438,3 +1438,33 @@ starts, it is noise, and repeating it is the failure mode — one honest notice 
   `tests/pi-text.sh`.
 - **Lesson**: when a protocol's last step is "the actor remembers to mark it done", the actor
   forgetting *is* the protocol. Put the completion in the path that already runs.
+
+## INC-17 — the percolation gate failed on work in progress, and moved when nothing did (2026-11-19)
+
+- **What**: `pi-percolate check` blocked `pi-preflight` on task #272 with "unmitigated weight
+  0.270 → 0.289 (agent:events/preflight.jsonl, agent:text/running.json, agent:publish/enabled)".
+  Re-running it five minutes later on the same tree printed `ok` with no change of intent, and
+  five runs of `--json` in one minute gave fragility 1.71, 1.74, 1.77, 1.90, 2.00.
+- **Cause**: two, both in the gate rather than in the machine. (1) The 0.289 was `cap:bin/pi-peer`:
+  a new tool written and committed in the same turn, so preflight — which runs *before* the commit —
+  read an untracked-but-present source as unrecoverable. Every new capability therefore blocked its
+  own publish, and the only visible exit the message offered was `accept`, i.e. lower the bar.
+  (2) The random sweep sampled from an unseeded RNG over a set, and the blast table sorted ties by
+  insertion order; identical input printed different numbers, which `pi-tool check` calls a failure
+  by definition, so the gate could not be pinned and its own history cannot be compared.
+- **Guard**: a file that exists, is not versioned and is not ignored is classified `uncommitted`,
+  excluded from `unrebuildable` and printed as a `warn` line *before* the verdict (`pi-preflight`
+  reports the last line, so a trailing warn would have hidden a failure). The sweep is seeded from
+  the resource set (sha256 of the sorted names), every resource iteration is sorted, every tie is
+  broken by name, and the warn never becomes the last line. `tests/pi-percolate.sh` pins the
+  classification ("a present but unversioned file is one add from safe", "an ignored file is not
+  misread as a missing restore path", "a file that is gone is still unmitigated") and reproducibility
+  ("same disk prints the same numbers"); `pi-tool check pi-percolate` ok, both runs identical.
+  `peer/` (third-party inbound via `bin/pi-peer`), the phone-digest cache and `intent/captured.json`
+  are gitignored for the same reason: state, not capability. Baseline re-recorded at 0.255 with the
+  reason on the record — tighter than the 0.270 it replaced, not looser.
+- **Lives in**: `bin/pi-percolate` (`git_untracked`, `mitigation`, `blast_radius`, `audit`, `check`),
+  `tests/pi-percolate.sh`, `.gitignore`, `percolation/baseline.json`.
+- **Lesson**: a regression gate that fails on uncommitted work trains the only person who reads it
+  to accept the drift, which is the one action the gate exists to prevent. And a measured number
+  that changes with the RNG is not a measurement.

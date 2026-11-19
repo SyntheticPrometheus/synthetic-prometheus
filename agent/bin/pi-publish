@@ -16,7 +16,10 @@ Rules (state in publish/state.json):
   - at most max_pushes_per_7d pushes in any rolling 7 days, --force excepted;
   - additionally: <= max_pushes_per_24h in a day, >= min_gap_h between pushes, and only inside
     the local "window" hours -- the cadence of an active human, not of a cron (rates and hours
-    measured from 312 contributor-repos in six public repos: research/github-activity-cadence.md).
+    measured from 329 contributor-repos in six public repos: research/github-activity-cadence.md).
+
+Every push that lands sends one ntfy text to the owner (the confirmed path only, so a refused push
+is silent); PI_PUSH_NOTIFY=0 turns it off. tests/pi-publish.sh pins both directions.
 """
 import argparse
 import filecmp
@@ -90,8 +93,15 @@ PASS_ENTRY = re.compile(r"""(?i)(api[_-]?key|secret|password)\s*[:=]\s*['\"]pi/[
 # Raw research caches are large and not snapshot material; the digests beside them are.
 EXCLUDE_REL = {"research/cc"}
 
-DEFAULTS = {"min_changed_files": 3, "min_days": 7, "max_pushes_per_7d": 5,
-            "max_pushes_per_24h": 2, "min_gap_h": 1.5, "window": [8, 22],
+# Rate: the peer is a top-15% regular contributor, not the median account and not the median
+# regular (owner, 2026-11-19: acting like a top 85-95% contributor is not a ban risk when the
+# behaviour matches humans at that level). Measured over 1,863 commits / 21 regulars, 180 d:
+# commits/week p50 10.0, p75 17.4, p85 28.0, p90 53.3 — 28/week is ~4/day, which is what the
+# 14 pushes/week cap allows once a push carries more than one commit. Shape matters more than
+# rate: 75% of a top-decile author's consecutive commits fall <60 min apart (a session), so the
+# gap floor is 15 min, not the 1.5 h that made every cluster impossible.
+DEFAULTS = {"min_changed_files": 3, "min_days": 7, "max_pushes_per_7d": 14,
+            "max_pushes_per_24h": 4, "min_gap_h": 0.25, "window": [8, 22],
             "max_file_kb": 512, "max_total_mb": 20, "last_push": 0, "history": []}
 
 
@@ -407,6 +417,10 @@ def main():
     else:
         # keep the local branch name aligned with the remote so HEAD:main is not a cross-branch push
         git("checkout", "-q", "-B", "main")
+        # --remote must win on an existing repo too: it is how a trial run points at a throwaway
+        # bare repo instead of publishing, and an ignored flag publishes by accident.
+        subprocess.run(["git", "remote", "set-url", "origin", a.remote],
+                       cwd=DST, capture_output=True, text=True)
     git("add", "-A")
     msg = f"snapshot {time.strftime('%Y-%m-%d')}: {changed} file(s) changed"
     git("-c", "user.email=agent@local", "-c", "user.name=SyntheticPrometheus",
