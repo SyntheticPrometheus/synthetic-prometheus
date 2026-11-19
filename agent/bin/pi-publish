@@ -7,12 +7,16 @@
   pi-publish --status        show the batching state and the remote
 
 Why it is deliberately slow: GitHub dislikes push floods, and a public snapshot is not a backup of
-my working tree. One squashed commit per week at most, only when there is something worth reading.
+my working tree. One squashed commit per cycle, only when there is something worth reading, never
+more often than a busy human maintainer would publish.
 
 Rules (state in publish/state.json):
   - refuse to push if any secret pattern matches, or a file is > 512 KB, or total > 20 MB;
   - skip unless (changed files >= min_changed_files) or (days since last push >= min_days);
-  - at most max_pushes_per_7d pushes in any rolling 7 days, --force excepted.
+  - at most max_pushes_per_7d pushes in any rolling 7 days, --force excepted;
+  - additionally: <= max_pushes_per_24h in a day, >= min_gap_h between pushes, and only inside
+    the local "window" hours -- the cadence of an active human, not of a cron (rates and hours
+    measured from 312 contributor-repos in six public repos: research/github-activity-cadence.md).
 """
 import argparse
 import filecmp
@@ -35,10 +39,11 @@ REMOTE = "git@github.com:SyntheticPrometheus/synthetic-prometheus.git"
 
 # explicit allowlist, relative to ~/.pi/agent. Nothing else is ever copied.
 ALLOW = [
-    "AGENTS.md", "mcp.json",
+    "AGENTS.md", "IDENTITY.md", "mcp.json",
     "agents", "skills", "prompts", "extensions", "research",
     "bin/mem", "bin/mem.py", "bin/layaq", "bin/pi-attach", "bin/pi-delegate", "bin/pi-term",
     "bin/pi-publish", "bin/pi-github-bootstrap", "bin/pi-preflight", "bin/pi-secret",
+    "bin/pi-accounts", "bin/pi-mail",
     "bin/pi-review", "bin/pi-commit-guard.py",
     "PUBLISHING.md", "PASSWORDS.md", "RUNBOOK-accounts.md", "INCIDENTS.md",
     "delegation/README.md", "delegation/policy.md",
@@ -55,6 +60,7 @@ DOTFILES = [
     ".config/systemd/user/pi-selfimprove.timer",
     ".config/systemd/user/pi-review.service",
     ".config/systemd/user/pi-review.timer",
+    ".config/systemd/user/pi-publish.timer",
     ".config/autostart/pi-terminal.desktop",
 ]
 # `.litwalk-cache` holds raw OpenAlex/arXiv batches (13 MB, single files up to 641 KB): cache
@@ -84,8 +90,9 @@ PASS_ENTRY = re.compile(r"""(?i)(api[_-]?key|secret|password)\s*[:=]\s*['\"]pi/[
 # Raw research caches are large and not snapshot material; the digests beside them are.
 EXCLUDE_REL = {"research/cc"}
 
-DEFAULTS = {"min_changed_files": 3, "min_days": 7, "max_pushes_per_7d": 2, "max_file_kb": 512,
-            "max_total_mb": 20, "last_push": 0, "history": []}
+DEFAULTS = {"min_changed_files": 3, "min_days": 7, "max_pushes_per_7d": 5,
+            "max_pushes_per_24h": 2, "min_gap_h": 1.5, "window": [8, 22],
+            "max_file_kb": 512, "max_total_mb": 20, "last_push": 0, "history": []}
 
 
 def record(outcome, reason, changed=0):
@@ -273,12 +280,17 @@ def git(*args, cwd=None, check=True):
     return subprocess.run(["git", *args], cwd=cwd or DST, capture_output=True, text=True, check=False)
 
 
-def plan(changed, total, problems, state, force=False, why=None):
-    days = (time.time() - state["last_push"]) / 86400 if state["last_push"] else 999
-    windows = [t for t in state["history"] if time.time() - t < 7 * 86400]
+def plan(changed, total, problems, state, force=False, why=None, now=None):
+    now = time.time() if now is None else now
+    days = (now - state["last_push"]) / 86400 if state["last_push"] else 999
+    windows = [t for t in state["history"] if now - t < 7 * 86400]
+    day = [t for t in windows if now - t < 86400]
+    last = max(windows) if windows else 0
+    lo, hi = state.get("window", [8, 22])
     print(f"snapshot: {changed} changed file(s), {total//1024} KB")
     print(f"state: last push {days:.1f}d ago, {len(windows)} push(es) in the last 7d "
-          f"(cap {state['max_pushes_per_7d']})")
+          f"(cap {state['max_pushes_per_7d']}/7d, {state['max_pushes_per_24h']}/24h), "
+          f"window {lo:02d}:00-{hi:02d}:00 local")
     for p in problems:
         print("BLOCK:", p)
     if problems:
@@ -286,19 +298,32 @@ def plan(changed, total, problems, state, force=False, why=None):
     if force:
         print("FORCE: batching rules bypassed")
         return 0
+
+    def skip(msg):
+        print(f"SKIP: {msg}")
+        if why is not None:
+            why.append(("skip", msg))
+        return 0
+
+    # The fingerprint of a bot is when it posts, not only how often: a cron at 05:37 Monday
+    # is a time no developer in this timezone posts (measured: 4% of real commits fall in
+    # 00:00-06:00 local, 70% in 08:00-20:00; research/github-activity-cadence.md).
+    hour = time.localtime(now).tm_hour
+    if not (lo <= hour < hi):
+        return skip(f"outside the {lo:02d}:00-{hi:02d}:00 local posting window "
+                    f"(it is {hour:02d}:xx)")
+    if len(day) >= state["max_pushes_per_24h"]:
+        return skip(f"burst cap reached ({len(day)}/{state['max_pushes_per_24h']} in 24h)")
+    gap_h = (now - last) / 3600 if last else 999
+    if gap_h < state["min_gap_h"]:
+        return skip(f"only {gap_h:.1f}h since the last push "
+                    f"(min {state['min_gap_h']:g}h: humans do not push machine-fast)")
     if len(windows) >= state["max_pushes_per_7d"]:
-        msg = f"push cap reached ({len(windows)}/{state['max_pushes_per_7d']} in 7d)"
-        print(f"SKIP: {msg}")
-        if why is not None:
-            why.append(("skip", msg))
-        return 0
+        return skip(f"push cap reached ({len(windows)}/{state['max_pushes_per_7d']} in 7d)")
     if changed < state["min_changed_files"] and days < state["min_days"]:
-        msg = (f"{changed} changed < {state['min_changed_files']} and only {days:.1f}d "
-               f"< {state['min_days']}d since the last push; next eligible in {state['min_days']-days:.1f}d")
-        print(f"SKIP: {msg}")
-        if why is not None:
-            why.append(("skip", msg))
-        return 0
+        return skip(f"{changed} changed < {state['min_changed_files']} and only {days:.1f}d "
+                    f"< {state['min_days']}d since the last push; "
+                    f"next eligible in {state['min_days']-days:.1f}d")
     return 0
 
 
@@ -315,7 +340,9 @@ def main():
         days = (time.time() - state["last_push"]) / 86400 if state["last_push"] else None
         print(f"remote: {a.remote}\nlast push: {f'{days:.1f}d ago' if days is not None else 'never'}")
         print(f"rules: {state['min_changed_files']} files or {state['min_days']}d, "
-              f"max {state['max_pushes_per_7d']}/7d")
+              f"max {state['max_pushes_per_7d']}/7d and {state['max_pushes_per_24h']}/24h, "
+              f">= {state['min_gap_h']:g}h apart, only "
+              f"{state['window'][0]:02d}:00-{state['window'][1]:02d}:00 local")
         print(f"repo dir: {DST}")
         st = last_status()
         if st:

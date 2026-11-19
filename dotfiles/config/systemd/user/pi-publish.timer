@@ -1,0 +1,13 @@
+[Unit]
+Description=Harness snapshot publish, every hour in the local posting window (pi-publish gates the rest)
+
+[Timer]
+# The window is the rule that matters: pi-publish refuses outside 08:00-22:00 local, so the
+# timer may wake hourly without ever producing a 04:00 push. An hourly run that mostly skips
+# is cheaper than a weekly cron whose one attempt is a fixed fingerprint.
+OnCalendar=*-*-* 08..21:23
+RandomizedDelaySec=1200
+Persistent=true
+
+[Install]
+WantedBy=timers.target

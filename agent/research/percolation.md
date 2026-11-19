@@ -113,6 +113,28 @@ Findings that changed how the machine is maintained:
 5. **17 of 66 capabilities are islands** — session-owned agenda rows and MCP servers that share no
    required resource. They cannot be broken by another failure; they also cannot help each other.
 
+## 4b. Audit 2026-11-18 — the unmitigated row was the ledger, not the machine
+
+At the start of the run: 109 capabilities, 143 resources, 78% of capability weight restorable, six
+`none` rows. The largest — `agent:delegation/ledger.jsonl`, 6.2%, the only unmitigated resource
+above the gate's 5% — is the one file `pi-commit-guard` refuses to stage, so "just track it" was
+closed by design. What changed:
+
+- `pi-delegate ledger` keeps a last-known-good `ledger.jsonl.bak` (append-only ⇒ a copy is a valid
+  snapshot at any instant), `--restore` puts it back and parks the damaged copy as `.corrupt`, and
+  the 1 h `ledger-backup` agenda row keeps it fresh. Pinned by `tests/pi-delegate.sh`
+  (truncate → restore 2/2 rows; a missing backup refuses and leaves the ledger alone).
+- The five `agent:text/*` rows were extraction error, not fragility: `poll.lock`, `dispatch.lock`,
+  `due.lock`, `dispatch.log` and `due-escalated.json` are created by the tool itself (`open("w")`
+  for the flock slots, `open("a")` for the log, a 12 h stop-trying map) and carry no unique record
+  — `text/dispatch.jsonl` does, and it has a `.bak`. Measured by importing `bin/pi-text` against an
+  empty root: all five appear on the first lock/append. `mitigation()` now says `rebuildable` for
+  exactly those names, and only those.
+
+Result: restorable 78% → 84%, no unmitigated resource above the 5% gate, fragility unchanged
+within sampling noise (1.7–1.8×). The remaining `none` rows are all ≤2.1% (publish state,
+`win-log.jsonl`, a bare `bin` path, browser/autostart config) — recorded rather than acted on.
+
 ## 5. Limits (what this model does not see)
 
 - **Static, literal extraction**: paths, quoted relative names, `pass <key>`, `host:port`, venv

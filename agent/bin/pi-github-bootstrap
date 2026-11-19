@@ -40,6 +40,9 @@ else
     --disable-wiki
 fi
 
+# Every repo this creates gets the PR/issue webhook, so no repo can be born deaf to the phone.
+"$HOME/.pi/agent/bin/pi-github-watch" hook "$USER/$REPO" || echo "warning: webhook install failed (bin/pi-github-watch hook $USER/$REPO)"
+
 # Prefer SSH when a key exists, otherwise let gh's credential helper drive HTTPS.
 if [ -f "$HOME/.ssh/id_ed25519.pub" ] || [ -f "$HOME/.ssh/id_rsa.pub" ]; then
   REMOTE="git@github.com:$USER/$REPO.git"

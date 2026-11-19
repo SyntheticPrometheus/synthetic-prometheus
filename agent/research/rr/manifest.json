@@ -1,0 +1,25 @@
+{
+ "tangential": [],
+ "topics": [
+  {
+   "slug": "anthropic-code-mode",
+   "topic": "Anthropic code mode: code execution as tooling"
+  },
+  {
+   "slug": "knuth-claude-cycles",
+   "topic": "Knuth's Claude Cycles: how the cycles were found"
+  },
+  {
+   "slug": "new-models-2026",
+   "topic": "New models 2026 (US, China, elsewhere) with innovative features"
+  },
+  {
+   "slug": "compression-2026",
+   "topic": "Recent compression algorithms with innovative useful features"
+  },
+  {
+   "slug": "hutter-prize",
+   "topic": "Hutter Prize winners and how their solutions work"
+  }
+ ]
+}

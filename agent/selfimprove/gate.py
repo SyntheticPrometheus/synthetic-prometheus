@@ -14,6 +14,7 @@ Exit code: 0 accept, 2 hold, 3 reject, 1 usage/void.
 import argparse
 import hashlib
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -61,6 +62,12 @@ def main():
         a.min_delta = pol.get("min_delta", 2)
     if a.k is None:
         a.k = pol.get("min_reps", 3)
+    # --k may raise the evidence bar for one comparison, never lower it: `--k 1` accepted a
+    # single observation (forged-result probe, 2026-11-18).
+    floor_k = pol.get("min_reps", 3)
+    if a.k < floor_k:
+        print(f"NOTE: --k {a.k} is below the policy floor {floor_k}; using {floor_k}")
+        a.k = floor_k
     if a.cost_win_frac is None:
         a.cost_win_frac = pol.get("cost_win_frac", 0.0)
     b, c = load(a.base), load(a.cand)
@@ -100,9 +107,18 @@ def main():
               f"same model; a model change is not a harness effect")
         return 1
     # The audit above read arm_path now; bind it to the bytes that were actually evaluated.
+    # A missing file is not "nothing to check": it is an unverifiable claim, so it voids the
+    # pair instead of silently skipping the check (forged-result probe, 2026-11-17).
     for name, d in (("base", b), ("cand", c)):
         p = Path(d.get("arm_path") or "")
-        if p.is_file() and d.get("arm_sha") and sha(p) != d["arm_sha"]:
+        if not d.get("arm_sha"):
+            print(f"VOID: {name} records no arm_sha — the arm that ran is not identified")
+            return 1
+        if not p.is_file():
+            print(f"VOID: {name} arm file is missing ({p or 'no path'}) — the bytes behind "
+                  f"arm_sha cannot be checked, so this pair is unverifiable")
+            return 1
+        if sha(p) != d["arm_sha"]:
             print(f"VOID: {name} arm file changed after it was evaluated ({p}) — re-run it, "
                   f"an edited arm is not the arm that produced these results")
             return 1
@@ -116,6 +132,18 @@ def main():
         return 1
     k = b["reps"]
     for name, d in (("base", b), ("cand", c)):
+        # A pass is a boolean observation. Anything else (5, "yes", NaN, a float) is a forged or
+        # corrupt row whose sum would inflate a score, so it is void rather than coerced.
+        for task_id, vals in d["by_task"].items():
+            if any(not (isinstance(x, int) and x in (0, 1)) for x in vals):
+                print(f"VOID: {name}/{task_id} pass values must be 0 or 1, got {vals}")
+                return 1
+        to = d.get("tokens_out")
+        if to is not None and (isinstance(to, bool) or not isinstance(to, (int, float))
+                               or not math.isfinite(to) or to < 0):
+            print(f"VOID: {name} tokens_out {to!r} is not a finite non-negative number — "
+                  f"a cost comparison against it is meaningless")
+            return 1
         bad = {t: len(v) for t, v in d["by_task"].items() if len(v) != k}
         if bad:
             print(f"VOID: {name} is not a balanced matrix — reps={k} but per-task counts {bad}")
@@ -138,7 +166,12 @@ def main():
     only_c = sorted(set(c["by_task"]) - set(b["by_task"]))
     nb = sum(sum(b["by_task"][x]) for x in common)
     nc = sum(sum(c["by_task"][x]) for x in common)
-    delta = nc - nb
+    # min_delta is a count of *tasks* ("wins by at least min_delta tasks"). Summing pass counts
+    # let one task improve 0/3 -> 3/3 and read as +3, which accepted a single-task change. Score
+    # tasks: won if the candidate passes it more often, lost if less often.
+    won = [t for t in common if sum(c["by_task"][t]) > sum(b["by_task"][t])]
+    lost = [t for t in common if sum(c["by_task"][t]) < sum(b["by_task"][t])]
+    delta = len(won) - len(lost)
     if only_b or only_c:
         # A shared-subset delta and a whole-run cost total are different observations. Report them
         # for diagnosis and never promote from them: --allow-subset buys the detail, not a verdict.
@@ -150,7 +183,8 @@ def main():
                   f"{sum(v)}/{len(v)}") for t, v in c["by_task"].items()}
     print(f"lineage: cand parent={c.get('parent') or '-'} harness_rev={c.get('harness_rev') or '-'}")
     print(f"base {b['arm']}: {nb}/{len(common) * k}   cand {c['arm']}: {nc}/{len(common) * k}   "
-          f"delta {delta:+d}   reps {k}   wall {b['wall_s']}s -> {c['wall_s']}s")
+          f"tasks +{len(won)}/-{len(lost)} (delta {delta:+d})   reps {k}   "
+          f"wall {b['wall_s']}s -> {c['wall_s']}s")
     for t, (x, y) in detail.items():
         print(f"  {t:18s} {x} -> {y}{'  REGRESSED' if t in regressed else ''}")
 
@@ -168,13 +202,21 @@ def main():
     if regressed:
         print(f"REJECT: regression on {', '.join(regressed)}")
         return 3
+    # A suite the base already passes completely cannot show a capability gain (delta <= 0 by
+    # arithmetic), so a cost difference there is uninformative, not an improvement. Report it as
+    # such instead of promoting on a ceiling (agenda #13, #112; review finding 4).
+    if delta == 0 and nb == len(common) * k:
+        print(f"HOLD: UNINFORMATIVE — base passes all {len(common)} task(s) on this suite at k={k}; "
+              f"a pass-rate or token difference here is not evidence about capability. Widen the "
+              f"suite (agenda #112) before promoting.")
+        return 2
 
     # Cost-only win: delegated recon can leave pass rate unchanged while cutting the parent's
     # output tokens (the expensive ones). Accepted only at equal per-task pass, k>=3, and with a
     # margin, and reported as its own verdict so it is never confused with a capability gain.
     if delta == 0 and a.cost_win_frac > 0:
         tb, tc = b.get("tokens_out", 0), c.get("tokens_out", 0)
-        if tb and tc:
+        if tb and tc is not None:
             frac = 1 - tc / tb
             print(f"cost: out-tokens {tb} -> {tc} (-{frac:.1%})  wall {b.get('wall_s')}s -> {c.get('wall_s')}s")
             if frac >= a.cost_win_frac:
@@ -182,7 +224,7 @@ def main():
                       f"(threshold {a.cost_win_frac:.0%}) — measure again next cycle before trusting it")
                 return 0
     if delta >= a.min_delta:
-        print(f"ACCEPT: +{delta} tasks, no regression — archive the arm and record the decision")
+        print(f"ACCEPT: {delta:+d} tasks, no regression — archive the arm and record the decision")
         return 0
     print(f"HOLD: delta {delta:+d} below min-delta {a.min_delta}")
     return 2

@@ -30,6 +30,19 @@ AGENT_DIR = Path(os.environ.get("PI_AGENT_DIR", str(Path.home() / ".pi" / "agent
 SUBAGENT_EXT = AGENT_DIR / "extensions" / "subagent" / "index.ts"
 
 
+def suite_sha(root=None):
+    """Fingerprint of the judge, not just its index. suite.json names the tasks, but
+    suite/fixtures/*.py builds their inputs and verifiers: regenerating a fixture changes what the
+    arm is scored on while suite.json stays byte-identical. Hash both, sorted, file name included
+    (2026-11-17 review, finding 2 — verified: an edited fixture left suite_sha unchanged)."""
+    base = Path(root) if root else HERE
+    h = hashlib.sha256()
+    files = sorted([base / "suite" / "suite.json"] + list((base / "suite" / "fixtures").glob("*.py")))
+    for p in files:
+        h.update(p.name.encode() + b"\0" + p.read_bytes() + b"\0")
+    return h.hexdigest()
+
+
 def sha(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
@@ -190,7 +203,7 @@ def main():
     arm_text = arm.read_text()
     ids = [t for t in a.tasks.split(",") if t]
     tasks = [t for t in suite["tasks"] if not ids or t["id"] in ids]
-    suite_sha_start = sha(SUITE)
+    suite_sha_start = suite_sha()
     stamp = time.strftime("%Y%m%dT%H%M%S")
     arm_name = arm.stem
     outdir = RUNS / f"{stamp}-{arm_name}"
@@ -238,7 +251,7 @@ def main():
         "parent": a.parent or None,
         "harness_rev": git_rev(HERE.parent),
         "suite_sha": suite_sha_start,
-        "suite_sha_at_end": sha(SUITE),
+        "suite_sha_at_end": suite_sha(),
         "reps": a.reps,
         "n": len(results),
         "passed": passed,

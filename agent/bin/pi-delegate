@@ -30,6 +30,7 @@ import json
 import os
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 import time
@@ -487,6 +488,39 @@ def cmd_expire(args) -> int:
     if out:
         append(out)
     print(f"expired {len(out)} dispatch(es) older than {args.days}d")
+    return 0
+
+
+def cmd_ledger(args) -> int:
+    """Backup/restore the append-only ledger.
+
+    The ledger is the evidence every delegation decision is measured against, and pi-commit-guard
+    refuses to stage it, so git is not a restore path. A copy of an append-only file is a valid
+    snapshot at any instant, so `backup` keeps a last-known-good `ledger.jsonl.bak` and `--restore`
+    puts it back, parking the damaged copy as `.corrupt` first (percolation audit 2026-11-18: this
+    was the largest unmitigated single point of failure, 6.2% of capability weight).
+    """
+    bak = Path(str(LEDGER) + ".bak")
+    if args.restore:
+        if not bak.exists():
+            print(f"pi-delegate: no {bak.name} to restore from")
+            return 1
+        if LEDGER.exists():
+            shutil.copy(LEDGER, Path(str(LEDGER) + ".corrupt"))
+        shutil.copy(bak, LEDGER)
+        print(f"restored {LEDGER.name} from {bak.name} ({len(read_ledger())} rows; "
+              f"damaged copy kept as {LEDGER.name}.corrupt)")
+        return 0
+    if not LEDGER.exists():
+        print("pi-delegate: no ledger yet — nothing to back up")
+        return 0
+    if args.stale > 0 and bak.exists() and time.time() - bak.stat().st_mtime < args.stale:
+        print(f"ledger backup fresh ({int(time.time() - bak.stat().st_mtime)}s old)")
+        return 0
+    tmp = Path(str(bak) + ".tmp")
+    shutil.copy(LEDGER, tmp)
+    tmp.replace(bak)
+    print(f"backed up {LEDGER.name} -> {bak.name} ({len(read_ledger())} rows)")
     return 0
 
 
@@ -1200,6 +1234,12 @@ def main() -> int:
     p = sub.add_parser("expire")
     p.add_argument("--days", type=int, default=7)
     p.set_defaults(func=cmd_expire)
+
+    p = sub.add_parser("ledger")
+    p.add_argument("--restore", action="store_true")
+    p.add_argument("--stale", type=int, default=3600,
+                   help="skip the copy when the .bak is younger than this many seconds")
+    p.set_defaults(func=cmd_ledger)
 
     p = sub.add_parser("report")
     p.add_argument("--min-n", type=int, default=2)

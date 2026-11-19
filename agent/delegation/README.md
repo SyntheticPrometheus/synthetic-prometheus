@@ -6,7 +6,7 @@ Small directory on purpose: three documents and one append-only log.
 |---|---|
 | `policy.md` | the versioned prose rules (v3). Citations to `research/ai-swarm-delegation.md` + `research/org-delegation.md` |
 | `contracts.md` | copy-paste six-field contracts (scout/worker/verifier/bulker/integrator) + DoR/DoD |
-| `ledger.jsonl` | append-only evidence: one row per dispatch, one row per verdict |
+| `ledger.jsonl` | append-only evidence: one row per dispatch, one row per verdict. Never staged (contains task text), so `pi-delegate ledger` keeps an hourly `.bak` and `--restore` is its restore path |
 | `routes.jsonl` | routing decisions (regex + optional Laya) for the fit-readiness report |
 | `route-eval.py` | routing benchmark: 24 tuning cases, or any held-out set via `--cases` (policy §1c) |
 | `route-eval-heldout.json` + `-result.json` | 22 fresh cases + the run that promoted inkling to decider (§1c) |
@@ -53,6 +53,8 @@ pi-delegate partition --shard a=src/a --shard b=src/b --strict --min-lines 60   
 pi-delegate run --agent scout --task "..." --cwd ~/proj          # headless, logs itself
 pi-delegate verdict pass --last --note "digest matched the code I re-read"
 pi-delegate report                                               # posteriors + proposals
+pi-delegate ledger                                             # snapshot -> ledger.jsonl.bak (hourly row)
+pi-delegate ledger --restore                                   # put the snapshot back, keep .corrupt
 pi-delegate flow --days 30 [--json]                              # cycle time, yield, $/pass
 pi-delegate targets                                             # agents/models + local rails
 pi-delegate route "<task>"                                       # inkling decides (regex fallback, cached)

@@ -1,0 +1,254 @@
+#!/usr/bin/env python3
+"""pi-mail — read my own inbox without a browser window: IMAP when I have an app password,
+otherwise Gmail's Atom feed via the existing Firefox session cookies.
+
+Transport is chosen automatically:
+  1. IMAP   — pass entry `google/imap-app-password` (needs 2-Step Verification on the account).
+              Full message bodies, survives browser cookie loss. Preferred.
+  2. Atom   — `https://mail.google.com/mail/feed/atom/` authenticated with cookies read from the
+              persistent Firefox profile. Unread inbox only, summaries ~200 chars. No 2FA needed,
+              nothing to sign up for. Falls back here until an app password exists.
+
+    pi-mail check                     # which transport is live, and can it connect
+    pi-mail latest [--n 5]            # newest messages: from / subject / snippet
+    pi-mail otp [--from openrouter] [--minutes 20] [--len 6]
+    pi-mail wait [--from x] [--timeout 300]
+
+Exit: 0 ok, 2 connection/auth failed, 3 nothing found.
+"""
+import argparse
+import email
+import email.utils
+import glob
+import imaplib
+import os
+import re
+import sqlite3
+import subprocess
+import sys
+import time
+import urllib.request
+import xml.etree.ElementTree as ET
+from datetime import datetime, timedelta, timezone
+
+USER = "prometheussynthetic@gmail.com"
+IMAP_HOST = "imap.gmail.com"
+ATOM_URL = "https://mail.google.com/mail/feed/atom/"
+AGENT = os.path.expanduser("~/.pi/agent")
+UA = "Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0"
+
+
+def secret(path):
+    try:
+        out = subprocess.run([f"{AGENT}/bin/pi-secret", "get", path], capture_output=True, text=True, check=True)
+        return out.stdout.strip() or None
+    except Exception:
+        return None
+
+
+# ---------------------------------------------------------------- atom transport (no credentials
+
+
+def firefox_cookies():
+    """Cookie header for google.com from the persistent Firefox profile (read-only)."""
+    dbs = glob.glob(os.path.expanduser("~/.config/mozilla/firefox/*/cookies.sqlite"))
+    dbs += glob.glob(os.path.expanduser("~/.mozilla/firefox/*/cookies.sqlite"))
+    if not dbs:
+        raise RuntimeError("no Firefox cookie store found")
+    db = max(dbs, key=os.path.getmtime)
+    con = sqlite3.connect(f"file:{db}?immutable=1", uri=True)
+    try:
+        rows = con.execute(
+            "select name,value from moz_cookies where host in "
+            "('.google.com','mail.google.com','accounts.google.com','www.google.com')"
+        ).fetchall()
+    finally:
+        con.close()
+    if not rows:
+        raise RuntimeError(f"no google cookies in {db} (not signed in?)")
+    return "; ".join(f"{n}={v}" for n, v in rows)
+
+
+def atom_messages(sender=None, minutes=None):
+    cookie = firefox_cookies()
+    req = urllib.request.Request(ATOM_URL, headers={
+        "Cookie": cookie, "User-Agent": UA,
+        "Accept": "application/atom+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Referer": "https://mail.google.com/",
+        "Sec-Fetch-Dest": "document", "Sec-Fetch-Mode": "navigate", "Sec-Fetch-Site": "same-origin",
+    })
+    with urllib.request.urlopen(req, timeout=25) as r:
+        raw = r.read()
+    if b"Unauthorized" in raw[:400]:
+        raise RuntimeError("atom feed said Unauthorized (session expired — sign in again once)")
+    ns = {"a": "http://purl.org/atom/ns#"}
+    root = ET.fromstring(raw)
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=minutes) if minutes else None
+    out = []
+    for e in root.findall("a:entry", ns):
+        frm = (e.findtext("a:email", default="", namespaces=ns)
+               or e.findtext("a:author/a:email", default="", namespaces=ns))
+        name = (e.findtext("a:author/a:name", default="", namespaces=ns)
+                or e.findtext("a:title", default="", namespaces=ns))
+        subj = e.findtext("a:title", default="", namespaces=ns)
+        date = e.findtext("a:issued", default="", namespaces=ns)
+        summary = e.findtext("a:summary", default="", namespaces=ns)
+        if sender and sender.lower() not in f"{frm} {name} {subj}".lower():
+            continue
+        if cutoff and date:
+            try:
+                when = datetime.fromisoformat(date.replace("Z", "+00:00"))
+                if when < cutoff:
+                    continue
+            except ValueError:
+                pass
+        out.append((f"{name} <{frm}>", subj, date, summary))
+    return out
+
+
+# ---------------------------------------------------------------- IMAP transport (app password)
+
+
+def imap_connect(pw):
+    m = imaplib.IMAP4_SSL(IMAP_HOST)
+    m.login(USER, pw)
+    return m
+
+
+def _text(msg):
+    if msg.is_multipart():
+        for part in msg.walk():
+            if part.get_content_type() == "text/plain" and "attachment" not in str(part.get("Content-Disposition")):
+                try:
+                    return part.get_payload(decode=True).decode(part.get_content_charset() or "utf-8", "replace")
+                except Exception:
+                    pass
+        for part in msg.walk():
+            if part.get_content_type() == "text/html":
+                raw = part.get_payload(decode=True) or b""
+                return re.sub(r"<[^>]+>", " ", raw.decode(part.get_content_charset() or "utf-8", "replace"))
+        return ""
+    try:
+        return msg.get_payload(decode=True).decode(msg.get_content_charset() or "utf-8", "replace")
+    except Exception:
+        return ""
+
+
+def imap_messages(m, sender=None, minutes=None):
+    since = (datetime.now(timezone.utc) - timedelta(minutes=minutes or 1440)).strftime("%d-%b-%Y")
+    m.select("INBOX", readonly=True)
+    typ, data = m.search(None, "SINCE", since)
+    if typ != "OK":
+        return []
+    out = []
+    for num in reversed(data[0].split()):
+        typ, raw = m.fetch(num, "(RFC822)")
+        if typ != "OK" or not raw or not isinstance(raw[0], tuple):
+            continue
+        msg = email.message_from_bytes(raw[0][1])
+        frm = email.utils.parseaddr(msg.get("From", ""))[1].lower()
+        if sender and sender.lower() not in f"{frm} {msg.get('Subject','')}".lower():
+            continue
+        out.append((msg.get("From", ""), msg.get("Subject", ""), msg.get("Date", ""), _text(msg)))
+    return out
+
+
+# ---------------------------------------------------------------- commands
+
+
+def find_code(text, n):
+    for pat in (rf"(?:code|otp|pin|password)[^0-9]{{0,24}}(\d{{{n}}})",
+                rf"(\d{{{n}}})[^0-9]{{0,24}}(?:code|otp)",
+                rf"(?<!\d)(\d{{{n}}})(?!\d)"):
+        hit = re.search(pat, text, re.I)
+        if hit:
+            return hit.group(1)
+    return None
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("cmd", choices=["check", "latest", "otp", "wait"])
+    ap.add_argument("--from", dest="sender")
+    ap.add_argument("--minutes", type=int, default=30)
+    ap.add_argument("--n", type=int, default=5)
+    ap.add_argument("--len", type=int, default=6)
+    ap.add_argument("--timeout", type=int, default=300)
+    a = ap.parse_args()
+
+    pw = secret("google/imap-app-password")
+    if pw:
+        try:
+            m = imap_connect(pw)
+        except Exception as e:
+            print(f"pi-mail: IMAP login failed ({e}); trying atom", file=sys.stderr)
+            m = None
+        if m:
+            transport = "imap"
+            fetch = lambda: imap_messages(m, a.sender, a.minutes)
+            if a.cmd == "check":
+                typ, data = m.select("INBOX", readonly=True)
+                print(f"ok: {USER} over IMAP, INBOX has {data[0].decode()} messages")
+                m.logout()
+                return 0
+    else:
+        m = None
+        transport = "atom (no app password yet)"
+
+    if not pw or m is None:
+        fetch = lambda: atom_messages(a.sender, a.minutes)
+        if a.cmd == "check":
+            try:
+                msgs = atom_messages()
+            except Exception as e:
+                print(f"pi-mail: atom transport failed: {e}", file=sys.stderr)
+                return 2
+            print(f"ok: {USER} via {transport}: {len(msgs)} unread")
+            return 0
+
+    if a.cmd == "wait":
+        deadline = time.time() + a.timeout
+        while True:
+            try:
+                if fetch():
+                    print("arrived")
+                    return 0
+            except Exception as e:
+                print(f"pi-mail: {e}", file=sys.stderr)
+                return 2
+            if time.time() >= deadline:
+                print(f"pi-mail: nothing from *{a.sender or 'anyone'}* after {a.timeout}s", file=sys.stderr)
+                return 3
+            time.sleep(8)
+
+    try:
+        msgs = fetch()
+    except Exception as e:
+        print(f"pi-mail: {e}", file=sys.stderr)
+        return 2
+    if not msgs:
+        print(f"pi-mail: no messages in the last {a.minutes} min"
+              + (f" from *{a.sender}*" if a.sender else ""), file=sys.stderr)
+        return 3
+
+    if a.cmd == "latest":
+        for frm, subj, date, text in msgs[: a.n]:
+            print(f"{date}\n  from {frm}\n  {subj}\n  {re.sub(r'\s+', ' ', text)[:180]}\n")
+        return 0
+
+    for frm, subj, date, text in msgs:
+        code = find_code(f"{subj}\n{text}", a.len)
+        if code:
+            print(code)
+            if m:
+                try:
+                    m.logout()
+                except Exception:
+                    pass
+            return 0
+    print("pi-mail: messages found but no code matched", file=sys.stderr)
+    return 3
+
+
+if __name__ == "__main__":
+    sys.exit(main())

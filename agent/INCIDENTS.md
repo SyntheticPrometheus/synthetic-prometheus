@@ -6,6 +6,33 @@ without a guard is a promise, and promises are what failed the first time.
 
 Format: what happened → root cause → guard → where the guard lives.
 
+## 2026-11-19 — the percolation gate reported a file list as a single point of failure (#259)
+
+- **What**: `pi-preflight graph` went red and blocked publish on three items: `cap:bin/pi-accounts`
+  as a new 5.4% hub, plus `text/config.json` (0.024→0.049) and `agenda/schedule.json`
+  (0.010→0.034) "growing". Nobody had made the machine fragile: the three commits behind them were
+  a new tool, a publish allowlist entry, and pi-text learning to read the agenda.
+- **Cause**: two extraction rules read a *mention* as a *dependency*. (1) A bare quoted `bin/x` —
+  pi-publish's `ALLOW` list (a missing entry is skipped: `if not src.exists(): continue`) and
+  pi-preflight's set of tools allowed to read the text topic — resolved to `cap:bin/x`, so the list
+  of files publish *copies* registered as things publish *needs*. (2) A read inside `try/except`
+  with a fallback (`{}`, `[]`) was still "required", although both readers survive the file's loss.
+  The tool had already learned the first half of this lesson for `sys:` resources ("a bare word was
+  a fake single point of failure, 2026-11-16") and never generalised it.
+- **Guard**: capability edges now come only from path forms, and a read inside a `try:` whose
+  handler falls back is optional (a handler that re-raises still counts as required). Pinned by
+  `tests/pi-percolate.sh` (7 extraction cases + the real gate must stay green and no registry name
+  may be a hub), which `pi-tool check` runs twice inside `pi-preflight tools`. Measured: 15 false
+  capability edges and 16 fallback edges removed, 279→256 required deps, `pi-percolate check` red→
+  green, `pi-preflight --quiet` no FAIL.
+- **Lives in**: `bin/pi-percolate` (`fallback_lines`, `resources_of`), `tests/pi-percolate.sh`,
+  `percolation/baseline.json` (re-recorded with the reason).
+
+- **Open, by decision**: `BIN / "pi-wait"`-style aliases are still invisible to the extractor
+  (pi-done really does invoke pi-wait; only its docstring named it), so a few genuine edges are
+  missing. Under-counting is the honest direction for a regression gate; the limit is now stated in
+  the tool's own model-limits paragraph instead of being rediscovered as a bug.
+
 ## 2026-11-17 — a due session opened with nothing in its queue and looped (bug #198)
 
 - **What**: the 49-hour pergola pass (`01a1df87`) closed all 19 BACKLOG items and then ran 20 identical
@@ -924,8 +951,13 @@ Format: what happened → root cause → guard → where the guard lives.
   on a copy patched back to the old `json.dumps` form and exits 0 on the fixed file.
 - **Not fixed here**: the channel still authenticates a sender by topic secrecy alone, so a text
   can still *ask* the agent to do something (that is the feature). The design fix — an ntfy access
-  token for publish, or a shared secret in the message — needs the owner's phone client, so it is
+  token for publish, or a shared secret in the message — needs the owner's phone client, so it was
   filed as a task, not silently changed.
+- **Closed 2026-11-19 (#117)**: the owner declined the inbound signing secret (#214), so topic
+  secrecy is the authentication of record. `pi-preflight`'s `text-auth` check now fails if the
+  topic is under 80 bits, appears in a publishable file or the publish repo's history, if the
+  GitHub webhook shares it, or if a new executable starts reading `pi/text-topic`. Those are the
+  reopen conditions, checked on every publish instead of remembered in prose.
 - **Lives in**: `bin/pi-text` (`write_resume_script`, `safe_id`, `MAX_INBOUND_CHARS`, `cmd_check`),
   this file.
 
@@ -1276,3 +1308,133 @@ starts, it is noise, and repeating it is the failure mode — one honest notice 
 - **Lives in**: `bin/pi-github-watch` (`setup`, `api_hook`).
 - **Lesson**: "I could not" is a claim about a method, not a fact about the world. Before reporting
   it, enumerate the credentials and interfaces still untried — the second one usually works.
+
+## INC-12 — no git identity on the machine, so a fresh clone could not commit (2026-11-17)
+
+- **What happened**: answering pergola PR #1, the first commit in that tree died with `Author identity
+  unknown — tell me who you are`. The identity existed only as `user.name`/`user.email` in that one
+  repo's `.git/config`; `git config --global --list` was empty, and `~/Projects/market-lab` carried no
+  identity at all (its history is authored as `host <host@localhost>` and `agent <agent@local>`).
+  Any new clone, any repo without a local block, needed `-c user.email=…` per command or failed — and the
+  failure surfaced as a broken step in the middle of a PR merge instead of at repo birth.
+- **Cause**: identity was set per repo when a repo needed it, never as a machine fact. Nothing asked git
+  the same question a commit asks, so "can this tree author a commit?" was only discovered by trying.
+- **Guard**: `~/.gitconfig` now carries the identity globally (SyntheticPrometheus
+  <prometheussynthetic@gmail.com>, `init.defaultBranch = main`), and `bin/pi-preflight`'s `identity` check
+  runs `git var GIT_AUTHOR_IDENT` in every `~/Projects/*/.git` — the exact operation that failed — plus a
+  placeholder test (`host`, `agent`, `@localhost`, `@local`, `example.com`) so silence cannot be a
+  placeholder. Verified: `pi-preflight` prints `ok identity … every ~/Projects repo can author a commit`;
+  with `GIT_CONFIG_GLOBAL=/dev/null` the same function returns
+  `no global identity (name=MISSING email=MISSING)`.
+- **Lives in**: `~/.gitconfig`, `bin/pi-preflight` (`identity`), `AGENTS.md` engineering defaults.
+- **Not done on purpose**: no history rewrite. `market-lab`'s old `@localhost` authors are evidence of
+  when this was missing; new commits carry the global identity.
+- **Lesson**: a machine fact belongs at machine scope once (`--global`), and the guard asks the tool the
+  same question the failing operation asks — an identity check that only reads config could pass while
+  `git commit` still refuses.
+
+## INC-13 — an e2e run judged a binary six hours older than the tree it named (2026-11-17)
+
+- **What happened**: after merging pergola PR #1 the post-merge e2e (job j35188151) failed
+  `tag work lays out one panel: expected [1] got [0]` plus four tag-erasure lines, and a rerun
+  (j89500533) reproduced it exactly. It looked like the merge had regressed workspaces. It had not:
+  `scripts/health.sh` resolved `pergola` from `~/.local/bin` (built 10:31), while the tree was at
+  `c1fd53b` (17:03). Re-running the same suite with the tree's own release build passed all six tag
+  checks. The merge had in fact *fixed* the tag erasure, by moving `forget_view` out of `detach_seat`
+  into the close path.
+- **Cause**: the suite named the binary path but never compared it to the tree's HEAD, so "green" and
+  "red" were both claims about an unstated build. Two runs of two different binaries look identical
+  in the log except for a path nobody read.
+- **Guard**: `crates/pergola/build.rs` stamps `PERGOLA_COMMIT` into the binary, `pergola --version`
+  prints `pergola 0.5.0-dev (<commit>)`, and `scripts/health.sh` (a) prefers `$ROOT/target/release/pergola`
+  over `PATH` and (b) fails the e2e *before* running it when the stamp is absent or differs from the
+  checkout's HEAD, naming both commits. Commit `f3c897f`.
+- **Lives in**: `~/Projects/pergola/crates/pergola/build.rs`, `crates/pergola/src/main.rs`,
+  `scripts/health.sh`; this rule in `AGENTS.md`: a merged PR's evidence names the build it measured.
+- **Lesson**: a test result is a triple — code under test, command, verdict. The bin path is not the
+  code under test; the commit stamp is. Any harness that runs a binary owes that stamp check, and a
+  regression claim has to survive "which build produced this?" before it is reported.
+- **Second layer, same class**: the installed `~/.local/bin/pergola-health` was a *copy* of the
+  script (2026-11-16 14:57), so the new refusal never reached the command — the fix lived in the repo
+  and the failure was still reproducible from the shell. It is now a shim that execs
+  `$PERGOLA_REPO/scripts/health.sh`, so an installed copy cannot drift from the checkout. Verified:
+  `PERGOLA_BIN=~/.local/bin/pergola pergola-health --e2e` refuses in 0 s, the stamped binary is
+  accepted and the suite runs.
+
+## INC-14 — the channel narrated my backlog instead of answering (2026-11-18)
+
+- **What**: in one evening the owner received four texts he could not act on — `Agenda needs you: bug
+  #231 pergola e2e floor…` (22:50), `Tried #230 and it did not finish (timeout, 900 s): no output`
+  (23:05), `Still open (#197, 8 h …) and not finished yet … the text spend cap is spent (text $1.15 of
+  $1.00/24h)` (23:40) and `3 messages waiting: … Answered in order — no need to resend` (00:20). His
+  reply: "I don't know why you keep telling me things are still open or that bugs still exist. I
+  don't care and you need to just deal with these things without me."
+- **Cause**: three separate legs each treated *queue state* as a reason to ring the phone: the agenda
+  digest (`phone_digest`, fresh bug lists forced an immediate text), the dispatch/due failure and
+  escalation notices (`send("Tried #… and it did not finish")`, `"#N is still … overdue after 3
+  sessions"`), and the nudge/wait notices in `pi-text`. All were
+  true, none were actionable, and one promised "Answered in order" while the spend cap blocked every
+  session for a day — a statement the harness could not keep.
+- **Guard**: owner-facing text is now only a session's answer (or an explicit `status`/`help`
+  request). `pi-agenda tick --notify` keeps its backlog local (`notify-send` only) and has no phone
+  leg; `pi-text` opens the session and stays silent when it cannot start, when a task outlives the
+  first rung, when a dispatch/due attempt fails, and when three sessions leave a due row stalled. `tests/pi-agenda.sh` pins "a new bug stays off
+  the phone"; `tests/pi-text.sh` pins silence for a blocked ack, a still-open nudge (which must still
+  reopen the task) and a failed due attempt. Measured: both suites green, `pi-tool check pi-text` and
+  `pi-tool check pi-agenda` ok (each pin runs twice).
+- **Lives in**: `bin/pi-text` (`ack`, `nudge`, `cmd_dispatch`, `run_due_one`), `bin/pi-agenda`
+  (`cmd_tick`), `escalate_due`, `tests/pi-text.sh`, `tests/pi-agenda.sh`.
+- **Lesson**: a message the reader cannot act on is noise with a timestamp; the question to ask before
+  any send is "what decision does this let the owner make?", not "is this true?".
+
+## INC-15 — nothing in the harness consumed an open task, and the one retry path lied (2026-11-19)
+
+- **What**: asked whether the harness was actively working through the open tasks, the answer was
+  no. At 11:41Z the
+  agenda had 5 due rows and 4 executed them; 45 open tasks, 4 of them p1 (2 days old for #116/#117,
+  42 h for #231). Task #250 was filed the same minute: tasks #197 (48.8 h) and #240 (25.5 h) each had
+  exactly one dispatch row — `route=resume, ok=true, wall_s=1.7, detail="ledger: window:text-197"` —
+  and `pi-text log` said `nudge: reopened task 197 … (spawned)` every 10 minutes while no session ran.
+- **Cause**: two bugs, one shape. (1) `recently_dispatched()` treated *any* `ok: true` as "finished
+  forever", and the `resume` route records `ok` = "`pi-term` opened a window and exited 0", which is
+  not work (the window's session reports for itself). One such row excluded a task permanently.
+  (2) The agenda had consumers for *text* tasks and for `session:` obligations, and none for an
+  `add-task`/`bug` row: filing was the whole lifecycle, so every tick could be green while four p1
+  bugs aged. Remembrance is not work.
+- **Guard**: `recently_dispatched()` now ignores `route=="resume"` rows (retroactive — #197/#240 are
+  dispatchable again) and the resume leg records `ok: None` with `spawned: true` instead of claiming
+  a completion. New `pi-text dispatch --tasks` works one open agenda task/bug per run, p1 first, with
+  a 12 h per-task cooldown, the spend cap and the dispatch lock, the session closing its own task;
+  agenda row `task-work` (2h, harness, p2) runs it detached. `tests/pi-text.sh` pins all of it ("a
+  spawned resume is retried", "a completed run is finished", "a worked task holds its cooldown", "the
+  task loop takes priority 1 first"); `pi-tool check pi-text` ok, both runs identical.
+- **Lives in**: `bin/pi-text` (`recently_dispatched`, `run_one`, `cmd_dispatch_tasks`,
+  `open_agenda_tasks`, `task_attempted`), `tests/pi-text.sh`, `agenda/schedule.json` row `task-work`.
+- **Lesson**: measure the *consumer*, not the producer. A queue whose writers are checked and whose
+  readers are not looks healthy in every log and does nothing.
+
+## INC-16 — an answered text task is re-dispatched, so the owner gets the same answer twice (2026-11-19)
+
+- **What**: the owner's 2026-11-18 15:00Z message about the intent router was answered at 06:20Z,
+  re-delivered as a fresh session at 15:20Z, and asked again at 17:20Z — three deliveries of one
+  inbox row (`PSylcwnpGhsk`), which reads on the phone like a question that was never handled.
+  Dispatch ledger shows `route=resume` for #240 at 2.1 s each time; the task stayed `open` and
+  three duplicate agenda rows piled up beside it (#239, #253 for the same capture work).
+- **Cause**: the `resume` route opens a tiled window and the *session inside it* is expected to run
+  `pi-agenda done`. That expectation lived only in the dispatch prompt — a promise, not a guard —
+  and INC-15's `recently_dispatched()` fix correctly stopped treating the resume row as completion,
+  which left `open` as "unanswered" with nothing to change it. The prompt told the session; the
+  system did not check.
+- **Guard**: the dispatcher exports `PI_TEXT_TASK=<id>` into the resume script, and `pi-text send`
+  (the reply path, `answers=True`) closes that task, drops its awaiting record, and writes a
+  `route=answered` ledger row. No session has to remember. A resume row is also a *delivery*, not
+  just "a window opened": `recently_dispatched()` cools it for `RETRY_COOLDOWN_S` like a failed
+  run, so the 10-minute tick cannot hand the same message to a second window while the first is
+  still working (task #257: #240 was served at 16:52, 17:00 and 17:10). `tests/pi-text.sh` pins it
+  ("a reply closes its task", "the ledger records the answer", "a spawned resume cools like a run",
+  "a served resume is retried later", "the window knows its task"); `pi-tool check pi-text` ok,
+  both runs identical.
+- **Lives in**: `bin/pi-text` (`close_dispatched_task`, `send`, `write_resume_script`),
+  `tests/pi-text.sh`.
+- **Lesson**: when a protocol's last step is "the actor remembers to mark it done", the actor
+  forgetting *is* the protocol. Put the completion in the path that already runs.

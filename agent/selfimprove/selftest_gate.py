@@ -22,8 +22,9 @@ TMP = None  # set to a per-case TemporaryDirectory by main(), so no fixture outl
 
 
 def run(by_task, reps, arm="cand", arm_sha="bbb", policy="pol-a", suite=SUITE,
-        suite_at_end=None, arm_path="/nonexistent/arm.md", model="m", model_ident=None,
+        suite_at_end=None, arm_path=None, model="m", model_ident=None,
         rep_ids=None, extra_args=()):
+    tag = arm_sha
     results = [{"id": t, "pass": p, "rep": i + 1}
                for t, v in by_task.items() for i, p in enumerate(v)]
     if rep_ids is not None:
@@ -38,7 +39,16 @@ def run(by_task, reps, arm="cand", arm_sha="bbb", policy="pol-a", suite=SUITE,
     if model_ident:
         d.update(model_ident)
     tmp = TMP if TMP is not None else Path(tempfile.mkdtemp())
-    f = tmp / f"{arm}-{'cand' if arm_sha != 'aaa' else 'base'}-{len(list(tmp.iterdir()))}.json"
+    if arm_path is None:
+        # A real arm file per arm: the gate now voids a pair whose arm bytes cannot be checked,
+        # so a fixture with a dangling path would be testing the wrong rejection.
+        import hashlib as _h
+        p = tmp / f"arm-{tag}.md"
+        p.write_text(f"arm {tag}\n")
+        arm_path = str(p)
+        d["arm_sha"] = _h.sha256(p.read_bytes()).hexdigest()
+        d["arm_path"] = arm_path
+    f = tmp / f"{arm}-{'cand' if tag != 'aaa' else 'base'}-{len(list(tmp.iterdir()))}.json"
     f.write_text(json.dumps(d))
     return f
 
@@ -182,6 +192,57 @@ def _c18():
     return gate(run({"task1": [False, False, True], "task2": [False, False, True]}, 3,
                     "base", "aaa", model_ident=ident),
                 run({"task1": [True] * 3, "task2": [True] * 3}, 3, model_ident=ident))
+
+
+@case("one task 0/3 -> 3/3 is +1 task, not +3 (min-delta 2)", 2, "delta +1")
+def _c20():
+    return gate(run({"task1": [False] * 3, "task2": [True] * 3}, 3, "base", "aaa"),
+                run({"task1": [True] * 3, "task2": [True] * 3}, 3))
+
+
+@case("pass=5 is not a pass (forged row)", 1, "pass values must be 0 or 1")
+def _c21():
+    b = run({"task1": [True] * 3}, 3, "base", "aaa")
+    p = Path(b)
+    d = json.loads(p.read_text())
+    for r in d["results"]:
+        r["pass"] = 5
+    p.write_text(json.dumps(d))
+    return gate(b, run({"task1": [True] * 3}, 3))
+
+
+@case("negative output tokens cannot buy a cost accept", 1, "finite non-negative")
+def _c22():
+    import json as _j
+    b = run({"task1": [True] * 3}, 3, "base", "aaa")
+    c = run({"task1": [True] * 3}, 3)
+    d = _j.loads(Path(c).read_text())
+    d["tokens_out"] = -5000
+    Path(c).write_text(_j.dumps(d))
+    return gate(b, c, "--cost-win-frac", "0.1")
+
+
+@case("arm file missing but arm_sha claimed", 1, "arm file is missing")
+def _c23():
+    return gate(run({"task1": [True] * 3}, 3, "base", "aaa"),
+                run({"task1": [True] * 3}, 3, arm_path="/nonexistent/claimed.md",
+                    arm_sha="deadbeef"))
+
+
+@case("--k cannot be lowered below the policy floor", 2, "k=1 < 3")
+def _c24():
+    return gate(run({"task1": [True]}, 1, "base", "aaa"),
+                run({"task1": [True]}, 1), "--k", "1")
+
+
+@case("saturated suite: a cost win is uninformative, not a promotion", 2, "UNINFORMATIVE")
+def _c25():
+    b = run({"task1": [True] * 3}, 3, "base", "aaa")
+    c = run({"task1": [True] * 3}, 3)
+    import json as _j
+    d = _j.loads(Path(c).read_text()); d["tokens_out"] = 10
+    Path(c).write_text(_j.dumps(d))
+    return gate(b, c, "--cost-win-frac", "0.1")
 
 
 def main():

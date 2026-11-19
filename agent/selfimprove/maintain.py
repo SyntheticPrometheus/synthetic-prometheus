@@ -37,9 +37,10 @@ def rows():
 
 
 def check():
-    import hashlib
     problems = []
-    cur = hashlib.sha256(SUITE.read_bytes()).hexdigest()
+    sys.path.insert(0, str(HERE))
+    import run as runner  # same fingerprint the runs record: suite.json + every fixture generator
+    cur = runner.suite_sha()
     rs = rows()
     if not rs:
         print("ledger empty (no runs yet)")
