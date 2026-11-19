@@ -95,6 +95,27 @@ DEFAULTS = {"min_changed_files": 3, "min_days": 7, "max_pushes_per_7d": 5,
             "max_file_kb": 512, "max_total_mb": 20, "last_push": 0, "history": []}
 
 
+def notify_pushed(changed, total):
+    """Say it on the phone the moment a push lands (owner, 2026-11-15).
+
+    Only on the confirmed path: a refused push says nothing, so the text never claims something
+    that did not happen. Never raises and never changes the exit code: a phone that is offline is
+    not a failed publish.
+    """
+    if os.environ.get("PI_PUSH_NOTIFY", "1") == "0":
+        return
+    msg = (f"pushed to GitHub: {changed} file(s), {total // 1024} KB "
+           f"-> synthetic-prometheus @ {time.strftime('%H:%M')}")
+    try:
+        out = subprocess.run([str(AGENT / "bin" / "pi-text"), "send", "--quiet",
+                              "--title", "pi push", msg],
+                             capture_output=True, text=True, timeout=30)
+        if out.returncode != 0:
+            print(f"notify failed (push stands): {(out.stderr or out.stdout).strip()[:200]}")
+    except Exception as exc:  # noqa: BLE001 — the push already happened; a text is not the gate
+        print(f"notify failed (push stands): {exc}")
+
+
 def record(outcome, reason, changed=0):
     """Every run leaves a trace, so --status can tell 'waiting' from 'broken'."""
     try:
@@ -419,6 +440,7 @@ def main():
     state["history"] = [t for t in state["history"] if time.time() - t < 30 * 86400] + [time.time()]
     save_state(state)
     record("pushed", f"{changed} file(s), {total//1024} KB", changed)
+    notify_pushed(changed, total)
     print("pushed")
     return 0
 

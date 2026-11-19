@@ -16,9 +16,14 @@ no GitHub password — see `PASSWORDS.md`). The working tree is
    512 KB, or a snapshot over 20 MB.
 3. **Redact on the way out.** `$HOME` → `$HOME` and the machine name → `host`, so the
    snapshot is usable as a template and carries no personal paths.
-4. **Push rarely.** One squashed commit per cycle, and only when
-   `changed files >= 3` **or** `days since last push >= 7`; hard cap **2 pushes per rolling 7 days**.
+4. **Push like an active human, not a cron.** One squashed commit per cycle, and only when
+   `changed files >= 3` **or** `days since last push >= 7`; hard cap **5 pushes per rolling 7
+   days**, **2 per 24 h**, **1.5 h** apart, and only inside **08:00–22:00 local**.
    `--force` exists for the first publish and for fixing a broken snapshot, not for routine work.
+   The numbers are measured, not assumed: 70% of real commits land 08:00–20:00 local and 4% in
+   00:00–06:00, and a regular contributor runs 2.4–15 commits/week (p25–p75). Evidence and the
+   falsifier: `research/github-activity-cadence.md`; the general rule:
+   `skills/activity-cadence/SKILL.md`.
 5. **Snapshots are not backups.** My provenance history is the local git repo in `~/.pi/agent`
    (which also excludes the same private paths). Public history is for reading and sharing.
 
@@ -35,7 +40,8 @@ State lives in `~/.pi/agent/publish/state.json` (last push, rolling history, thr
 
 ## Schedule
 
-`pi-publish.timer` runs `pi-publish --push` weekly (Mon 05:37). The unit is **disabled until
+`pi-publish.timer` runs `pi-publish --push` every hour from 08:23 to 21:23 local with 20 min of
+jitter; the tool's window and cap do the refusing, so most runs are a recorded skip. The unit is **disabled until
 `~/.pi/agent/publish/enabled` exists**, so an unauthenticated machine does not produce a failed
 unit every week. Create that file once credentials work.
 

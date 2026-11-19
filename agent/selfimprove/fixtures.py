@@ -52,5 +52,10 @@ def task(t):
 
 
 def selftest_answers(t):
+    """(good, bad, tolerant): `tolerant` is an equivalent representation of a correct answer
+    (e.g. YAML-quoted frontmatter values). It must PASS; a judge that fails it is over-strict,
+    which is how two cycle-16 "base failures" turned out to be judge defects (2026-11-19)."""
     d = _data(t)
-    return d.get("good") or t.get("selftest_good") or {}, d.get("bad") or t.get("selftest_bad") or {}
+    return (d.get("good") or t.get("selftest_good") or {},
+            d.get("bad") or t.get("selftest_bad") or {},
+            d.get("tolerant") or {})

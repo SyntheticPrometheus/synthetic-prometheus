@@ -96,8 +96,24 @@ size, dependency depth and prose volume all collapse into "the model scripts it"
 makes the gate unable to accept anything, so `policy.json` now carries `gate.cost_win_frac` (0.10):
 when accuracy is tied at k≥3 with no regression, an arm that cuts **output** tokens by ≥10% is
 accepted as `ACCEPT_COST`. It is labelled as cost, never as capability, and is re-measured next
-cycle. Capability headroom (cycle 16 hypothesis) must come from authored output under many
-simultaneous constraints, or from probing an opaque oracle — not from bigger inputs.
+cycle. Capability headroom must come from somewhere else — bigger inputs are not it.
+
+## Cycle 16: authored output under many constraints (falsified, 2026-11-19)
+
+The class was added (`release-brief`, `upgrade-brief`, suite v5): author a release brief under ~20
+simultaneous stated rules — word band, banned words, section counts, id/ticket/kind
+cross-references, per-kind summary numbers, self-hash. With a *fair* judge the base arm passes
+6/6 at k=3; the two earlier "failures" (0/6, then 4/6) were judge defects — a quoted YAML scalar
+and a trailing period the POLICY prose never showed. Replaying the saved artifacts against the
+fixed judge is what proved it, and `selftest.py` now pins a third answer per fixture (`tolerant`,
+an equivalent representation) that must pass, so over-strictness is caught before a run is blamed
+on the arm.
+
+Consequence: a fully specified deterministic task does not discriminate for this base model,
+however many constraints it carries. Headroom has to come from a different axis — judged quality
+with its own calibration, an interactive/adversarial oracle, or cost (which the gate already
+accepts as ACCEPT_COST) — and a failure manufactured by tightening unstated prose is a judge
+defect, not headroom.
 
 ## Review (the part that keeps it relevant)
 

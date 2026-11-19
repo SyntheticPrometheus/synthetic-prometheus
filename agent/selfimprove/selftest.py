@@ -84,7 +84,7 @@ def main():
     for t in SUITE["tasks"]:
         if a.task and t["id"] != a.task:
             continue
-        good_files, bad_files = fixtures.selftest_answers(t)
+        good_files, bad_files, tolerant_files = fixtures.selftest_answers(t)
         good_files = good_files or GOOD.get(t["id"])
         bad_files = bad_files or BAD.get(t["id"])
         if good_files is None or bad_files is None:
@@ -93,10 +93,15 @@ def main():
             continue
         ok_pass, err1 = run(t, good_files)
         ok_fail, err2 = run(t, bad_files)
-        status = "ok" if (ok_pass and not ok_fail) else "BROKEN"
+        ok_tol = True
+        if tolerant_files:
+            ok_tol, err3 = run(t, tolerant_files)
+            err1 = err1 or ("" if ok_tol else "equivalent answer failed: " + err3)
+        status = "ok" if (ok_pass and ok_tol and not ok_fail) else "BROKEN"
         if status == "BROKEN":
             bad += 1
         print(f"{t['id']:16s} good->{'PASS' if ok_pass else 'FAIL'} "
+              f"tol->{'PASS' if ok_tol else 'FAIL'} "
               f"bad->{'PASS' if ok_fail else 'FAIL'}  {status}"
               + (f"  {err1 or err2}" if status == "BROKEN" else ""))
     print("judge ok" if not bad else f"{bad} broken task(s)")
