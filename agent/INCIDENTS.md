@@ -1468,3 +1468,24 @@ starts, it is noise, and repeating it is the failure mode — one honest notice 
 - **Lesson**: a regression gate that fails on uncommitted work trains the only person who reads it
   to accept the drift, which is the one action the gate exists to prevent. And a measured number
   that changes with the RNG is not a measurement.
+
+## INC-18 — the tool-error wake fired on a busy hour, not a worse one (2026-11-20)
+
+- **What**: `pi-control wake` texted "tool-errors: last hour 11 error(s) vs baseline 4.0/h
+  (limit 8.0)" and filed task #274 at priority 1. The hour was 11 errors in 192 calls = 5.7%
+  against a 4.1% baseline: more calls, same failure rate. Nothing had regressed.
+- **Cause**: the trigger compared raw error *counts* per hour against a count baseline. Call
+  volume varies 10x between hours (3 to 192 calls on 11-19), so a busy hour clears any count
+  threshold on noise alone. `floor: 3` and `min_baseline: 1.0` were count floors, so they could
+  not help.
+- **Guard**: `tool-errors` now compares the error *rate* (errors/calls) against the median rate of
+  prior hours, requires >= `min_calls` (10) calls in the last hour and >= `floor` (6) errors to
+  arm, and reports `n/a` when an hour is too quiet to judge instead of guessing. Replayed against
+  the incident hour, the new rule reads `clear  last hour 11 error(s) in 192 calls (5.7%) vs
+  baseline 3.9% (limit 7.8%)`. `bin/pi-control selftest` pins the false alarm as a must-not-arm
+  case ("tool-errors ignore a busy hour"), plus rate-doubling firing and quiet-hour n/a; the
+  selftest runs inside `pi-control doctor`, which `pi-preflight`'s `control` check runs, so the
+  guard fires on every publish.
+- **Lives in**: `bin/pi-control` (`event_values`), `control/policy.json`, `bin/pi-control selftest`.
+- **Lesson**: a threshold over a count is a threshold over volume. Normalise by the exposure that
+  produced the count, and keep an absolute floor only as a noise guard, never as the trigger.
