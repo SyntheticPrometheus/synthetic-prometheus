@@ -20,6 +20,10 @@
   {
    "slug": "hutter-prize",
    "topic": "Hutter Prize winners and how their solutions work"
+  },
+  {
+   "slug": "pruning-and-distilling-mixture-of-experts-into-dense-languag",
+   "topic": "Pruning and Distilling Mixture-of-Experts into Dense Language Models"
   }
  ]
 }

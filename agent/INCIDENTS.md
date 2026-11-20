@@ -1672,3 +1672,27 @@ starts, it is noise, and repeating it is the failure mode — one honest notice 
 - **Lesson**: a test that reaches the real display is not a test, it is an action; and "never
   expire" turns any repeated notification into a permanent leak. The registry check said 0 windows
   while 221 were on screen — *the screen is part of the system, so a check must count it*.
+
+## INC-27 — an armed event paid for its own alarm every hour (2026-11-20)
+
+- **What happened**: agenda task #317 `control-wake failed: wake burn2x: last hour $0.585 vs
+  baseline $0.076/h (limit $0.15)`, and the same task had already been filed and worked for
+  tool-errors before it (#274, #147, #138). The hour was real work — 584 model calls shipping the
+  owner's docs and profile — but burn2x only compared it to the median active hour ($0.10) and
+  stayed armed for every consecutive busy hour.
+- **Cause**: `pi-control wake` scored ARMED as exit 2 every run, and the agenda turns a non-zero
+  exec into a p1 task. Each task opened a session, the session spent money, the next hour stayed
+  above 2x, and the guard billed the system for its own repeating alarm — the INC-9 wallpaper
+  class, in the money column. A persistent condition was treated as a fresh one.
+- **Guard**: `wake_lines()` in `bin/pi-control` records each event's first fire in
+  `control/state.json` and holds that event for its `cooldown_h` (6 h, per event in
+  `control/policy.json`), exiting 0 with a `hold … (woke N min ago)` line; a value that doubles
+  re-wakes early, and a clear event deletes its record so the next spike wakes immediately.
+  Pinned by the selftest cases `wake: first armed fire`, `… holds inside its cooldown`, `… a
+  doubling re-wakes`, `… cooldown expiry`, `… a cleared event forgets its cooldown` (26/26 ok).
+- **Measured**: `pi-control wake` → exit 2 firing burn2x at $0.493; a second run → exit 0 holding
+  it; `pi-agenda run control-wake` → `ok (hold burn2x: …)`, strikes 0, next due 15:28Z.
+- **Lives in**: `bin/pi-control` (`wake_lines`, `cmd_wake`, `DEFAULT_POLICY`), `control/policy.json`,
+  `control/state.json` (`wakes`), `INCIDENTS.md`.
+- **Lesson**: an alarm that stays true must fire once and say when it last fired. Re-filing a
+  persistent condition every tick converts the guard into the spend it was meant to catch.

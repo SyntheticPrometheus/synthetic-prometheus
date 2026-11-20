@@ -188,6 +188,87 @@ def est_tokens(s):
     return max(1, len(s) // 4)
 
 
+# --- D-optimal (Gram log-determinant) selection -------------------------------
+# Replaces the hard "drop anything with jaccard>0.72" filter. Lineage: arXiv:2605.28207
+# (Kim et al., NeurIPS 2026) converts a Mixture-of-Experts into a dense model by choosing
+# a subset of experts that is jointly *important* and *mutually diverse*, scoring
+# S as log det(I + lam^-1 K_S) + sum log I_e over a Gram kernel K (D-optimal design).
+# Greedy is (1-1/e) optimal there (Prop 3.2); the same greedy applies to any candidate
+# pool, so retrieval can price redundancy instead of banning it at a threshold.
+DOPT_LAM = float(os.environ.get("MEM_DOPT_LAM", "0.5"))   # regularisation: larger = closer to plain score order
+DOPT_W = float(os.environ.get("MEM_DOPT_W", "1.0"))       # weight of the log-det (diversity) term
+DOPT_POOL = 40
+
+
+def cos_gram(toksets):
+    """K_ij = |A_i & A_j| / sqrt(|A_i||A_j|) over token sets (the paper's expert-output kernel, here)."""
+    n = len(toksets)
+    norms = [math.sqrt(len(t)) if t else 1.0 for t in toksets]
+    K = [[0.0] * n for _ in range(n)]
+    for i in range(n):
+        ti = toksets[i]
+        K[i][i] = 1.0
+        for j in range(i + 1, n):
+            v = len(ti & toksets[j]) / (norms[i] * norms[j])
+            K[i][j] = K[j][i] = v
+    return K
+
+
+def dopt_pick(scored, want, lam=None, w=None, pool=None):
+    """Greedy D-optimal selection of `want` items from [(score, row)] ordered by score.
+
+    Gain of adding e to S:  log(I_e + eps) + w * log(1 + lam^-1 * k_eS^T A_S^-1 k_S)
+    with A_S = I + lam^-1 K_S maintained by Sherman-Morrison rank-1 updates (pure python,
+    pool is small). When the pool is incoherent (K off-diagonal ~0) the gain collapses to
+    the diagonal, i.e. plain importance order -- the theorem's own degenerate case.
+    """
+    lam = DOPT_LAM if lam is None else lam
+    w = DOPT_W if w is None else w
+    cand = scored[:pool or DOPT_POOL]
+    n = len(cand)
+    if n <= 1 or want <= 0:
+        return list(cand[:want])
+    K = cos_gram([tokset(r["title"] + " " + r["body"]) for _s, r in cand])
+    top = max((s for s, _r in cand), default=1.0) or 1.0
+    imp = [math.log(max(s, 0.0) / top + 0.05) for s, _r in cand]
+    inv = lam ** -1
+    Ainv = [[0.0] * want for _ in range(want)]   # A_S^-1 in the selected basis
+    chosen = []
+    live = list(range(n))
+    while live and len(chosen) < want:
+        best, best_gain = -1, None
+        m = len(chosen)
+        for i in live:
+            gain_det = 0.0
+            if m:
+                kS = [K[j][i] for j in chosen]
+                t = sum(kS[a] * sum(Ainv[a][b] * kS[b] for b in range(m)) for a in range(m))
+                # det(A_new) = det(A_old) * (1 + inv - inv^2 k^T A^-1 k), A = I + inv*K_S
+                s = 1.0 + inv - inv * inv * max(t, 0.0)
+                gain_det = math.log(s) if s > 1e-12 else -1e9
+            g = imp[i] + w * gain_det
+            if best_gain is None or g > best_gain:
+                best, best_gain = i, g
+        chosen.append(best)
+        live.remove(best)
+        # bordered inverse: A_new = [[A, v],[v^T, 1+inv]], v = inv*k
+        # A_new^-1 = [[A^-1 + (inv^2/s) Ak Ak^T, -inv*Ak/s], [-inv*Ak^T/s, 1/s]]
+        # s = (1+inv) - v^T A^-1 v,  Ak = A^-1 k
+        kk = [K[j][best] for j in chosen[:-1]]
+        mm = len(kk)
+        Ak = [sum(Ainv[a][b] * kk[b] for b in range(mm)) for a in range(mm)] if mm else []
+        s = 1.0 + inv - inv * inv * sum(kk[a] * Ak[a] for a in range(mm)) if mm else 1.0 + inv
+        if s < 1e-12:
+            s = 1e-12
+        for a in range(mm):
+            for b in range(mm):
+                Ainv[a][b] += inv * inv * Ak[a] * Ak[b] / s
+            Ainv[a][mm] = -inv * Ak[a] / s
+            Ainv[mm][a] = -inv * Ak[a] / s
+        Ainv[mm][mm] = 1.0 / s
+    return [cand[i] for i in chosen]
+
+
 def now():
     return time.time()
 
@@ -539,16 +620,31 @@ def search(c, q, k=8, ctx=None, budget=None, want_digests=True):
         cands.setdefault(mid, (0.9 * prior(row), row))
     ranked = sorted(cands.values(), key=lambda t: -t[0])
 
-    # MMR-lite: penalize near-duplicate token sets so one answer doesn't eat the budget
-    picked, seen_sets = [], []
+    # D-optimal selection: importance x mutual diversity, priced not banned (see dopt_pick).
+    # Exact duplicates are still dropped outright -- two copies of one memory are not a
+    # diversity tradeoff, they are a duplicate.
+    seen_sets = []
+    dedup = []
     for sc, row in ranked:
         ts = tokset(row["title"] + " " + row["body"])
-        if seen_sets and max(jacc(ts, s) for s in seen_sets) > 0.72:
+        if seen_sets and max(jacc(ts, s) for s in seen_sets) > 0.90:
             continue
-        picked.append((sc, row))
+        dedup.append((sc, row))
         seen_sets.append(ts)
-        if len(picked) >= max(k * 2, k + 4):
+        if len(dedup) >= DOPT_POOL * 2:
             break
+    n_keep = max(k * 2, k + 4)
+    if getattr(search, "use_dopt", False):
+        picked = dopt_pick(dedup, n_keep)
+    else:   # hard duplicate filter, the pre-2611.28207 behaviour; D-optimal measured neutral here
+        picked, seen2 = [], []
+        for sc, row in ranked:
+            ts = tokset(row["title"] + " " + row["body"])
+            if seen2 and max(jacc(ts, s2) for s2 in seen2) > 0.72:
+                continue
+            picked.append((sc, row)); seen2.append(ts)
+            if len(picked) >= n_keep:
+                break
 
     out, used_tok = [], 0
     for sc, row in picked:
@@ -953,8 +1049,14 @@ def cmd_eval(a, c):
     if getattr(a, "dense", None) is not None:
         search.use_dense = a.dense
         search.force_dense = a.dense
+    if getattr(a, "dopt", None) is not None:
+        search.use_dopt = a.dopt
     spec = json.load(open(EVALP))
     qs = spec["queries"] if isinstance(spec, dict) else spec
+    # An eval that bumps `accesses` changes `prior()` and so ranks differently next run: a
+    # measurement that mutates its own store cannot gate anything (2026-11-20: recall@6 read
+    # 1.000 warm and 0.909 cold on identical code). Snapshot, measure, restore.
+    snap = c.execute("SELECT id, accesses, last_access FROM memories").fetchall()
     hits5 = hitsb = 0
     rr = 0.0
     lat, toks = [], []
@@ -962,8 +1064,9 @@ def cmd_eval(a, c):
     for case in qs:
         q = case["q"]
         expect = {int(e) if str(e).isdigit() else e for e in case["expect"]}
+        bget = a.budget if getattr(a, "budget", None) is not None else case.get("budget")
         for trial in (1, 2):  # warm, measure second pass
-            out, used, ms = search(c, q, k=6, ctx=case.get("scope"), budget=case.get("budget"))
+            out, used, ms = search(c, q, k=getattr(a, "k", 6), ctx=case.get("scope"), budget=bget)
         ids = [r["id"] for _s, r in out]
         hit = sorted(set(ids) & expect)
         hits5 += 1 if hit else 0
@@ -975,8 +1078,12 @@ def cmd_eval(a, c):
             misses.append((q, sorted(expect), ids[:4]))
         if a.verbose:
             print(f"{'OK ' if hit else 'MISS'} {q[:60]:<62} ranks={[ids.index(e)+1 for e in hit]} tok={used}")
+    c.executemany("UPDATE memories SET accesses=?, last_access=? WHERE id=?",
+                  [(a, l, i) for i, a, l in snap])
+    c.commit()
     n = len(qs)
-    res = {"n": n, "recall@6": round(hits5 / n, 3), "all_expected": round(hitsb / n, 3),
+    res = {"n": n, "k": getattr(a, "k", 6), "budget": getattr(a, "budget", None),
+           f"recall@{getattr(a, 'k', 6)}": round(hits5 / n, 3), "all_expected": round(hitsb / n, 3),
            "mrr": round(rr / n, 3), "avg_tokens": round(sum(toks) / n, 0),
            "p50_ms": round(sorted(lat)[len(lat) // 2], 1)}
     print(json.dumps(res, indent=1))
@@ -1105,6 +1212,8 @@ def main():
     s.add_argument("--json", action="store_true")
     s.add_argument("--dense", dest="dense", action="store_true", default=None)
     s.add_argument("--no-dense", dest="dense", action="store_false")
+    s.add_argument("--dopt", dest="dopt", action="store_true", default=None)
+    s.add_argument("--no-dopt", dest="dopt", action="store_false")
 
     s = add_cmd("brief", cmd_brief, help="session-start working set")
     # 1100: measured pinned+KEY+RECENT content is ~1105 tokens (2026-11-16). Growth beyond this is
@@ -1141,9 +1250,13 @@ def main():
 
     s = add_cmd("eval", cmd_eval)
     s.add_argument("--verbose", "-v", action="store_true")
+    s.add_argument("--k", type=int, default=6)
+    s.add_argument("--budget", type=int, default=None)
     s.add_argument("--save", action="store_true")
     s.add_argument("--dense", dest="dense", action="store_true", default=None)
     s.add_argument("--no-dense", dest="dense", action="store_false")
+    s.add_argument("--dopt", dest="dopt", action="store_true", default=None)
+    s.add_argument("--no-dopt", dest="dopt", action="store_false")
     s = add_cmd("embed", cmd_embed, help="build/refresh dense vectors")
     s = add_cmd("doctor", cmd_doctor, help="capability + health report")
     s = add_cmd("export", cmd_export); s.add_argument("--format", default="md", choices=["md", "jsonl"])
