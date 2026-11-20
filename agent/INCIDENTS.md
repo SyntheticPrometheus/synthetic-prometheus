@@ -1798,3 +1798,29 @@ starts, it is noise, and repeating it is the failure mode — one honest notice 
 - **Lesson**: a channel that carries failures is only as useful as its precision — a false FAIL
   costs exactly the same as an unread one, because the next reader learns to skim it. A success
   with a pending action is a success plus a task, not a failure.
+
+## INC-32 — a healthy timer was paged as a failed one, three times in four days (2026-11-20)
+
+- **What happened**: `pi-publish.service` exited 5/NOTINSTALLED because its own `pi-preflight` gate
+  refused to publish (an unindexed research file, a nondeterministic `pi-human` pin, an unread
+  failed completion). It retried an hour later, passed, and pushed 16 files. Meanwhile the agenda
+  filed priority-1 tasks titled *"weekly-publish: its timer pi-publish.timer failed"* — at
+  11-16 10:47, 11-20 08:36 and 11-20 12:50 — each with the note `systemctl --user status
+  pi-publish.timer`, which reports a timer that is `active (waiting)` and has never failed.
+- **Cause**: `sync_timers` treated any trigger whose `Result` was not `success` as a dead timer,
+  with one title for both cases, and paged on the *first* failure even for a row that retries
+  every hour and healed itself before the task was read.
+- **Guard**: (a) `page_on_failure` — a row on a cadence ≤ 6 h takes a strike on the first refused
+  trigger and pages only when the next trigger fails too; a slower row pages at once, because it
+  has no retry to wait for. (b) The title now distinguishes a service that ran and refused
+  (`<row>: <unit> ran, its job failed`) from a unit that never fired, and `failure_evidence`
+  copies the `FAIL`/`PREFLIGHT` lines out of the unit's journal into the task's notes, so the
+  session reads the reason instead of running `status` on a healthy timer.
+- **Measured**: `tests/pi-agenda.sh` drives a fake `systemctl`/`journalctl`: first refused trigger
+  of a 1 h row → strikes 1, no task; second → one p1 task whose title says the job failed and
+  whose notes carry `FAIL tools`; a 7 d row → task on the first refusal; a green trigger clears
+  the strike and adds nothing. Run twice, byte-identical.
+- **Lives in**: `bin/pi-agenda` (`page_on_failure`, `failure_evidence`, `sync_timers`),
+  `tests/pi-agenda.sh`.
+- **Lesson**: a page must name the thing that failed. "Its timer failed" costs a whole session on
+  `systemctl status` and teaches the owner that p1 means noise.
