@@ -12,6 +12,7 @@
  "retire": [],
  "double": [
   "tester/boundaries",
+  "tester/recovery",
   "tester/state"
  ]
 }
