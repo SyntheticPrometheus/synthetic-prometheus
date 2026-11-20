@@ -74,6 +74,21 @@ def s_agents_md():
         add("agents.md", "pass", f"{lines} lines, every referenced path exists")
 
 
+def s_replay():
+    """Full-stack replay (roadmap P0): the arm-only suite cannot see a harness layer that stopped
+    loading. Run the replay selftest, which drops memory-boot and proves the arm-only invocation
+    still passes — a discriminating replay is the evidence, not "the script exited 0"."""
+    r = subprocess.run([sys.executable, str(SI / "replay.py"), "--selftest"],
+                       capture_output=True, text=True, timeout=300)
+    lines = [l.strip() for l in r.stdout.splitlines()
+             if l.startswith(("RESULT", "healthy", "dropped", "arm-only"))]
+    detail = "; ".join(lines) or (r.stderr.strip().splitlines() or ["no output"])[-1]
+    if r.returncode == 0:
+        add("replay", "pass", "full-stack replay catches a regression arm-only misses")
+    else:
+        add("replay", "fail", detail[:320], "run selfimprove/replay.py --selftest and fix the layer")
+
+
 def s_suite():
     rows = [json.loads(l) for l in (SI / "ledger.jsonl").read_text().splitlines() if l.strip()]
     if not rows:
@@ -340,7 +355,7 @@ def main():
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args()
 
-    for fn in (s_agents_md, s_suite, s_delegation, s_memory, s_guards, s_timers, s_skills, s_vendor,
+    for fn in (s_agents_md, s_replay, s_suite, s_delegation, s_memory, s_guards, s_timers, s_skills, s_vendor,
                s_publish, s_pdsa, s_mind):
         try:
             fn()

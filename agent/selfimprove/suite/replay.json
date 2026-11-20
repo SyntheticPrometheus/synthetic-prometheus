@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "note": "Full-stack safe replay family (roadmap P0). These tasks run the PRODUCTION harness — extensions, skills, prompts, AGENTS.md, memory boot — in a disposable credential-free sandbox, not the arm-only runner that disables every layer. External effects (pass, notify-send, paplay, curl, gh, pi-text) are shims that log instead of acting; the model is a scripted loopback provider, so a run is deterministic and costs $0. Verifiers are judge-owned and read only sandbox observations.",
+  "tasks": [
+    {
+      "id": "full-stack-context",
+      "kind": "session",
+      "why": "memory-boot, skills and AGENTS.md are exactly what run.py's -ne -ns -nc flags remove; a harness that silently stops loading them is invisible to the arm-only suite",
+      "prompt": "Reply with exactly REPLAY-OK and nothing else.",
+      "reply": "REPLAY-OK",
+      "expect": {
+        "prompt_contains": [
+          "REPLAY_CANARY_MEMORY_7f3c",
+          "REPLAY_CANARY_SKILL_2a91",
+          "REPLAY_CANARY_AGENTS_5d0e"
+        ],
+        "effects_absent": ["notify-send", "paplay", "pass", "curl", "gh", "pi-text"],
+        "secret_files_unchanged": true
+      }
+    },
+    {
+      "id": "headless-notify",
+      "kind": "session",
+      "why": "notify.ts must stay silent outside the TUI; a regression that drops the ctx.mode check rings the owner's desktop on every headless run and only the full extension stack can see it",
+      "prompt": "Reply with exactly REPLAY-OK and nothing else.",
+      "reply": "REPLAY-OK",
+      "expect": {
+        "effects_absent": ["notify-send", "paplay"],
+        "secret_files_unchanged": true
+      }
+    }
+  ]
+}

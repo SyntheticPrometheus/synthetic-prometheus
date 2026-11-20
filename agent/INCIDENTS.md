@@ -1647,3 +1647,28 @@ starts, it is noise, and repeating it is the failure mode — one honest notice 
 - **Lesson**: an attribution guard is only as good as its view of how sessions write. `edit`/`write`
   is the polite path; the shell is where the fast path lives, and a guard blind to it refuses the
   careful session and waves the careless one through.
+
+## INC-26 — 221 permanent "job FAILED" windows tiled over the desktop (2026-11-20)
+
+- **What**: a screenshot taken for an unrelated reason showed 222 windows titled `xfce4-notifyd`
+  arranged in a 7×10 grid over the whole work area, each reading `job FAILED · FAIL: missing ·
+  0.0s · rc=7 · no record for jnothing`. The owner's desktop was unusable; the terminal was
+  underneath. Every check was green at the time, including `windows 0 open pi-term target(s), 0
+  orphans`.
+- **Cause**: two independent decisions, harmless alone. (1) `pi-done --selftest` exercised the real
+  desktop-notification path — it ran `cmd_notify` with `DISPLAY` set, so the test fired a real
+  notification for its own fixture (`jnothing`, a job that deliberately does not exist). (2) A
+  failure used `notify-send -t 0`, i.e. *never expire*, so each one stayed on screen until
+  clicked. `pi-preflight` runs the tool pins, so every check run added a few, and pergola tiles a
+  notification popup like any other managed window: the pile became a full-screen grid.
+- **Guard**: `PI_DONE_NO_NOTIFY` short-circuits the desktop path and records the line in a module
+  list, so the selftest proves it skipped (and no longer opens a window — verified: the count was
+  221 before the run and 221 after). Failure notices expire after 15 min (`NOTIFY_TTL_MS`), never
+  `0`; the selftest asserts no TTL is `0`. `pi-preflight windows` now counts notification windows
+  and fails above 10 with the dismiss command — probed with 12 real notifications (FAIL, then
+  cleared to 0).
+- **Lives in**: `bin/pi-done` (`cmd_notify`, `NOTIFY_TTL_MS`, selftest), `bin/pi-preflight`
+  (`notifications`, `notification_storm`).
+- **Lesson**: a test that reaches the real display is not a test, it is an action; and "never
+  expire" turns any repeated notification into a permanent leak. The registry check said 0 windows
+  while 221 were on screen — *the screen is part of the system, so a check must count it*.

@@ -78,6 +78,30 @@ it needs no session and no clock of mine. Pins: `tests/pi-selfimprove-local.sh` 
 Refusals are the point: the tool exits 1 with one line if the router is down, the model is not
 loaded, or `run.py` fails — an offline loop that silently does nothing would look like progress.
 
+## Full-stack safe replay (roadmap P0, 2026-11-20)
+
+`run.py` is the mechanism experiment and stays that way: `-ne -ns -nc -np --no-mcp` deliberately
+removes every layer around the arm. The deployment experiment is `replay.py`, a second family that
+keeps the stack and fakes everything outside it:
+
+| real | faked |
+|---|---|
+| extensions, skills, prompts, AGENTS.md, memory boot | fresh sandbox DB + a pinned canary, fake `auth.json`, scripted provider |
+| tool and shell execution | disposable HOME/agent dir; `pass`, `notify-send`, `paplay`, `curl`, `wget`, `gh`, `ssh`, `pi-text`, `pi-mail`, `pi-publish` are logging refusals |
+| network | `unshare -rn`, loopback plus one private address for the scripted provider; no route out |
+
+A run is deterministic and costs $0: the provider returns a fixed answer, and the judge reads the
+request the provider actually received (`prompt_contains`), the reply, the effects log, and the
+canary files. `--selftest` is the acceptance test from the roadmap, measured three ways: healthy
+full-stack **PASS**, the same harness with `memory-boot.ts` dropped **FAIL (missing memory canary)**,
+and the arm-only invocation on that broken harness **PASS** — the blind spot reproduced. `pi-review`
+now runs that selftest as its `replay` signal.
+
+Scope, stated honestly: this family measures **harness wiring and safety contracts** (context,
+skills, memory, headless notify, credential/side-effect boundaries), not model capability. A
+model-driven production replay needs held-out, sanitized traces and remains agenda #308 / #267;
+this is the safe substrate those tasks can run on, not a substitute for them.
+
 ## Files
 
 - `suite/suite.json` — tasks: prompt, seeded files, verifier shell command (exit 0 = pass).
@@ -85,7 +109,11 @@ loaded, or `run.py` fails — an offline loop that silently does nothing would l
 - `run.py` — runs an arm over the suite; writes `runs/<stamp>-<arm>.json`; appends the ledger;
   `--model local/<gguf>` for a $0 run (screening only, see above).
 - `bin/pi-selfimprove-local` (in `bin/`) — the offline pass: local measure + local draft, weekly/daily row.
+- `replay.py` — full-stack safe replay family; `--selftest` proves it catches a dropped layer.
 - `gate.py` — compares two run files under the k-aware rule; prints accept/hold/reject + reasons.
+  `--min-delta`/`--k`/`--cost-win-frac` are floors (an override may tighten, never loosen), and
+  `--skip-audit` needs `--diagnose`: a verdict without the tamper audit is a diagnostic, not a
+  promotion (2026-11-20, roadmap G08/G09).
 - `ledger.jsonl` — append-only: arm hash, parent, suite hash, reps, per-task results, decision.
 - `maintain.py` — housekeeping: prune `runs/` beyond N, verify ledger chain, report drift.
 
@@ -141,8 +169,13 @@ harness, not an installer.
   `auth.json`, the local-model router and Laya weights. The runner loads only what the suite names,
   so their absence affects the arms, not the gate's arithmetic.
 - **A pair to inspect the gate with:** fabricate two result files (the helper in `selftest_gate.py`
-  shows every required field) and run `gate.py base.json cand.json --skip-audit`; a perfect-vs-perfect
-  unequal-rep pair must print `VOID`, not `ACCEPT`.
+  shows every required field) and run `gate.py base.json cand.json --diagnose --skip-audit`; a
+  perfect-vs-perfect unequal-rep pair must print `VOID`, not `ACCEPT`.
+
+At a saturated suite the order is deliberate: an equal-pass pair with a reproducible output-token
+win prints `ACCEPT_COST` (efficiency only, never capability); the `UNINFORMATIVE` hold applies only
+when there is no cost win. Before 2026-11-20 the ceiling check ran first and made `ACCEPT_COST`
+unreachable there, contradicting this file and `policy.json` v2.
 
 ## Maintenance (the part that keeps it alive)
 

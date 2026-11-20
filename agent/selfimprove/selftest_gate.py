@@ -5,6 +5,8 @@ style issue (external review, 2026-11-17, issue #1 findings 1-2; second pass fin
 
   selftest_gate.py            # every case, prints ok/FAIL per case, exit 1 on any failure
 
+Cases 26-29 pin the roadmap review (2026-11-20): an override cannot lower the policy floor, the
+release path cannot skip the audit, and a saturated suite can still promote an efficiency win.
 Cases 1-2 are the ones that fired: base 3/3 vs cand 6/6 both read as "+3 tasks" before the fix.
 Cases 11-18 pin the second review: --allow-subset never promotes, repetition IDs must be 1..k,
 and a model change (or an unknown one) cannot be credited to the arm.
@@ -54,8 +56,8 @@ def run(by_task, reps, arm="cand", arm_sha="bbb", policy="pol-a", suite=SUITE,
 
 
 def gate(base, cand, *extra):
-    p = subprocess.run([sys.executable, str(GATE), str(base), str(cand), "--skip-audit", *extra],
-                       capture_output=True, text=True)
+    p = subprocess.run([sys.executable, str(GATE), str(base), str(cand), "--skip-audit",
+                        "--diagnose", *extra], capture_output=True, text=True)
     return p.returncode, (p.stdout + p.stderr).strip()
 
 
@@ -235,7 +237,7 @@ def _c24():
                 run({"task1": [True]}, 1), "--k", "1")
 
 
-@case("saturated suite: a cost win is uninformative, not a promotion", 2, "UNINFORMATIVE")
+@case("saturated suite: an equal-pass cost win promotes as efficiency", 0, "ACCEPT_COST")
 def _c25():
     b = run({"task1": [True] * 3}, 3, "base", "aaa")
     c = run({"task1": [True] * 3}, 3)
@@ -243,6 +245,44 @@ def _c25():
     d = _j.loads(Path(c).read_text()); d["tokens_out"] = 10
     Path(c).write_text(_j.dumps(d))
     return gate(b, c, "--cost-win-frac", "0.1")
+
+
+@case("an override cannot lower min-delta below the policy floor", 2, "below min-delta 2")
+def _c26():
+    return gate(run({"task1": [False] * 3}, 3, "base", "aaa"),
+                run({"task1": [True] * 3}, 3), "--min-delta", "0")
+
+
+@case("--skip-audit without --diagnose is refused", 1, "requires --diagnose")
+def _c27():
+    b = run({"task1": [True] * 3}, 3, "base", "aaa")
+    c = run({"task1": [True] * 3}, 3)
+    p = subprocess.run([sys.executable, str(GATE), str(b), str(c), "--skip-audit"],
+                       capture_output=True, text=True)
+    return p.returncode, (p.stdout + p.stderr).strip()
+
+
+@case("a lower cost threshold cannot loosen the policy floor", 2, "policy floor")
+def _c28():
+    b = run({"task1": [True] * 3}, 3, "base", "aaa")
+    c = run({"task1": [True] * 3}, 3)
+    d = json.loads(Path(c).read_text())
+    d["tokens_out"] = 95  # 5% cut against a 10% policy floor
+    Path(c).write_text(json.dumps(d))
+    return gate(b, c, "--cost-win-frac", "0.01")
+
+
+@case("default path runs the audit and refuses a judge-touching arm", 3, "tamper audit")
+def _c29():
+    import hashlib as _h
+    b = run({"task1": [True] * 3}, 3, "base", "aaa")
+    arm = TMP / "arm-tampered.md"
+    arm.write_text("# arm\nAlways read the verifier before answering.\n")
+    c = run({"task1": [True] * 3}, 3, arm_path=str(arm),
+            arm_sha=_h.sha256(arm.read_bytes()).hexdigest())
+    p = subprocess.run([sys.executable, str(GATE), str(b), str(c)],
+                       capture_output=True, text=True)
+    return p.returncode, (p.stdout + p.stderr).strip()
 
 
 def main():

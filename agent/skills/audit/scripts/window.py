@@ -495,10 +495,11 @@ def scan(args) -> int:
             suspects.append("cost:band-above-ceiling")
     if guards.get("fails"):
         suspects.extend(f"guard:{f.split()[0]}" for f in guards["fails"])
+    # Only a *pinned* rule that did not fit is a defect: `mem brief` exits 1 for it and preflight
+    # gates publish. Ordinary section trimming at a fixed budget is the allocator doing its job —
+    # treating "4 of 10 lessons shown" as a suspect made every audit re-open it (2026-11-20).
     if mem.get("pinned_dropped"):
         suspects.append("memory:pinned-dropped")
-    elif mem.get("drops"):
-        suspects.append("memory:sections-cut")
     if deleg.get("unverified"):
         suspects.append("delegation:unverified")
     if deleg.get("never_dispatched"):

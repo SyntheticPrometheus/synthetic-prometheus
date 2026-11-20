@@ -1,25 +1,28 @@
-# Harness review — 2026-11-17 00:00 UTC
+# Harness review — 2026-11-20 14:04 UTC
 
-9 pass · 2 warn · 0 fail
+8 pass · 2 warn · 2 fail
 
 | signal | state | detail |
 |---|---|---|
-| agents.md | pass | 129 lines, every referenced path exists |
-| suite | warn | 15 tasks, last base 9/9 (1.00) on 3/15 tasks 2.0d ago — uncovered: accounting-sum, hash-blob, fix-check, stale-cache … — saturated on the covered tasks only; the rest are unproven |
-| delegation | pass | 100 dispatches, 61 without verdict, 0 stale (>7d); roster bulker, debator, integrator, redteam, scout, tester, verifier, worker |
-| memory | warn | brief 1043/1100 tok (95%), 214 knowledge row(s) + 31 digest(s), last digest 0d ago; cut KEY LESSONS / PREFERENCES 4/10; RECENT 5/8; OPEN PDSA 1/2 — working set is full (sections are cutting rows, listed above) |
-| guards | pass | preflight green, 50 incident(s) all carry a guard |
+| agents.md | fail | 188 lines, 1 referenced path(s) missing: tests/NAME.sh |
+| replay | pass | full-stack replay catches a regression arm-only misses |
+| suite | pass | 17 tasks, last base 0/6 (0.00) on 6/17 tasks 0.4d ago — uncovered: stale-cache, long-reports, log-fanout, chain-12 … |
+| delegation | pass | 179 dispatches, 96 without verdict, 0 stale (>7d); roster bulker, debator, integrator, redteam, scout, tester, verifier, worker |
+| memory | warn | brief 1030/1100 tok (94%), 298 knowledge row(s) + 32 digest(s), last digest 3d ago; cut KEY LESSONS / PREFERENCES 4/10; RECENT 5/8; OPEN PDSA 1/2 — working set is full (sections are cutting rows, listed above) |
+| guards | fail | pi-preflight failing: Command '('$HOME/.pi/agent/bin/pi-preflight', '--quiet')' timed out after 120 seconds |
 | timers | pass | enabled: pi-agenda.timer, pi-burn.timer, pi-frantic.timer, pi-mind.timer, pi-publish.timer, pi-review.timer, pi-selfimprove.timer |
-| skills | pass | 19 skill(s) with valid frontmatter |
-| vendor | pass | 1.3.2  (2026-11-15) pinned, no upstream drift |
-| publish | pass | last attempt 0.3d ago — pushed: 1 file(s), 10258 KB; 4/2 in 7d |
-| pdsa | pass | 17 open cycle(s) |
-| mind | pass | 2 episodes (creativity:1, curiosity:1), last 2.0d; report 2d; lit refresh 2d |
+| skills | pass | 22 skill(s) with valid frontmatter |
+| vendor | warn | 4 new commit(s), head abeeaf95660b, version 1.3.2 |
+| publish | pass | last attempt 0.0d ago — pushed: 2 file(s), 1885 KB; 13/2 in 7d |
+| pdsa | pass | 21 open cycle(s) |
+| mind | pass | 2 episodes (creativity:1, curiosity:1), last 5.5d; report 5d; lit refresh 6d |
 
 ## ACTIONS
 
-- cover the remaining 12 task(s) at k>=3 before reading this as a ceiling
+- fix or drop the dangling reference(s): tests/NAME.sh
 - mem consolidate --digest, or archive what no longer matters
+- fix the failing preflight check before anything else
+- bin/pi-skills update --dry-run, then follow upstream/PROTOCOL.md
 
 ## Standing questions (answer in one line each next session)
 

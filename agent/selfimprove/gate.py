@@ -48,7 +48,12 @@ def main():
     ap.add_argument("cand")
     ap.add_argument("--min-delta", type=int, default=None)
     ap.add_argument("--k", type=int, default=None)
-    ap.add_argument("--skip-audit", action="store_true")
+    ap.add_argument("--skip-audit", action="store_true",
+                    help="skip the tamper audit; refused unless --diagnose is also given, so the "
+                         "release path cannot bypass it (roadmap G09, 2026-11-20)")
+    ap.add_argument("--diagnose", action="store_true",
+                    help="diagnostic mode: permits --skip-audit; a verdict printed here is not a "
+                         "promotion unless the audit also ran")
     ap.add_argument("--allow-subset", action="store_true",
                     help="accepted for compatibility: a subset pair prints per-task detail and always HOLDs")
     ap.add_argument("--cost-win-frac", type=float, default=None,
@@ -60,6 +65,13 @@ def main():
     pol = _json.loads(pol_path.read_text())["gate"] if pol_path.exists() else {}
     if a.min_delta is None:
         a.min_delta = pol.get("min_delta", 2)
+    # min_delta may raise the bar for one comparison, never lower it: `--min-delta 0` accepted a
+    # +1-task arm against a policy floor of 2 (roadmap G08, measured 2026-11-20). Same floor as --k.
+    floor_delta = pol.get("min_delta", 2)
+    if a.min_delta < floor_delta:
+        print(f"NOTE: --min-delta {a.min_delta} is below the policy floor {floor_delta}; "
+              f"using {floor_delta}")
+        a.min_delta = floor_delta
     if a.k is None:
         a.k = pol.get("min_reps", 3)
     # --k may raise the evidence bar for one comparison, never lower it: `--k 1` accepted a
@@ -70,6 +82,15 @@ def main():
         a.k = floor_k
     if a.cost_win_frac is None:
         a.cost_win_frac = pol.get("cost_win_frac", 0.0)
+    floor_cost = pol.get("cost_win_frac", 0.0)
+    if floor_cost and a.cost_win_frac < floor_cost:
+        print(f"NOTE: --cost-win-frac {a.cost_win_frac} is below the policy floor {floor_cost}; "
+              f"using {floor_cost}")
+        a.cost_win_frac = floor_cost
+    if a.skip_audit and not a.diagnose:
+        print("REFUSE: --skip-audit requires --diagnose — a verdict with no tamper audit is a "
+              "diagnostic, not a promotion; run the real audit for the release path")
+        return 1
     b, c = load(a.base), load(a.cand)
     if not a.skip_audit:
         import subprocess as _sp
@@ -202,18 +223,12 @@ def main():
     if regressed:
         print(f"REJECT: regression on {', '.join(regressed)}")
         return 3
-    # A suite the base already passes completely cannot show a capability gain (delta <= 0 by
-    # arithmetic), so a cost difference there is uninformative, not an improvement. Report it as
-    # such instead of promoting on a ceiling (agenda #13, #112; review finding 4).
-    if delta == 0 and nb == len(common) * k:
-        print(f"HOLD: UNINFORMATIVE — base passes all {len(common)} task(s) on this suite at k={k}; "
-              f"a pass-rate or token difference here is not evidence about capability. Widen the "
-              f"suite (agenda #112) before promoting.")
-        return 2
-
     # Cost-only win: delegated recon can leave pass rate unchanged while cutting the parent's
     # output tokens (the expensive ones). Accepted only at equal per-task pass, k>=3, and with a
     # margin, and reported as its own verdict so it is never confused with a capability gain.
+    # This branch runs BEFORE the ceiling hold on purpose: policy.json v2 says a cost win is
+    # exactly what a saturated suite can still show, and the old order made ACCEPT_COST
+    # unreachable there (roadmap Tier P0; measured 2026-11-20).
     if delta == 0 and a.cost_win_frac > 0:
         tb, tc = b.get("tokens_out", 0), c.get("tokens_out", 0)
         if tb and tc is not None:
@@ -223,6 +238,13 @@ def main():
                 print(f"ACCEPT_COST: equal pass, {frac:.0%} fewer output tokens "
                       f"(threshold {a.cost_win_frac:.0%}) — measure again next cycle before trusting it")
                 return 0
+    # A suite the base already passes completely cannot show a capability gain (delta <= 0 by
+    # arithmetic), so an equal-pass pair with no cost win is uninformative (agenda #13, #112).
+    if delta == 0 and nb == len(common) * k:
+        print(f"HOLD: UNINFORMATIVE — base passes all {len(common)} task(s) on this suite at k={k}; "
+              f"a pass-rate or token difference here is not evidence about capability. Widen the "
+              f"suite (agenda #112) before promoting.")
+        return 2
     if delta >= a.min_delta:
         print(f"ACCEPT: {delta:+d} tasks, no regression — archive the arm and record the decision")
         return 0

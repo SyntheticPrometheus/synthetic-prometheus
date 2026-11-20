@@ -453,10 +453,17 @@ def cmd_verdict(args) -> int:
     rows = read_ledger()
     sha = args.sha
     if args.last or not sha:
+        # `--last` used to mean "the newest dispatch row", verdict or not: two verdicts in a row
+        # both attached to the *same* dispatch and the older one stayed unverified forever
+        # (measured 2026-11-20: two testers, one verdict recorded, yield still 0.5 for the pair).
+        # The newest dispatch that has no verdict yet is the one the caller just finished.
+        done = {r.get("task_sha") for r in rows if r.get("type") == "verdict"}
         for r in reversed(rows):
-            if r.get("agent"):
+            if r.get("agent") and r.get("task_sha") not in done:
                 sha = r.get("task_sha")
                 break
+        else:
+            sys.exit("pi-delegate: every dispatch already has a verdict")
     if not sha:
         sys.exit("pi-delegate: no dispatch in the ledger to attach a verdict to")
     append([{"ts": now(), "type": "verdict", "task_sha": sha, "verdict": args.verdict,

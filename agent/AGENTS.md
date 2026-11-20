@@ -186,3 +186,7 @@ controller is unreadable), a waiting notice carries the count and the clock time
 once per 15 min, and scheduled due work yields a tick while the owner is texting; `pi-text check` (blocking in
 `pi-preflight`) fails after a day of silence. Routing rules, `inbox` / `watch --timeout 300` / `send --working`
 (2 h/8 h/24 h ladder), `bin/pi-bg` panels 21/22/23 (`skills/desktop`), ntfy → Telegram transport: `skills/agenda` § Texts.
+**A message that names a skill plus a topic is that skill's task**, not a question — `research-to-ship
+<topic>` means run `skills/research-to-ship` on `<topic>` (owner, 2026-11-20). `pi-text`'s `route()` decides it
+before the word-count rule (`skill_call`), the prompt names the SKILL.md, and a one-typo skill name still
+resolves; the case that cost a dropped task (#306) is pinned in `tests/pi-text.sh`.

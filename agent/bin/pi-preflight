@@ -396,7 +396,37 @@ def windows():
     off = pergola_offscreen()
     if off:
         return False, off
-    return True, f"{len(open_rows)} open pi-term target(s), 0 orphans, one WM"
+    storm = notification_storm()
+    if storm:
+        return False, storm
+    return True, f"{len(open_rows)} open pi-term target(s), 0 orphans, one WM, {notifications()} notification window(s)"
+
+
+def notifications() -> int:
+    """How many notification popups are open right now (0 when there is no display)."""
+    if not os.environ.get("DISPLAY"):
+        return 0
+    try:
+        r = subprocess.run(["wmctrl", "-l"], capture_output=True, text=True, timeout=15)
+    except (subprocess.SubprocessError, OSError):
+        return 0
+    return sum(1 for ln in (r.stdout or "").splitlines() if ln.split()[3:4] == ["xfce4-notifyd"])
+
+
+def notification_storm(limit: int = 10) -> str | None:
+    """A pile of notification popups is a screen the owner cannot use, and no check looked at it.
+
+    2026-11-20: a screenshot showed 221 windows titled "xfce4-notifyd" tiled over the whole
+    desktop — every run of `pi-done --selftest` posted a real "job FAILED" notification (DISPLAY
+    was set) with `-t 0` (never expire), and pergola arranges a notification like any other window.
+    The registry check below counted 0 pi-term targets the whole time. The screen is part of the
+    system; count it.
+    """
+    n = notifications()
+    if n > limit:
+        return (f"{n} notification window(s) open (limit {limit}) — a storm, not a notice; dismiss "
+                f"with `DISPLAY=:0 wmctrl -c xfce4-notifyd`")
+    return None
 
 
 def pergola_offscreen() -> str | None:

@@ -175,3 +175,48 @@ Guards added, both executable:
   representation of the correct answer (quoted YAML scalars here). It must PASS. A judge that
   fails an equivalent answer is over-strict by definition, and this is the exact defect that
   produced two spurious "base failures" today. `fixtures.selftest_answers` returns it.
+
+## 2026-11-20 — gate hardening: override floors, audit on the release path, cost win at ceiling
+
+Input: external roadmap (`Synthetic_Prometheus_Self_Improvement_Engineering_Roadmap.md`, 2026-11-19,
+reviewed against `main` d0ac58a). Phase 0 of that document: fix release-safety failures in the
+existing Python gate before any Rust rewrite. Three of its P0 findings reproduced on this host:
+
+1. `--min-delta 0` accepted a +1-task arm (`ACCEPT: +1 tasks`) against a policy floor of 2.
+2. `--skip-audit` let a candidate verdict skip `audit.py`; nothing separated that from promotion.
+3. base 3/3 vs cand 3/3 with output tokens 100 -> 10 printed `HOLD: UNINFORMATIVE` — the ceiling
+   branch returned before `ACCEPT_COST`, so the cost axis `policy.json` v2 describes was unreachable
+   exactly where it was meant to apply.
+
+Fixed in `gate.py` (no policy change, so `policy_sha` is unchanged: 21b2705c563bea5b):
+- `--min-delta` and `--cost-win-frac` are floored at `policy.json` values: an override may raise the
+  bar for one comparison, never lower it (same rule `--k` already had).
+- `--skip-audit` now requires `--diagnose`; without it the gate prints `REFUSE` and exits 1. The
+  release path therefore always runs the tamper audit.
+- the cost-only branch runs before the ceiling hold: equal pass + reproducible output-token win =>
+  `ACCEPT_COST` (efficiency, never capability); `UNINFORMATIVE` only when there is no cost win.
+
+Evidence: `selftest_gate.py` 25/25 before, **29/29 after** (4 new cases: min-delta floor, skip-audit
+without diagnose, cost-frac floor, default-path audit refusal; case 25 flipped from HOLD to
+ACCEPT_COST). `selftest.py` judge suite unchanged (17 tasks, good/tolerant/bad all classified).
+Still open from the roadmap and filed as agenda tasks: full-stack replay (arm-only runs are not a
+production measurement), a frozen evaluation contract with held-out post-freeze tasks, execution
+isolation, and the Rust validator/pure gate. None of those is claimed as done here.
+
+## 2026-11-20 — Full-stack safe replay: the arm-only blind spot is now measured
+
+Roadmap P0 said `run.py` is not a production-harness measurement. Built `replay.py` +
+`suite/replay.json`: the real extensions/skills/prompts/AGENTS.md/memory boot, a fresh sandbox DB,
+fake credentials, logging refusals for pass/notify-send/curl/gh/pi-text, a scripted non-loopback
+provider (so local-slim does not strip the stack), and `unshare -rn` with only loopback plus one
+private address. Judge reads the provider request, reply, effects log and canary files.
+
+Measured, `python3 selfimprove/replay.py --selftest`:
+- healthy full-stack **PASS**;
+- same harness with `memory-boot.ts` dropped **FAIL: missing context REPLAY_CANARY_MEMORY_7f3c**;
+- arm-only invocation (`-ne -ns -nc -np --no-mcp`) on that broken harness **PASS** — the regression
+  is invisible to the current suite, which is exactly the roadmap's completion evidence.
+
+`replay.py` full family: 2/2 PASS (~0.9 s/task). `pi-review` runs the selftest as the `replay`
+signal; `tests/pi-selfimprove-replay.sh` pins the three observations and is byte-identical across
+two runs. Scope: wiring/safety contracts, not model capability; model-driven replay stays #308/#267.
