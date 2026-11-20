@@ -35,6 +35,6 @@ method: prize.hutter1.net (http, https fails TLS hostname check), mattmahoney.ne
 - tester: redteam — technique: oracle
 
 ## Implementation
-- path: skills/recursive-research/SKILL.md — check: bin/pi-research check --done — status: done
+- path: skills/research-to-ship/SKILL.md — check: bin/pi-research check --done — status: done
 - path: research/rr/hutter-prize.md — check: bin/pi-research check --done — status: done
 - task #264 — test an offline-trained tiny model on mem dedup before buying more cloud embedding — status: open

@@ -244,6 +244,17 @@ def money_section(days: float) -> dict:
         out["top_sessions"] = [(float(t[1]), t[2].split("/")[-1][:44]) for t in top[:3]]
     else:
         out["drivers"] = text.strip()[:140]
+    # the decision numbers (recent rate, runway) from the same log, offline: --json would sample
+    # the provider, and an audit must not spend money to measure money.
+    rc, text = run([str(AGENT / "bin" / "pi-burn"), "--report"], 60)
+    if rc == 0:
+        try:
+            rep = json.loads(text)
+            out["per_day_recent"] = rep.get("per_day_recent")
+            out["per_day_window"] = rep.get("per_day")
+            out["runway_days"] = rep.get("runway_days")
+        except ValueError:
+            pass
     cap_days = max(1, math.ceil(days))          # one window for the number and for the share
     out["cap_days"] = cap_days
     rc, text = run([str(AGENT / "bin" / "pi-burn"), "--cap", str(cap_days)], 300,
@@ -419,16 +430,23 @@ def suite_section() -> dict:
         if r.get("n") and r.get("reps") and r["reps"] >= 3:
             tasks.add(r.get("tag") or r.get("arm"))
     total, covered, last_base = 0, set(), None
+    last_model = last_k = None
     try:
         spec = json.loads((AGENT / "selfimprove" / "suite" / "suite.json").read_text())
         ids = [t["id"] for t in spec.get("tasks") or []]
         total = len(ids)
         # coverage is what the last base run actually executed (pi-review's rule: a subset run must
         # not be scored against today's suite size)
+        # A local-model run is a batch-target measurement, not this harness's baseline: the ledger's
+        # last row on 2026-11-19 was qwen2.5-1.5b 0/6 (by design) and the report read "last base
+        # 0.0" — the same class as #239, a number read off the wrong run.
         base = [r for r in rows if r.get("arm") == "base"]
-        if base:
-            last = base[-1]
+        hosted = [r for r in base if (r.get("model_provider") or "") != "local"]
+        if hosted or base:
+            last = (hosted or base)[-1]
             last_base = last.get("pass_rate")
+            last_model = (last.get("model_resolved") or "?").split("/")[-1][:28]
+            last_k = last.get("reps")
             rp = (AGENT / "selfimprove" / "runs" / f"{last['stamp']}-{last['arm']}"
                   / "result.json")
             covered = {r["id"] for r in json.loads(rp.read_text()).get("results", [])}
@@ -436,7 +454,7 @@ def suite_section() -> dict:
     except Exception:
         pass
     return {"suite_tasks": total, "covered_tags": len(covered) or len(tasks),
-            "last_base": last_base}
+            "last_base": last_base, "last_model": last_model, "last_k": last_k}
 
 
 # ------------------------------------------------------------------ the pack
@@ -507,8 +525,12 @@ def scan(args) -> int:
         print(f"  corrections: {s['corrections']} · gaps: {len(s.get('gaps') or [])}")
     for cid, calls in s.get("long_chains") or []:
         print(f"  long chain {cid}: {calls} calls")
-    print(f"\n## MONEY  ${money.get('per_day') or '?'}/day · balance ${money.get('balance', '?')}"
-          f"/${money.get('credited', '?')} · today ${money.get('today', '?')}"
+    fmt = lambda v: f"{v:.2f}" if isinstance(v, (int, float)) else "?"
+    print(f"\n## MONEY  ${fmt(money.get('per_day_recent') or money.get('per_day'))}/day recent"
+          f" · ${fmt(money.get('per_day'))}/day window"
+          f" · balance ${money.get('balance', '?')}/${money.get('credited', '?')}"
+          f" · today ${money.get('today', '?')}"
+          f" · runway {money.get('runway_days', '?')}d"
           f" · sample {money.get('burn_sample_age_h', '?')}h old")
     for band, share in money.get("bands") or []:
         print(f"  context band {band:<10} {share:5.1f}% of spend")
@@ -558,7 +580,9 @@ def scan(args) -> int:
     for e in repo.get("examples") or []:
         print(f"  {e}")
     print(f"\n## SUITE  {suite.get('covered_tags', '?')}/{suite.get('suite_tasks', '?')} tasks "
-          f"covered at k>=3 · last base {suite.get('last_base', '?')}")
+          f"covered at k>=3 · last base {suite.get('last_base', '?')}"
+          + (f" ({suite['last_model']}, k={suite['last_k']})"
+             if suite.get("last_model") else ""))
     print(f"\n## SUSPECTS ({len(suspects)})")
     for x in suspects:
         print(f"  - {x}")

@@ -34,6 +34,6 @@ method: GitHub releases (openzl, lz4, clp, brotli, xz) plus arXiv 2610/2611, 6 m
 - tester: tester — technique: fault
 
 ## Implementation
-- path: skills/recursive-research/SKILL.md — check: bin/pi-research check --done — status: done
+- path: skills/research-to-ship/SKILL.md — check: bin/pi-research check --done — status: done
 - path: research/rr/compression-2026.md — check: bin/pi-research check --done — status: done
 - task #262 — measure zstd vs lz4 seek vs OpenZL on our own bytes before changing a path — status: open

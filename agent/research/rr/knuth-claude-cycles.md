@@ -18,7 +18,7 @@ method: Knuth's claude-cycles.pdf, HN 47557166, the Lean formalization repo, arX
 - tangential: dual-solver orchestration (symbolic + local search) — from knuth-claude-cycles — pairs a cloud model with the deterministic CP/SA solver we already run instead of asking one model to do both jobs.
 
 ## Systems impact
-- skills/recursive-research step 1 — change — evidence `knuth/claude-cycles.pdf` — a long exploration must checkpoint to a plan file, so a resumed run does not restart from prose.
+- skills/research-to-ship step 1 — change — evidence `knuth/claude-cycles.pdf` — a long exploration must checkpoint to a plan file, so a resumed run does not restart from prose.
 - skills/delegate policy — change — evidence `github.com/kim-em/KnuthClaudeLean` — a verifier audits the acceptance criteria, not the child's narrative; the acceptance line already exists and is unused.
 - bin/pi-senate and bin/pi-percolate — remove — evidence `arxiv:2605.09489` — no change is implied; recorded so a reader knows the neighbourhood was walked and rejected.
 
@@ -35,6 +35,6 @@ method: Knuth's claude-cycles.pdf, HN 47557166, the Lean formalization repo, arX
 - tester: tester — technique: state
 
 ## Implementation
-- path: skills/recursive-research/SKILL.md — check: bin/pi-research check --done — status: done, step 1 and step 4 name the checkpoint and the spec audit
+- path: skills/research-to-ship/SKILL.md — check: bin/pi-research check --done — status: done, step 1 and step 4 name the checkpoint and the spec audit
 - path: research/rr/knuth-claude-cycles.md — check: bin/pi-research check --done — status: done
 - task #265 — require plan.md checkpoints after each exploration step and audit the spec, not the transcript — status: open

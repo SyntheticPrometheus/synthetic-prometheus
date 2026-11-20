@@ -550,6 +550,26 @@ def memory_guard():
         f"{' (no disk backstop)' if not disk else ''}; llama-router MemoryMax={mx or 'unset'}")
 
 
+def memory_pins():
+    """Every pinned rule must actually reach the session prompt at the budget the boot uses.
+
+    2026-11-20: `mem brief` allocated pinned rows first but returned 0 when it dropped one, and the
+    boot extension asked for 700 tokens while seven live pins cost ~830 — so a rule the system
+    promised to always load was silently absent from every session. The brief now exits 1, and
+    this check reads that: the fix is the gate, not a note in the report.
+    """
+    r = subprocess.run([str(AGENT / "bin" / "mem"), "brief", "--budget", "1100"],
+                       capture_output=True, text=True, timeout=120)
+    out = r.stdout or ""
+    core = next((l for l in out.splitlines() if l.startswith("## CORE")), "## CORE (pinned)")
+    stats = next((l for l in out.splitlines() if l.startswith("## STATS")), "")
+    if r.returncode != 0:
+        why = next((l.strip() for l in out.splitlines() if "budget too small" in l),
+                   (r.stderr or "").strip()[:120] or "brief exited non-zero")
+        return False, f"a pinned rule does not fit: {why}"
+    return True, f"{core.replace('## ', '')}; {stats.replace('## STATS ', '')}"
+
+
 def laya_vml():
     """torch's bundled MKL dispatched an AVX-512 cos kernel on this AVX-only CPU and SIGILLed twice.
 
@@ -1095,6 +1115,7 @@ def main():
     check("graph", graph)
     check("units", units)
     check("memory", memory_guard)
+    check("memory pins", memory_pins)
     check("laya-vml", laya_vml)
     check("research", research_runs)
     check("frontmatter", frontmatter)

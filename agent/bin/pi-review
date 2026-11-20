@@ -79,7 +79,11 @@ def s_suite():
     if not rows:
         add("suite", "fail", "no ledger rows", "run selfimprove/run.py --arm arms/base.md")
         return
-    cur = __import__("hashlib").sha256((SI / "suite" / "suite.json").read_bytes()).hexdigest()
+    # same judge fingerprint run.py records: suite.json plus every fixture generator, so a
+    # fixture edit is caught as stale evidence instead of silently comparing against new inputs
+    sys.path.insert(0, str(SI))
+    import run as runner
+    cur = runner.suite_sha()
     same = [r for r in rows if r.get("suite_sha") == cur and r.get("arm") == "base"]
     last = same[-1] if same else rows[-1]
     age = days(__import__("datetime").datetime.strptime(last["stamp"], "%Y%m%dT%H%M%S").timestamp())

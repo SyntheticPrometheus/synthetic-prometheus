@@ -1,9 +1,13 @@
 ---
-name: recursive-research
+name: research-to-ship
 description: Turn a topic (or a list) into research, a doubled set of tangential topics, a systems-impact analysis, a self-improving loop, an implementation and a push — with testers and debators attacking every stage. Use when the owner asks to research something and actually change the system with it, when a technology might obsolete a tool or a row, or when a finding must end in a shipped commit rather than a digest.
 ---
 
-# Recursive research — a run, not a read
+# research-to-ship — a run, not a read
+
+Formerly `recursive-research` (owner, 2026-11-19: the old name described step 1 of 7). The research
+is the *input*; the shipped, tested change is the output. Tool unchanged: `bin/pi-research` owns the
+shape (manifest, template, gate), since scaffolding and gating digests is exactly what it does.
 
 One line: **research that cannot name the system it changes, the metric it moves, the observation
 that would prove it wrong, and the commit it landed in has not happened.**

@@ -35,6 +35,6 @@ method: pi-web over HN, arXiv, model cards and release notes, 2026-06..2026-11 w
 - tester: redteam — technique: oracle
 
 ## Implementation
-- path: skills/recursive-research/SKILL.md — check: bin/pi-research check --done — status: done
+- path: skills/research-to-ship/SKILL.md — check: bin/pi-research check --done — status: done
 - path: research/rr/new-models-2026.md — check: bin/pi-research check --done — status: done
 - task #263 — deferred tool loading, the one prompt-side saving in the window at −85% schema tokens — status: open

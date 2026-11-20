@@ -18,7 +18,7 @@ method: pi-web over Anthropic engineering/research posts, Cloudflare blog, HN, a
 - tangential: deferred tool-schema loading (defer_loading / Tool Search) — from anthropic-code-mode — it could remove the fixed tool-schema prompt we pay on every turn, including on local models where prefill is minutes.
 
 ## Systems impact
-- skills/recursive-research step 4 — change — evidence `anthropic.com/engineering/claude-code-sandboxing` — the tester is told to try the sandbox escape before the feature test, because a denylist is the failure mode.
+- skills/research-to-ship step 4 — change — evidence `anthropic.com/engineering/claude-code-sandboxing` — the tester is told to try the sandbox escape before the feature test, because a denylist is the failure mode.
 - bin/pi-delegate ledger — change — evidence `arxiv:2610.32555` — a child that failed on a tool fault should be retried by the parent, and the retry count recorded; today the verdict is pass/fail only.
 - codemode sandbox claim — create — evidence `arxiv:2607.05743` — state what the JS sandbox can reach (no fs, no net) in the skill that tells a tester to attack it, so "isolated" is checkable.
 

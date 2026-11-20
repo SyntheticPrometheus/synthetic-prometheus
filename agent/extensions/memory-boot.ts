@@ -17,10 +17,13 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 const run = promisify(execFile);
 const MEM = path.join(os.homedir(), ".pi", "agent", "bin", "mem");
 
-const FULL_BUDGET = 700;
+const FULL_BUDGET = 1100;
 /**
- * Local models get a 200-token brief: the full one is ~700 tokens, which at 7.8 tok/s of prefill
- * is 90 s of a 16k context spent on memory a 1.5B cannot use anyway (see extensions/local-slim.ts).
+ * FULL_BUDGET must be >= mem's own default (1100), or the pinned set does not fit and `mem brief`
+ * drops a pinned rule with exit 1: measured 2026-11-20, the extension asked for 700 while seven
+ * live pins cost ~830, so a rule the system promised to always load was never in the prompt.
+ * Local models get 200: the full brief at 7.8 tok/s of prefill is 90 s of a 16k context spent on
+ * memory a 1.5B cannot use anyway (see extensions/local-slim.ts).
  */
 const LOCAL_BUDGET = 200;
 

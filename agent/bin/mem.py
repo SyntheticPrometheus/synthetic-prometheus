@@ -757,7 +757,11 @@ def cmd_brief(a, c):
     # hard-coded 40, so --budget 0 reported "~54/0" — tester finding, 2026-11-16)
     print(f"## STATS {st['n']} memories ({st['ar'] or 0} archived), "
           f"budget ~{used}/{a.budget} tok")
-    return 0
+    # A pinned rule is a promise that it is in every session. When the budget cannot hold the set,
+    # the brief used to print 6/7 and still exit 0, so the caller could not tell a complete brief
+    # from a truncated one (measured 2026-11-20: the boot extension asked for 700 while the pins
+    # need ~830, and one pinned rule was never loaded). Exit 1 so the guard has something to read.
+    return 1 if dropped_core else 0
 
 
 # ---------------------------------------------------------------- consolidate

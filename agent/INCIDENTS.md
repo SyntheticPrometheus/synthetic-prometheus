@@ -1489,3 +1489,161 @@ starts, it is noise, and repeating it is the failure mode — one honest notice 
 - **Lives in**: `bin/pi-control` (`event_values`), `control/policy.json`, `bin/pi-control selftest`.
 - **Lesson**: a threshold over a count is a threshold over volume. Normalise by the exposure that
   produced the count, and keep an absolute floor only as a noise guard, never as the trigger.
+
+## INC-19 — the owner's file attachments were never downloaded, and expired unread (2026-11-20)
+
+- **What**: three files arrived via ntfy at 19:20, 20:00 and 23:00 EST. `pi-text` recorded the
+  caption ("You received a file: X.md") and dropped `eve["attachment"]` on the floor. Only the
+  19:20 one was saved, because that session fetched the URL by hand while it was still fresh. The
+  other two expired: ntfy keeps an attachment 3 h (`expires` = sent+10800) and the message record
+  under a day, and by 13:00Z both URLs returned 404 and the 20:00 event was gone from the cache.
+  Task #290 (`textnow_sms_verification_setup.md`) could not be worked at all.
+- **Cause**: the inbound path modelled a text as text. Files were treated as if the caption were
+  the content, so nothing owned the download and its lifetime was never a deadline anyone saw.
+- **Guard**: `pi-text`'s `ntfy_fetch` now captures the attachment and calls `save_attachment()`
+  inside the 10-minute poll — download to `~/Documents/inbox/` (override `PI_TEXT_INBOX`), a
+  `.part` rename so a truncated file never gets a real name, the filename sanitised to one path
+  component, and a `file`/`file_error` field on the inbox record (`pi-text inbox` prints both).
+  `tests/pi-text.sh` pins it: saved-at-receipt, hostile `../../` name contained, bytes intact,
+  dead URL recorded rather than silent. `pi-tool check pi-text` green, 53 checks, both runs
+  identical.
+- **Lives in**: `bin/pi-text` (`save_attachment`, `ntfy_fetch`), `tests/pi-text.sh`.
+- **Lesson**: an inbound artifact with a server-side TTL is due work at receipt time. "A session
+  will read it later" is a lifetime nobody measured.
+
+## INC-20 — the owner's channel went silent because a task session spent the chat cap (2026-11-20)
+
+- **What**: four texts sat unanswered from 06:20Z to 13:00Z, including "Status?" and "You still
+  there?". The dispatcher ran every 10 minutes and refused every time: `the text spend cap is spent
+  (text $1.01 of $1.00/24h — over)`. The $1.01 was one 900 s task session (#231, pergola e2e) that
+  shared the chat ledger. Meanwhile `pi-text check` and `pi-preflight text` said "the dispatcher is
+  not running, not busy" — a wrong diagnosis of a running, refusing dispatcher, so the guard sent
+  the next fixer to the wrong file.
+- **Cause**: one ledger, two jobs. The $1/24h cap was calibrated on owner replies (median $0.012),
+  but `text/dispatch.jsonl` also records task and due sessions (median $0.03, up to $0.15), so a
+  single long task could spend a day of chat budget. The check only asked "did a session open",
+  never "what did the dispatcher say".
+- **Guard**: `pi-control` splits the text ledger by route into `text` (fresh/resume replies) and
+  `text-work` (task/due), each with its own cap ($1.00 / $2.00) under the $12 backstop; `pi-text`
+  asks for the bucket it is spending (`rate_brake("text-work")` for the work loops) and writes a
+  `blocked`/`tick-blocked`/`due-blocked` ledger row carrying the reason; the check quotes that
+  reason instead of guessing. `bin/pi-control selftest` pins "a $9 task session does not spend the
+  chat cap" + "a $1.50 reply still spends the chat cap"; `tests/pi-text.sh` pins that the work loop
+  asks for its own bucket. Verified live: the same dispatcher sampled 20 min after the fix opened
+  task #290 and spent $0.017 of the chat bucket.
+- **Lives in**: `bin/pi-control` (`TEXT_WORK_ROUTES`, `subsystem_spend`), `control/policy.json`,
+  `bin/pi-text` (`rate_brake`, `last_refusal`), `tests/pi-text.sh`, `bin/pi-control selftest`.
+- **Lesson**: a cap must be measured on the population it was calibrated on. And when a guard says
+  "X is not running", it must first quote X's own last words.
+
+## INC-21 — three audit numbers were read off the wrong population (2026-11-20)
+
+- **What**: the weekly audit reported `70.4% of spend in the >250k band` and `above 7486 call(s),
+  $33.13`, `runway 7 days`, and `SUITE last base 0.0` — while the system spent $0.23 that day, held
+  $71.58, and the last hosted base run was 0.9722. Each number was real; each was computed over the
+  wrong set of rows.
+- **Cause**: (a) `pi-burn --cap` counted above-ceiling calls from sessions that *began before* the
+  setting whose ceiling it was testing; (b) runway divided the whole sampled window's spend by its
+  elapsed days, so the 2026-11-15 mega-session carried $9.24/day into a host spending $2.49; (c) the
+  audit's suite section took the last `base` row regardless of model, and the last row was a
+  deliberate qwen2.5-1.5b 0/6 run.
+- **Guard**: `--cap` counts only post-settings sessions and prints the older calls as `history …
+  sunk, not a defect`; `pi-burn` gains `per_day_recent` (median of the last three complete days)
+  and computes runway from it while keeping the window average as context, plus an offline
+  `--report` the audit uses so measuring money spends none; the audit's suite section prefers the
+  last hosted base row and prints its model and k. `tests/pi-burn.sh` pins all of it, and both
+  failures were mutation-checked (put the old counter/runway back and the case goes red).
+- **Lives in**: `bin/pi-burn`, `tests/pi-burn.sh`, `skills/audit/scripts/window.py`.
+- **Lesson**: money and quality instruments must name the population they measured. A window
+  average is context; the decision number is the recent, comparable run.
+
+## INC-22 — a pinned rule was never loaded into any session (2026-11-20)
+
+- **What**: the session brief printed `CORE (pinned) 6/7` and `budget too small for 1 pinned
+  rule(s)` at the top of every session. One pinned rule — the thing the boot is supposed to
+  guarantee — was absent from the prompt, and `mem brief` still exited 0, so nothing could see it.
+- **Cause**: the boot extension asked for a 700-token brief while the seven live pins cost ~830 at
+  the allocator's 0.80 CORE share. The CLI default had been raised to 1100; the extension constant
+  had not, and no gate compared them.
+- **Guard**: `FULL_BUDGET` is 1100 (the tool's default), `mem brief` exits 1 when it drops a pinned
+  rule, and `pi-preflight`'s new `memory pins` check runs `mem brief --budget 1100` and fails
+  publish when a pin does not fit.
+- **Lives in**: `extensions/memory-boot.ts`, `bin/mem.py` (`cmd_brief`), `bin/pi-preflight`
+  (`memory_pins`).
+- **Lesson**: a budget in two places is a budget in zero places. Pinned means "always in the
+  prompt", so the allocator's failure to fit it is an error, not a caption.
+
+## INC-23 — a forecast priced a gate the world had already decided (2026-11-20)
+
+- **What**: `speaker/reports/path-to-gavel-2026-11-16.md` carried P(declares) = 0.35 and printed
+  P(Speaker) = 1.56% on a rung that was decided on the 18th: the House Democratic Caucus
+  organizational election was held on Nov 18–19, Ted Lieu became chair, **Lauren Underwood became
+  vice chair** (defeating Sara Jacobs), and Pressley filed for nothing ("I do not seek positional
+  authority—I seek impact", pressley.house.gov 2026-11-18). The Kalshi market repriced the same
+  week: `KXNEXTSPEAKER-31-APRE` 3.0% → 0.2%, Jeffries 99.4%.
+- **Cause**: the model had no notion of a *cycle*. Every gate was a constant prior, so the tool
+  went on pricing a gate that observation had already resolved, and nothing in `report` or
+  `check` compared the overlay's calendar against today's date.
+- **Guard**: `model()` reads a dated `cycle` block from `speaker/data/notes.json`
+  (`held`, `pressley_filed`) and sets `p_declare = 0.0` when the cycle is resolved — a measured
+  gate is not a prior. `cycle_unrecorded()` is the running check: once an `election_dates` date is
+  more than `GRACE_DAYS` (1) in the past and no outcome is recorded, `pi-speaker report` **refuses
+  to write** (exit 2) and `pi-speaker check` fails (exit 1) with "record who won and whether she
+  filed". Both directions tested: recorded → 0/0, unrecorded 1d past → 2/1, restored → 0/0.
+- **Lives in**: `bin/pi-speaker` (`cycle_unrecorded`, `model`, `report`, `check`),
+  `speaker/data/notes.json` (`cycle` block), `speaker/reports/path-to-gavel-2026-11-20.md`.
+- **Lesson**: a date in a watch list is a deadline for the *tool*, not just for the reader. If the
+  calendar can resolve a gate, the gate must be read from the calendar, and the tool must refuse to
+  print a number it did not measure after that date has passed.
+
+## INC-24 — the money guard could not fire on a NaN, a negative or an unknown route (2026-11-20)
+
+- **What**: two independent testers, pointed at the new cap split, each found the same class from
+  a different side: `caps: {"text": "NaN"}` made `pi-control cap` print `$1.50 of $nan/24h — ok`
+  and exit 0 (so no brake at all, not even the 6/h blind one); `cost:"5.0"` vanished from the sum,
+  `cost:NaN` made the total NaN (`nan > cap` is False, so the cap could never fire), `cost:-5`
+  subtracted headroom without bound, and `cost:true` counted as $1.00. An unknown route
+  (`due-blocked`, or any future autonomous one) billed the *owner's* channel; `route:"task"`
+  sessions were invisible to the hourly blind-guard count; and a `+00:00` stamp parsed in
+  pi-control but not in pi-text, so the two tools disagreed about the same row.
+- **Cause**: untyped numbers crossing a ledger boundary, and a default (`chat`) chosen for the
+  case where nobody had said which bucket a route belongs to. Both are the same error: the guard
+  decided in favour of "not over" whenever it did not understand the input.
+- **Guard**: `valid_cost()` rejects bools, strings, non-finite and negative costs; an unreadable
+  cost or cap makes the row `over` with a `detail` (fail closed) so `pi-control cap` exits 3 and
+  pi-text falls back to the blind count brake; only `CHAT_ROUTES={"fresh","resume"}` may spend
+  the owner's bucket (everything else, including unknown routes, bills `text-work`); `pi-text`
+  counts `task` sessions and parses `Z`/offset stamps with the same parser as pi-control; a
+  refusal older than the cap it names is no longer quoted. `pi-control selftest` grew 7 cases
+  (21/21) and `tests/pi-text.sh` 6, and every one was mutation-checked: restoring the old cost
+  filter, the old route default, the old parser, the old session set or the old refusal window
+  turns exactly its case red. The selftest summary had hardcoded `11`, so it under-reported its
+  own case count; it now counts what it ran.
+- **Lives in**: `bin/pi-control` (`valid_cost`, `CHAT_ROUTES`, `cap_table`, selftest),
+  `bin/pi-text` (`spend_cap_state`, `_row_ts`, `SESSION_ROUTES`, `last_refusal`), `tests/pi-text.sh`.
+- **Lesson**: a guard's default must be the *refusing* state. "I did not understand the input"
+  and "there is no risk" are different answers, and only one of them may be silent.
+
+## INC-25 — a session's commit swept another session's in-flight hunks (2026-11-20)
+
+- **What**: while this audit had `bin/pi-text` and `bin/pi-control` edits in the working tree, a
+  text-dispatched session committed the owner's cap raise (`5f2a31b`) and that commit included
+  the audit's uncommitted hunks (the `SESSION_ROUTES` comment, the controller-shape check). Its
+  own `git commit` was not refused; minutes later the audit's commit *was* refused for the same
+  paths. Both sessions were mine, the merge happened to be clean and the tests were green, but
+  attribution in the history is now wrong and nothing stopped the sweep.
+- **Cause**: two holes in `pi-claim`'s attribution. The audit edited through `python3 - <<PY`
+  (a heredoc script calls `write_text`), which `_OPAQUE_WRITE` did not match (it knew `python3 -c`
+  only), and the write-target extractor only accepts absolute or `./` paths, so a bare
+  `bin/pi-text` inside the script was invisible. The commit guard then saw only the audit's older,
+  already-committed edit and rated it safe.
+- **Guard**: `_OPAQUE_WRITE` now matches heredoc interpreters (`python3 - <<`, `sh -s`, `bash -s`)
+  and, for an opaque writer, a staged path's **basename** appearing anywhere in the command counts
+  as an edit (noisy by construction; the override is per-path via `PI_CLAIM_ALLOW`, and failing
+  closed is much cheaper than the sweep). `pi-claim selftest` pins both directions: a heredoc
+  `Path('probe.txt').write_text(...)` is a foreign edit, a `grep z probe.txt` is not; removing the
+  basename branch turns the first red.
+- **Lives in**: `bin/pi-claim` (`_OPAQUE_WRITE`, `foreign_edits`), `bin/pi-claim selftest`.
+- **Lesson**: an attribution guard is only as good as its view of how sessions write. `edit`/`write`
+  is the polite path; the shell is where the fast path lives, and a guard blind to it refuses the
+  careful session and waves the careless one through.
