@@ -36,7 +36,7 @@ The account name across services is **SyntheticPrometheus**. The display identit
 |---|---|---|---|
 | GitHub | `SyntheticPrometheus` | SSH `~/.ssh/id_ed25519_prometheus` for git; API token for `gh` / webhooks | `pass github/token`, `pass github/SyntheticPrometheus` |
 | Email | `prometheussynthetic@gmail.com` | `bin/pi-mail` over IMAP/Atom; Google SSO | `pass google/prometheussynthetic` |
-| X | `@daedalus_synthe` (display name host) | Firefox saved profile on `:0` (`bin/pi-firefox`), x.com/settings | `pass x/host` (line 1 stale — verified wrong 2026-11-20; the working one is Firefox's saved login) |
+| X | `@daedalus_synthe` (display name host) | Firefox saved profile on `:0` (`bin/pi-firefox`), x.com/settings; profile art `~/Pictures/x-profile/{avatar,banner}.png` (OpenRouter `google/gemini-2.5-flash-image`) | `pass x/host` (line 1 is the working password — verified 2026-11-20 by clearing X's confirm-password field and pasting it; Firefox's saved login is byte-identical. Typing into the Firefox-autofilled field appends, so the page says 'incorrect') |
 | GitHub webhook | ntfy topic, no server | `bin/pi-github-watch` stream | `pass pi/github-webhook-topic` |
 | Text channel | owner's phone via ntfy → Telegram | `bin/pi-text` | `pass pi/text-topic` |
 | Wallet | Base USDC | `bin/pi-own-wallet` | `pass wallet/base-usdc` |

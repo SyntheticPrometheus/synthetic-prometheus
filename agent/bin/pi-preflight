@@ -15,6 +15,8 @@ Each check exists because something went wrong once (see INCIDENTS.md):
   graph        the percolation model of the machine must not get more fragile than its baseline
   frontmatter  every skill/agent/prompt frontmatter must parse as YAML (pi drops what does not)
   panel        the owner's panel indicators exist, emit valid genmon XML, and a click actually fires
+  updates      the machine and pi must be current: a stale apply, an aging reboot marker, an
+               unmerged .pacnew, or a missing/disabled `updates` row (the protocol is not wired)
 """
 import ast
 import calendar
@@ -813,6 +815,62 @@ def decisions():
     return False, "; ".join(l[:100] for l in out if l.startswith("OVERDUE")) or "pi-decide due failed"
 
 
+def probe_due():
+    """A claim past its review date that no probe ever killed is stale evidence.
+
+    The harness already requires falsifiers (`pi-decide`, `pi-research`, `mem pdsa`), but until
+    `bin/pi-probe` runs one. This check keeps the registry honest: a recorded claim whose
+    `--review-by` has passed without a `falsified` verdict blocks publish, exactly like an overdue
+    decision. An empty registry passes.
+    """
+    tool = AGENT / "bin" / "pi-probe"
+    if not tool.exists():
+        return False, "bin/pi-probe missing"
+    r = subprocess.run([str(tool), "due"], capture_output=True, text=True, timeout=30)
+    out = (r.stdout + r.stderr).strip().splitlines()
+    if r.returncode == 0:
+        return True, out[-1] if out else "no claims"
+    return False, "; ".join(l[:100] for l in out if l.startswith("DUE")) or "pi-probe due failed"
+
+
+def updates():
+    """An update protocol that is not wired is prose.
+
+    Measured 2026-11-20: the last full `pacman -Syu` was 6 days old (54 packages, glibc, the
+    kernel) and pi was a release behind, and no check existed — so this guard asks the protocol's
+    own offline view (`pi-update status`) three questions a stale machine would otherwise answer
+    silently: has an apply succeeded recently, is a reboot marker aging, is a `.pacnew` waiting —
+    and one the machine cannot answer about itself: is the weekly row still there and enabled.
+    """
+    import sqlite3
+    tool = AGENT / "bin" / "pi-update"
+    if not tool.exists():
+        return False, "bin/pi-update missing"
+    r = subprocess.run([str(tool), "status", "--json", "--max-age-days", "30"],
+                       capture_output=True, text=True, timeout=120)
+    try:
+        data = json.loads(r.stdout or "{}")
+    except ValueError:
+        return False, "pi-update status --json is unparseable"
+    if r.returncode != 0:
+        return False, "; ".join(data.get("attention") or ["pi-update status failed"])[:220]
+    if not (AGENT / "skills" / "updates" / "SKILL.md").exists():
+        return False, "skills/updates/SKILL.md missing: the protocol is not documented"
+    try:
+        con = sqlite3.connect(f"file:{AGENT / 'agenda' / 'agenda.db'}?mode=ro", uri=True)
+        row = con.execute("select enabled, cadence from obligations where id = 'updates'").fetchone()
+        con.close()
+    except sqlite3.Error as exc:
+        return False, f"agenda unreadable: {exc}"
+    if not row:
+        return False, "no `updates` agenda row: the weekly apply is not scheduled"
+    if not row[0]:
+        return False, "the `updates` agenda row is disabled"
+    age = data.get("last_apply_age_days")
+    when = f"last apply {age}d ago" if age is not None else "no apply recorded"
+    return True, f"{when}, `updates` row every {row[1]}, no attention"
+
+
 def tools():
     """A tool is only a capability if it is pinned and deterministic.
 
@@ -1153,6 +1211,8 @@ def main():
     check("repomap", repomap)
     check("web", web)
     check("decisions", decisions)
+    check("probe", probe_due)
+    check("updates", updates)
     check("tools", tools)
     check("map", map_index)
     check("identity", identity)

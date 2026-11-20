@@ -1,0 +1,326 @@
+#!/usr/bin/env python3
+"""pi-probe — run the probe a claim was supposed to face, so a falsifier is an event, not a word.
+
+Why this exists: this harness already *asks* for falsifiers — `pi-decide` refuses a record without
+a dated one, `pi-research` refuses a digest without one, `mem pdsa` cycles carry one. None of those
+ever runs it. A falsifier that is only checked for presence is decoration: the claim was never
+exposed to the observation that could kill it. This tool stores a claim together with the probes
+that would kill it, runs them, and reports the verdict. `survived` is evidence, not proof.
+
+A probe comes in two shapes, because both are honest:
+  --falsifier CMD   killer: exits 0 only when it OBSERVED the falsifying condition
+                    (e.g. `grep -q Traceback daemon.log` for "the daemon is stable")
+  --holds-if CMD    necessary condition: exits 0 when the claim still holds
+                    (e.g. `pi-preflight --quiet` for "the tree is publishable")
+A probe that could not run (exit 126/127, timeout, signal) is an ERROR, never a survival.
+
+  pi-probe add --claim TEXT [--name SLUG] (--falsifier CMD | --holds-if CMD)... [--review-by DATE]
+  pi-probe run NAME... | --all [--timeout SEC] [--json]
+  pi-probe list
+  pi-probe show NAME
+  pi-probe due                     exit 1 on a survived claim past its review-by
+  pi-probe selftest
+
+Exit: 0 claim survived every probe · 1 a probe fired (claim falsified) · 2 usage/error
+Records live in $PI_FALSIFY_DIR (default ~/.pi/agent/falsify), one JSON file per claim, and every
+run appends to falsify/log.jsonl so "I ran the falsifier" is auditable.
+"""
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import json
+import os
+import re
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+AGENT = Path(os.environ.get("PI_AGENT_DIR") or Path.home() / ".pi" / "agent")
+BASE = Path(os.environ.get("PI_FALSIFY_DIR") or (AGENT / "falsify"))
+LOG = BASE / "log.jsonl"
+TRIVIAL = {"", ":", "true", "false", "exit 0", "exit 1", "/bin/true", "/bin/false"}
+
+
+def slug(text: str) -> str:
+    words = re.findall(r"[a-z0-9]+", text.lower())
+    return "-".join(words[:6]) or "claim"
+
+
+def record_path(name: str) -> Path:
+    return BASE / f"{name}.json"
+
+
+def load(name: str) -> dict:
+    p = record_path(name)
+    if not p.exists():
+        raise KeyError(name)
+    return json.loads(p.read_text())
+
+
+def save(rec: dict) -> None:
+    BASE.mkdir(parents=True, exist_ok=True)
+    p = record_path(rec["name"])
+    fd, tmp = tempfile.mkstemp(dir=BASE, prefix=".tmp-", suffix=".json")
+    try:
+        with os.fdopen(fd, "w") as fh:
+            json.dump(rec, fh, indent=1, sort_keys=True)
+            fh.write("\n")
+        os.replace(tmp, p)
+    finally:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+
+
+def _date(value: str) -> str | None:
+    try:
+        return dt.date.fromisoformat(value).isoformat()
+    except ValueError:
+        return None
+
+
+def probe(mode: str, cmd: str, timeout: float) -> dict:
+    """Run one probe. mode=kills fires on 0; mode=holds fires on non-zero. 126/127 -> error."""
+    try:
+        r = subprocess.run(["/bin/sh", "-c", cmd], capture_output=True, text=True,
+                           timeout=timeout, env={**os.environ, "LC_ALL": "C"})
+        rc = r.returncode
+        out, err = r.stdout, r.stderr
+    except subprocess.TimeoutExpired:
+        return {"cmd": cmd, "mode": mode, "rc": None, "outcome": "error",
+                "detail": f"timeout after {timeout:g}s"}
+    except OSError as e:
+        return {"cmd": cmd, "mode": mode, "rc": None, "outcome": "error", "detail": str(e)}
+    if rc < 0:
+        return {"cmd": cmd, "mode": mode, "rc": rc, "outcome": "error",
+                "detail": "killed by signal"}
+    if rc in (126, 127):
+        return {"cmd": cmd, "mode": mode, "rc": rc, "outcome": "error",
+                "detail": "probe could not run (126/127)"}
+    fired = rc == 0 if mode == "kills" else rc != 0
+    detail = ""
+    for line in (out + "\n" + err).splitlines():
+        if line.strip():
+            detail = line.strip()[:200]
+    return {"cmd": cmd, "mode": mode, "rc": rc,
+            "outcome": "fired" if fired else "survived", "detail": detail}
+
+
+def verdict(runs: list[dict]) -> tuple[str, int]:
+    errs = [r for r in runs if r["outcome"] == "error"]
+    fired = [r for r in runs if r["outcome"] == "fired"]
+    if fired:
+        return "falsified", 1
+    if errs:
+        return "error", 2
+    return "survived", 0
+
+
+def cmd_add(a) -> int:
+    claim = a.claim.strip()
+    if not claim:
+        print("refused: --claim is empty", file=sys.stderr)
+        return 2
+    probes = [{"mode": "kills", "cmd": c} for c in (a.falsifier or [])]
+    probes += [{"mode": "holds", "cmd": c} for c in (a.holds_if or [])]
+    if not probes:
+        print("refused: a claim needs at least one --falsifier or --holds-if probe",
+              file=sys.stderr)
+        return 2
+    for p in probes:
+        if p["cmd"].strip() in TRIVIAL:
+            print(f"refused: {p['cmd']!r} cannot falsify anything (always or never fires)",
+                  file=sys.stderr)
+            return 2
+    if a.review_by and not _date(a.review_by):
+        print("refused: --review-by is not YYYY-MM-DD", file=sys.stderr)
+        return 2
+    name = a.name or slug(claim)
+    if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", name):
+        print(f"refused: name {name!r} must be lowercase letters, digits, dashes", file=sys.stderr)
+        return 2
+    if record_path(name).exists() and not a.force:
+        print(f"refused: {name} already exists (use --force to replace)", file=sys.stderr)
+        return 2
+    rec = {"name": name, "claim": claim, "created": dt.datetime.now(dt.timezone.utc)
+           .strftime("%Y-%m-%dT%H:%M:%SZ"), "falsifiers": probes,
+           "review_by": _date(a.review_by) if a.review_by else None, "last": None}
+    save(rec)
+    print(f"recorded {name}: {claim} ({len(probes)} probe{'s' if len(probes) != 1 else ''})")
+    return 0
+
+
+def _run_one(rec: dict, timeout: float, as_json: bool) -> tuple[str, int]:
+    runs = [probe(p["mode"], p["cmd"], timeout) for p in rec["falsifiers"]]
+    v, rc = verdict(runs)
+    rec["last"] = {"ts": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                   "verdict": v, "runs": runs}
+    save(rec)
+    BASE.mkdir(parents=True, exist_ok=True)
+    with LOG.open("a") as fh:
+        fh.write(json.dumps({"ts": rec["last"]["ts"], "name": rec["name"], "verdict": v,
+                             "runs": [{"mode": r["mode"], "cmd": r["cmd"], "rc": r["rc"],
+                                       "outcome": r["outcome"]} for r in runs]},
+                            sort_keys=True) + "\n")
+    if as_json:
+        print(json.dumps({"name": rec["name"], "claim": rec["claim"], "verdict": v,
+                          "runs": runs}, indent=1, sort_keys=True))
+        return v, rc
+    print(f"claim      {rec['name']}: {rec['claim']}")
+    for r in runs:
+        label = "kills" if r["mode"] == "kills" else "holds"
+        print(f"probe      [{label}] {r['cmd']}")
+        print(f"  rc       {r['rc'] if r['rc'] is not None else 'none'}")
+        print(f"  outcome  {r['outcome']}" + (f"  ({r['detail']})" if r["detail"] else ""))
+    fired = sum(1 for r in runs if r["outcome"] == "fired")
+    bad = sum(1 for r in runs if r["outcome"] == "error")
+    print(f"VERDICT    {v} ({fired} fired, {len(runs) - fired - bad} survived, {bad} error)")
+    return v, rc
+
+
+def cmd_run(a) -> int:
+    names = a.names
+    if a.all:
+        names = sorted(p.stem for p in BASE.glob("*.json")) if BASE.exists() else []
+    if not names:
+        print("usage: pi-probe run NAME... | --all", file=sys.stderr)
+        return 2
+    seen: set[str] = set()
+    bold, berr = [], []
+    for name in names:
+        if name in seen:
+            continue
+        seen.add(name)
+        try:
+            rec = load(name)
+        except (KeyError, ValueError) as e:
+            print(f"error: no readable record {name} ({e})", file=sys.stderr)
+            berr.append(name)
+            continue
+        v, _ = _run_one(rec, a.timeout, a.json)
+        if v == "falsified":
+            bold.append(name)
+        elif v == "error":
+            berr.append(name)
+    if len(seen) > 1 and not a.json:
+        print(f"TOTAL      {len(bold)} falsified, {len(berr)} error, "
+              f"{len(seen) - len(bold) - len(berr)} survived")
+    if bold:
+        return 1
+    if berr:
+        return 2
+    return 0
+
+
+def cmd_list(a) -> int:
+    rows = sorted(BASE.glob("*.json")) if BASE.exists() else []
+    if not rows:
+        print("no claims recorded")
+        return 0
+    for p in rows:
+        try:
+            r = json.loads(p.read_text())
+        except ValueError:
+            print(f"{p.stem:24s} [unreadable]")
+            continue
+        last = r.get("last") or {}
+        print(f"{r.get('name', p.stem):24s} {last.get('verdict', 'never-run'):10s} "
+              f"{len(r.get('falsifiers', []))} probe(s)  {r.get('claim', '')[:70]}")
+    return 0
+
+
+def cmd_show(a) -> int:
+    try:
+        rec = load(a.name)
+    except (KeyError, ValueError) as e:
+        print(f"error: no readable record {a.name} ({e})", file=sys.stderr)
+        return 2
+    print(json.dumps(rec, indent=1, sort_keys=True))
+    return 0
+
+
+def cmd_due(a) -> int:
+    today = dt.date.today()
+    late = []
+    rows = sorted(BASE.glob("*.json")) if BASE.exists() else []
+    for p in rows:
+        try:
+            r = json.loads(p.read_text())
+        except ValueError:
+            continue
+        d = _date(r["review_by"]) if r.get("review_by") else None
+        if d and dt.date.fromisoformat(d) <= today and (r.get("last") or {}).get("verdict") != "falsified":
+            late.append((r.get("name", p.stem), d))
+    for name, d in late:
+        print(f"DUE {name} — review-by {d}, still not falsified")
+    if late:
+        print(f"{len(late)} claim(s) past review — run the probe or drop the claim")
+        return 1
+    print(f"claims: {len(rows)} recorded, none due")
+    return 0
+
+
+def cmd_selftest(a) -> int:
+    with tempfile.TemporaryDirectory() as td:
+        env = {**os.environ, "PI_FALSIFY_DIR": td}
+        cases = [
+            (["add", "--claim", "x is true", "--name", "x", "--falsifier", "test -d /nonexistent-pi-probe"], 0),
+            (["add", "--claim", "y is true", "--name", "y", "--falsifier", "test -d /"], 0),
+            (["add", "--claim", "z is true", "--name", "z", "--holds-if", "test -d /"], 0),
+            (["add", "--claim", "w", "--name", "w", "--falsifier", "true"], 2),
+            (["add", "--claim", "v", "--name", "v"], 2),
+            (["run", "x"], 0),
+            (["run", "y"], 1),
+            (["run", "z"], 0),
+            (["run", "nope"], 2),
+        ]
+        bad = 0
+        for args, want in cases:
+            r = subprocess.run([sys.executable, __file__, *args], capture_output=True,
+                               text=True, env=env)
+            got = r.returncode
+            ok = got == want
+            bad += 0 if ok else 1
+            print(("ok   " if ok else "FAIL ") + " ".join(args) + f"  rc={got} want={want}")
+        return 1 if bad else 0
+
+
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser(prog="pi-probe", description=__doc__.splitlines()[0])
+    sub = ap.add_subparsers(dest="action", required=True)
+
+    p = sub.add_parser("add", help="record a claim and the probes that could kill it")
+    p.add_argument("--claim", required=True)
+    p.add_argument("--name")
+    p.add_argument("--falsifier", action="append", metavar="CMD",
+                   help="killer probe: exit 0 means it observed the falsifying condition")
+    p.add_argument("--holds-if", action="append", metavar="CMD",
+                   help="necessary-condition probe: exit 0 means the claim still holds")
+    p.add_argument("--review-by")
+    p.add_argument("--force", action="store_true")
+    p.set_defaults(func=cmd_add)
+
+    p = sub.add_parser("run", help="run probes and report survived / falsified / error")
+    p.add_argument("names", nargs="*")
+    p.add_argument("--all", action="store_true")
+    p.add_argument("--timeout", type=float, default=30.0)
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=cmd_run)
+
+    p = sub.add_parser("list", help="claims with their last verdict")
+    p.set_defaults(func=cmd_list)
+    p = sub.add_parser("show", help="one record as JSON")
+    p.add_argument("name")
+    p.set_defaults(func=cmd_show)
+    p = sub.add_parser("due", help="claims past review-by that were never falsified")
+    p.set_defaults(func=cmd_due)
+    p = sub.add_parser("selftest", help="exercise add/run/refusal paths in a temp dir")
+    p.set_defaults(func=cmd_selftest)
+
+    a = ap.parse_args(argv)
+    return a.func(a)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

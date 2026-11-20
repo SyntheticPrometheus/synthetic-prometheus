@@ -48,6 +48,7 @@ ALLOW = [
     "bin/pi-publish", "bin/pi-github-bootstrap", "bin/pi-preflight", "bin/pi-secret",
     "bin/pi-accounts", "bin/pi-mail",
     "bin/pi-review", "bin/pi-commit-guard.py",
+    "bin/pi-falsify", "bin/pi-probe",
     "PUBLISHING.md", "PASSWORDS.md", "RUNBOOK-accounts.md", "INCIDENTS.md",
     "delegation/README.md", "delegation/policy.md",
     "laya/NOTES.md", "laya/bench.py", "laya/mcp_probe.py", "laya/probe2.py",

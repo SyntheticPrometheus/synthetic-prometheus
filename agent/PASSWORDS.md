@@ -53,3 +53,12 @@ than clicking harder.
 - If a credential is ever exposed (committed, pasted, logged): rotate it at the provider first, then
   update the store, then `pass git commit`.
 - `pass git log` is the audit trail of when an entry changed.
+
+## Entering a stored password into a form
+
+- Firefox pre-fills X's confirm-password form (and many others) from its own login store. Typing
+  the `pass` value into that field appends it to the pre-filled one, and the site says "incorrect"
+  for a password that is right. Click the field, `ctrl+a`, Delete, then paste, and check the dot
+  count equals the password length before submitting (INC-29, 2026-11-20).
+- Before recording a credential as stale, test it in a cleared field; a failed attempt in an
+  autofilled field is evidence about the form, not the password.

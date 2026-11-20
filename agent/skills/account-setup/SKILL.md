@@ -42,10 +42,14 @@ Say so in one line when you use it.
    bin/pi-firefox goto "https://service.example/signup"
    bin/pi-firefox shot /tmp/signup.png
    bin/pi-firefox key Tab
-   bin/pi-firefox type "text"
+   bin/pi-firefox move X Y
+   bin/pi-firefox type "text"          # human key intervals, pauses; --typos to self-correct
    bin/pi-firefox click X Y
+   bin/pi-firefox scroll 3             # smooth wheel ticks, or `scroll 3 X Y`
    ```
-   Pacing: one action every few seconds, one attempt per stage, no reload-spamming, no parallel
+   Pointer and keys are shaped by `bin/pi-human` (Bezier glide, dwell, jittered hold, non-uniform
+   key timing) — never call `xdotool mousemove ... click` or fixed-delay `xdotool type` yourself; a
+   teleport-then-type is a bot fingerprint and the reason this step exists at all. Pacing: one action every few seconds, one attempt per stage, no reload-spamming, no parallel
    tabs of the same flow. Calibrate the click offset with one harmless click first (the window
    frame and the client area differ by ~28 px); prefer Tab+Enter over clicking. If clicks stop
    working, suspect the offset before clicking harder.
@@ -96,3 +100,10 @@ DISPLAY=:0 bin/pi-firefox list   # the GUI fallback can see windows
 
 If all three work, the skill's tools are live. If one fails, fix that transport before starting a
 signup — a signup that stalls on verification is the failure this skill exists to prevent.
+
+- **X (or any ) password "incorrect" after typing a `pass` value** — the field was not empty.
+  Firefox autofills the confirm-password form, so typing the value appends to the saved one and
+  the page rejects it. Click the field, `ctrl+a`, Delete, then paste; verify the dot count equals
+  the password length before submitting. Measured 2026-11-20: `pass x/host` line 1 unlocked
+  x.com/settings/your_twitter_data/account this way, and was byte-identical to the Firefox login
+  (`logins.json` decrypted through `libnss3` `PK11SDR_Decrypt`).

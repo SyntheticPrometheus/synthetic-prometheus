@@ -1696,3 +1696,105 @@ starts, it is noise, and repeating it is the failure mode — one honest notice 
   `control/state.json` (`wakes`), `INCIDENTS.md`.
 - **Lesson**: an alarm that stays true must fire once and say when it last fired. Re-filing a
   persistent condition every tick converts the guard into the spend it was meant to catch.
+
+## INC-28 — a timeout bug outlived the task that caused it (2026-11-20)
+
+- **What happened**: text task #314 (research-to-ship on arXiv 2605.28207) timed out at 14:55
+  and again at 15:25; the second failure filed bug #323 at priority 1. The resumed run answered at
+  15:50 — 9 s, one turn — and `pi-agenda done 314`. #323 stayed open, so the task loop opened a
+  fresh session for a bug whose subject was already answered, hours after the answer was sent.
+- **Cause**: the dispatch loop filed a bug on the second failure and had no path back: nothing
+  joined a bug to the task it described, so success could not retire it. A later failure would
+  also have filed a second bug for the same streak.
+- **Guard**: `bin/pi-text` gains `open_bugs_for(task_id)` (open `source='bug'` rows whose `ref` is
+  the task, read-only with the INC-2 lock retry) and `close_bugs_for()`; the success path closes
+  them with `pi-agenda done` and logs why, and the failure path files a bug only when none already
+  tracks the streak. Pinned in `tests/pi-text.sh`: found by ref, another task's bug not matched,
+  close reports one, the row is no longer open, unrelated bug untouched, second close a no-op.
+- **Measured**: `tests/pi-text.sh` exit 0 (6 new checks ok); `pi-tool check pi-text` ok twice,
+  identical; live `close_bugs_for(314)` closed #323.
+- **Lives in**: `bin/pi-text` (`open_bugs_for`, `close_bugs_for`, `run_one`), `tests/pi-text.sh`.
+- **Lesson**: a bug filed automatically needs the same automatic close as the task it mirrors,
+  or the queue turns a recovered failure into permanent priority-1 wallpaper.
+
+## INC-29 — a working credential was recorded as stale (2026-11-20)
+
+- **What happened**: task #324 (p1) said `pass show x/host | head -1` did not authenticate on
+  X's confirm-password page while Firefox's saved login did, and asked for a password rotation or
+  a `logins.json` decrypt to overwrite the store. The decrypt showed the two are byte-identical
+  (`libnss3` `PK11SDR_Decrypt` over `key4.db` + `logins.json`), and the pass value unlocked
+  x.com/settings/your_twitter_data/account once the field was cleared first. Nothing was stale.
+- **Cause**: X's confirm form is pre-filled by Firefox's password manager. Typing (or piping) the
+  `pass` value into that field appends it to the saved value, so X rejected a concatenation and
+  the session recorded the credential as wrong. The dot count was never checked against the
+  password length before submitting.
+- **Guard**: the measured failure mode is now in `PASSWORDS.md` § Entering a stored password into a
+  form (committed) and `skills/account-setup/SKILL.md` — click the field, `ctrl+a`, Delete, paste,
+  and verify the dot count equals the password length before submitting; never type into a password
+  field Firefox may have autofilled. `IDENTITY.md`'s X row carries the verified date and the method
+  instead of "line 1 stale".
+- **Measured**: cleared field + paste of `pass x/host | head -1` → confirm accepted → account
+  information page rendered (screens /tmp/x-confirm-4.png, -5.png); `pass` file mtime 2026-11-19
+  18:41:55, unchanged since creation, equal to the login Firefox saved at account creation
+  2026-11-20 09:27:34.
+- **Lives in**: `IDENTITY.md` (X row), `skills/account-setup/SKILL.md`, this file.
+- **Lesson**: "the stored credential is wrong" needs a cleared field and a length check before it
+  becomes a memory row or a rotation task; an autofilled field makes every correct password fail.
+
+## INC-30 — a successful `pi update self` left pi unstartable (2026-11-20)
+
+- **What happened**: the first run of the new update protocol applied 55 packages and pi 1.5.2 →
+  1.6.0, and `pi update self` printed `Updated pi from 1.5.2 to 1.6.0` with rc=0. The very next
+  `pi --version` as `host` died with `Managed Pi executable is missing:
+  /root/.pi/agent/install/releases/1.6.0/node_modules/.bin/pi` — the release tree had been built
+  by npm running as root with mode 0700, so the owner could not traverse it. The update was
+  reported green while the harness was unusable for every new session.
+- **Cause**: the managed install lives under `/root`, so the update needs sudo, and npm honours
+  the invoking umask/ownership: `drwx------ root root` on the new release directory and its
+  `node_modules`. `pi update self` verifies that *it* wrote files, not that the launcher the owner
+  runs can execute them. Nothing in the protocol re-ran the owner-facing command afterwards.
+- **Guard**: `bin/pi-update` now (a) `chmod -R a+rX` the new release directory, (b) verifies with
+  the owner's launcher (`/root/.pi/agent/bin/pi --version`) inside `apply`, and (c) reverts
+  `current-version` to the previous release and fails the step if that launcher does not start.
+  `pi_launcher_ok()` is also part of `check`/`status` attention, so `pi-preflight updates` fails on a
+  present-but-unrunnable pi before any new session depends on it. `apply`'s per-step summary names
+  the launcher version, and `tests/pi-update.sh` pins the rollback path.
+- **Measured**: `sudo chmod -R a+rX releases/1.6.0` → `pi --version` 1.6.0; `pi-update status`
+  reports `pi 1.6.0 installed` with `attention 0`; the selftest case "broken launcher fails" passes
+  (19/19).
+- **Lives in**: `bin/pi-update` (`pi_launcher_ok`, `apply` pi-self step, `attention`),
+  `bin/pi-preflight` (`updates`), `tests/pi-update.sh`, `skills/updates/SKILL.md`.
+- **Lesson**: an installer's own rc is not evidence that the *owner-facing entrypoint* still works;
+  a step that changes where an executable lives must finish by running that executable as its user.
+
+## INC-31 — the failure channel reported two kinds of success as failures (2026-11-20)
+
+- **What happened**: `job-done` filed task #329 for two unread failed completions, and neither was
+  a defect in the work: `j39372477 updates: apply` (rc=3, 0.7 s) was a *duplicate* apply refused
+  while another held `updates/apply.lock`; `j27605177 updates: apply` (rc=1) had in fact installed
+  55 packages and pi 1.5.2 → 1.6.0, and failed only because the new kernel needs a reboot.
+  `j59109972 pergola verify HEAD` (rc=101, 0.9 s) was `cargo test --release --offline` launched
+  from `$HOME`, where there is no `Cargo.toml`.
+- **Cause**: three separate rules counted "expected state" as "failure". A held lock is the
+  system being updated by its owner, not an error. A kernel that landed is a dated risk with its
+  own marker, event and task — `problems.append("reboot required")` made a healthy apply exit 1,
+  file a bogus "apply failed" bug (#351) and leave an unread failure. And `pi-done run` accepted a
+  project tool with no project in the working directory, so the job died before it could do
+  anything, with an event that did not even record the cwd it ran in.
+- **Guard**: (a) `pi-update`'s lock refusal now exits 0 and names the holder's lock; (b) a
+  kernel flip sets `reboot_required` in `last_apply` and prints `reboot required` as a state,
+  never as a problem; (c) `pi-done run` refuses (`rc=2`) a `cargo`/`npm`/`pytest`/`go`/`make`/…
+  command whose project marker is absent from `cwd` *and* `--working-dir`, and every completion
+  event now records `cwd`.
+- **Measured**: `tests/pi-update.sh` (run twice, identical) pins the concurrent-apply exit 0 and a
+  fake-`sudo`/fake-`pacman` end-to-end apply where the kernel flips: `apply ok: 2 pkg(s) changed`,
+  exit 0, `"ok": true` in the event, `"reboot_required": true` in state. `pi-done --selftest`
+  pins the refusal inside and outside a crate and the recorded cwd. Live: `pi-done run --title t
+  -- cargo test --release --offline` from `$HOME` now refuses in one line; `pi-update status`
+  reports `last apply ok`, `attention 0`, `reboot pending`.
+- **Lives in**: `bin/pi-update` (lock branch, `apply` reboot block, `last_apply.reboot_required`),
+  `bin/pi-done` (`PROJECT_MARKERS`, `cwd_preflight`, event `cwd`), `tests/pi-update.sh`,
+  `bin/pi-done --selftest`.
+- **Lesson**: a channel that carries failures is only as useful as its precision — a false FAIL
+  costs exactly the same as an unread one, because the next reader learns to skim it. A success
+  with a pending action is a success plus a task, not a failure.

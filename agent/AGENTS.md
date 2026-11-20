@@ -72,6 +72,12 @@ it works without running it.
   **browser/GUI** only when no API exists or it is credential-walled (say so in one line). Prefer a *persistent*
   credential to scripted clicks: those die with the session. Internet: `web_search`/`web_get`/`web_api`
   (`bin/pi-web`); `pi-web doctor` before blaming a source.
+- **A GUI path moves like a hand** (owner, 2026-11-21: "human like mouse and keyboard movements" on
+  Twitter and the web). Every pointer and key event goes through `bin/pi-human`: Bezier path with
+  easing, dwell before the press, lognormal inter-key intervals with pauses, optional
+  `--typos` self-correction. Never `xdotool mousemove X Y click 1` or fixed-delay typing — no pointer
+  path, no dwell, uniform key interval is exactly what an anti-bot gate scores (`pi-firefox` already
+  routes through it; `tests/pi-human.sh` fails if a bare `xdotool type` comes back).
 - **A long job announces itself; nobody watches it.** `bin/pi-done run --title T [--phone] -- CMD…`
   starts a detached transient systemd unit and returns in ~50 ms; `OnSuccess`/`OnFailure` fire
   `pi-done-notify@<id>`, which writes `events/done.jsonl` (and optionally a text / agenda task). The
@@ -88,6 +94,15 @@ it works without running it.
   and `pi-preflight`'s `tools` check makes a *new* unpinned tool block publish: `pi-tool pins` ratchets the
   unpinned set against `tests/pins-baseline.json`, so it may shrink but never grow, and a rename or a new
   directory must be added to `map.json` before `pi-map --check` passes (`research/llm-to-deterministic-tools.md`).
+- **Updates run on a clock, not on memory** (owner, 2026-11-20): `bin/pi-update` owns both sides. `check`
+  measures with a throw-away sync db (never `pacman -Sy <pkg>` — that partial upgrade is the failure this
+  avoids), `apply` runs **detached** as the weekly `updates` row: snap-pac's automatic pre/post snapshot,
+  `pacman -Syu`, `paru -Sua`, then `pi update` for extensions, catalogs and self — the last verified by running
+  the *owner's* launcher, because npm-as-root builds a release tree only root can enter (INC-30). Aftermath is
+  state, not prose: `updates/state.json`, `REBOOT-REQUIRED`, `PACNEW.txt`, `events/update.jsonl`, a capped
+  `apply-*.log`, and a task for a reboot or an unmerged `.pacnew`. Rollback is printed, never run silently.
+  Guards: `pi-preflight updates` (stale apply, aging reboot marker, old `.pacnew`, a disabled row, a pi
+  launcher that does not start) and `tests/pi-update.sh`. `skills/updates`.
 
 ## Self-extension and method (encouraged, measured)
 

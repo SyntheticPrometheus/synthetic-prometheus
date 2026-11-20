@@ -1,0 +1,560 @@
+#!/usr/bin/env python3
+"""pi-falsify — find defects that pass every test: mutate the code, run its suite, keep survivors.
+
+The observation: the 2026-11-20 audit found 12 real defects in code whose self-tests were green.
+A green suite proves the tests ran, not that the code is right. This tool attacks that directly
+with a deterministic bug forge (research direction 2 of the owner's pi-falsify idea):
+
+  1. require the target's own suite to be green before anything is said;
+  2. produce single-point semantic mutants (comparison, boolean, constants) of the target;
+  3. execute each mutant in a disposable copy against the real suite;
+  4. a mutant the suite still passes is a SURVIVOR — a behaviour no test distinguishes, i.e. a
+     defect the suite cannot see;
+  5. keep the mutant descriptor + the exact failing-to-fail command, so it is reproducible and
+     minimal by construction (one AST node changed);
+  6. report a mutation score (killed / total) and the survivor list.
+
+Injected defects are calibration, not a real bug: a survivor says "the suite is blind here", and is
+a hypothesis to examine, never a claim that production code is wrong. `reproduce` re-runs one and
+prints the command that passes.
+
+  pi-falsify scan --target bin/pi-wait [--test tests/pi-wait.sh] [--limit N] [--timeout S] [--json]
+  pi-falsify reproduce FINDING [--timeout S]
+  pi-falsify minimize FINDING [--timeout S] [--max-runs N] [--json]
+  pi-falsify resources [--json]
+  pi-falsify report [--json]
+  pi-falsify list-targets
+  pi-falsify selftest
+
+minimize shrinks a survivor to the smallest program that still passes the suite both with and
+without the change: statements the suite does not pin down are deleted, the mutated statement is
+never deleted, and every accepted cut is re-run. It writes no witness it did not execute.
+
+resources splits the work by engine (deterministic / laya / local / free_hosted / paid). Only the
+deterministic column is non-zero here by design: a survivor is arithmetic and shell execution, and
+paid escalation stays disabled unless a control explicitly permits it.
+
+Exit: 0 the scan completed (survivors are the result) · 1 baseline suite red / target unreadable
+      · 2 usage/error. A survivor is data, not a failure of this command.
+
+State: $PI_FALSIFY_DIR (default ~/.pi/agent/falsify) — findings/<id>.json, last-scan.json, log.jsonl.
+Rust is the right home for a large mutation scheduler; this Python slice is deliberately small and
+stdlib-only, and says so instead of pretending to be a fuzzing platform.
+"""
+from __future__ import annotations
+
+import argparse
+import ast
+import copy
+import hashlib
+import json
+import os
+import shutil
+import stat
+import subprocess
+import sys
+import tempfile
+import time
+from pathlib import Path
+
+AGENT = Path(os.environ.get("PI_AGENT_DIR") or Path.home() / ".pi" / "agent")
+BASE = Path(os.environ.get("PI_FALSIFY_DIR") or (AGENT / "falsify"))
+FINDINGS = BASE / "findings"
+
+CMP = {ast.Lt: ast.LtE, ast.LtE: ast.Lt, ast.Gt: ast.GtE, ast.GtE: ast.Gt,
+       ast.Eq: ast.NotEq, ast.NotEq: ast.Eq, ast.In: ast.NotIn, ast.NotIn: ast.In,
+       ast.Is: ast.IsNot, ast.IsNot: ast.Is}
+OPS = {ast.Add: ast.Sub, ast.Sub: ast.Add, ast.Mult: ast.FloorDiv, ast.FloorDiv: ast.Mult}
+NODES = (ast.Compare, ast.BoolOp, ast.Constant, ast.BinOp)
+
+
+def _rel(p: Path) -> str:
+    try:
+        return str(p.resolve().relative_to(AGENT))
+    except ValueError:
+        return str(p)
+
+
+def candidates(tree: ast.AST) -> list[dict]:
+    """Every single-point mutation, in source order, deterministically."""
+    out = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Compare):
+            for i, op in enumerate(node.ops):
+                nxt = CMP.get(type(op))
+                if nxt:
+                    out.append({"kind": "compare", "line": node.lineno, "col": node.col_offset,
+                                "index": i, "from": type(op).__name__, "to": nxt.__name__})
+        elif isinstance(node, ast.BoolOp):
+            nxt = ast.Or if isinstance(node.op, ast.And) else ast.And
+            out.append({"kind": "boolop", "line": node.lineno, "col": node.col_offset,
+                        "from": type(node.op).__name__, "to": nxt.__name__})
+        elif isinstance(node, ast.Constant):
+            v = node.value
+            if isinstance(v, bool):
+                out.append({"kind": "const", "line": node.lineno, "col": node.col_offset,
+                            "from": json.dumps(v), "to": json.dumps(not v)})
+            elif isinstance(v, int) and v in (0, 1):
+                out.append({"kind": "const", "line": node.lineno, "col": node.col_offset,
+                            "from": json.dumps(v), "to": json.dumps(1 - v)})
+        elif isinstance(node, ast.BinOp):
+            nxt = OPS.get(type(node.op))
+            if nxt:
+                out.append({"kind": "binop", "line": node.lineno, "col": node.col_offset,
+                            "from": type(node.op).__name__, "to": nxt.__name__})
+    out.sort(key=lambda m: (m["line"], m["col"], m["kind"], m["from"]))
+    return out
+
+
+def find_id(target: Path, m: dict, src: str) -> str:
+    line = src.splitlines()[m["line"] - 1].strip() if m["line"] <= len(src.splitlines()) else ""
+    raw = f"{target.name}|{m['kind']}|{m['from']}|{m['to']}|{line}"
+    return hashlib.sha1(raw.encode()).hexdigest()[:8]
+
+
+def mutate_node(tree: ast.AST, m: dict) -> ast.AST:
+    """Apply one mutation descriptor to a parsed tree in place; return the mutated node."""
+    hits = []
+    for node in ast.walk(tree):
+        if m["kind"] == "compare" and isinstance(node, ast.Compare) \
+                and node.lineno == m["line"] and node.col_offset == m["col"]:
+            hits.append(("compare", node))
+        elif m["kind"] == "boolop" and isinstance(node, ast.BoolOp) \
+                and node.lineno == m["line"] and node.col_offset == m["col"]:
+            hits.append(("boolop", node))
+        elif m["kind"] == "const" and isinstance(node, ast.Constant) \
+                and node.lineno == m["line"] and node.col_offset == m["col"]:
+            hits.append(("const", node))
+        elif m["kind"] == "binop" and isinstance(node, ast.BinOp) \
+                and node.lineno == m["line"] and node.col_offset == m["col"]:
+            hits.append(("binop", node))
+    if len(hits) != 1:
+        raise ValueError(f"mutation site not unique ({len(hits)} matches)")
+    kind, node = hits[0]
+    if kind == "compare":
+        node.ops[m["index"]] = getattr(ast, m["to"])()
+    elif kind == "boolop":
+        node.op = getattr(ast, m["to"])()
+    elif kind == "const":
+        node.value = json.loads(m["to"])
+    elif kind == "binop":
+        node.op = getattr(ast, m["to"])()
+    return node
+
+
+def _shebang(src: str) -> str:
+    return src.splitlines()[0] + "\n" if src.startswith("#!") else ""
+
+
+def source_of(tree: ast.AST, src: str) -> str:
+    # ast.unparse drops comments, including the shebang.
+    return _shebang(src) + ast.unparse(tree) + "\n"
+
+
+def apply_mutation(src: str, m: dict) -> str:
+    tree = ast.parse(src)
+    mutate_node(tree, m)
+    # Without the shebang the suite executes the mutant as a shell script
+    # (and `import sys` is ImageMagick, which can wait on stdin).
+    return source_of(tree, src)
+
+
+def run(cmd: list[str], env: dict, timeout: float) -> tuple[int | None, str]:
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, env=env)
+    except subprocess.TimeoutExpired:
+        return None, "timeout"
+    except OSError as e:
+        return None, str(e)
+    tail = ""
+    for line in (r.stdout + "\n" + r.stderr).splitlines():
+        if line.strip():
+            tail = line.strip()[:200]
+    return r.returncode, tail
+
+
+def test_env(tmp_bin: Path) -> dict:
+    env = {**os.environ, "BIN": str(tmp_bin), "PYTHONDONTWRITEBYTECODE": "1",
+           "LC_ALL": "C", "TZ": "UTC"}
+    return env
+
+
+def scan(a) -> int:
+    target = Path(a.target)
+    if not target.is_absolute():
+        target = (Path.cwd() / target)
+    target = target.resolve()
+    if not target.is_file():
+        print(f"error: no target {target}", file=sys.stderr)
+        return 2
+    src = target.read_text()
+    try:
+        ast.parse(src)
+    except SyntaxError as e:
+        print(f"error: target is not Python: {e}", file=sys.stderr)
+        return 1
+    test = Path(a.test) if a.test else AGENT / "tests" / f"{target.stem}.sh"
+    if not test.is_file():
+        print(f"error: no suite at {test} (pass --test)", file=sys.stderr)
+        return 2
+    test = test.resolve()
+    started = time.monotonic()
+
+    FINDINGS.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="pi-falsify-") as td:
+        tmp = Path(td)
+        tmp_bin = tmp / "bin"
+        tmp_bin.mkdir()
+        exe = tmp_bin / target.name
+        shutil.copy2(target, exe)
+        os.chmod(exe, os.stat(exe).st_mode | stat.S_IXUSR)
+        env = test_env(tmp_bin)
+        rc, tail = run(["/bin/sh", str(test)], env, a.timeout)
+        if rc != 0:
+            print(f"error: baseline suite is not green (rc={rc}): {tail}", file=sys.stderr)
+            return 1
+
+        muts = candidates(ast.parse(src))
+        if a.limit:
+            muts = muts[:a.limit]
+        results, survivors = [], []
+        for m in muts:
+            try:
+                mutated = apply_mutation(src, m)
+            except (ValueError, SyntaxError):
+                continue
+            exe.write_text(mutated)
+            os.chmod(exe, os.stat(exe).st_mode | stat.S_IXUSR)
+            rc, tail = run(["/bin/sh", str(test)], env, a.timeout)
+            if rc is None:
+                outcome = "killed"
+            elif rc == 0:
+                outcome = "survived"
+            else:
+                outcome = "killed"
+            march = {**m, "id": find_id(target, m, src), "outcome": outcome,
+                     "test_rc": rc, "test_tail": tail}
+            results.append(march)
+            if outcome == "survived":
+                survivors.append(march)
+                rec = {"id": march["id"], "target": _rel(target), "test": _rel(test),
+                       "mutation": m, "line_text": src.splitlines()[m["line"] - 1].strip(),
+                       "repro": f"pi-falsify reproduce {march['id']}"}
+                (FINDINGS / f"{march['id']}.json").write_text(json.dumps(rec, indent=1,
+                                                                        sort_keys=True) + "\n")
+        killed = len(results) - len(survivors)
+        score = (killed / len(results)) if results else 0.0
+        calls = len(results) + 1  # one baseline run, then one per mutant
+        summary = {"target": _rel(target), "test": _rel(test), "mutants": len(results),
+                   "killed": killed, "survivors": len(survivors),
+                   "mutation_score": round(score, 4),
+                   "resources": {
+                       "deterministic": {"calls": calls, "cost_usd": 0.0,
+                                         "wall_seconds": round(time.monotonic() - started, 3)},
+                       "laya": {"calls": 0, "cost_usd": 0.0},
+                       "local": {"calls": 0, "cost_usd": 0.0},
+                       "free_hosted": {"calls": 0, "cost_usd": 0.0},
+                       "paid": {"calls": 0, "cost_usd": 0.0, "state": "disabled"}}}
+        (BASE / "last-scan.json").write_text(json.dumps(
+            {**summary, "results": results}, indent=1, sort_keys=True) + "\n")
+        with (BASE / "log.jsonl").open("a") as fh:
+            fh.write(json.dumps(summary, sort_keys=True) + "\n")
+
+    if a.json:
+        print(json.dumps({**summary, "survivors": survivors}, indent=1, sort_keys=True))
+        return 0
+    print(f"target     {summary['target']}")
+    print(f"suite      {summary['test']}  (baseline green)")
+    print(f"mutants    {len(results)}  single-point, {len(survivors)} survived, {killed} killed")
+    print(f"SCORE      {score:.0%} mutation detection")
+    r = summary["resources"]
+    print(f"resource   deterministic {r['deterministic']['calls']} run(s), $0.00; "
+          f"laya 0, local 0, free_hosted 0, paid 0 (disabled)")
+    if survivors:
+        print("survivors  (behaviour the suite cannot distinguish — hypotheses, not proven bugs)")
+        for s in survivors:
+            print(f"  {s['id']}  line {s['line']:4d}  "
+                  f"{s['from']} -> {s['to']}  "
+                  f"{src.splitlines()[s['line'] - 1].strip()[:80]}")
+    else:
+        print("survivors  none — every single-point mutant was caught")
+    return 0
+
+
+def reproduce(a) -> int:
+    p = FINDINGS / f"{a.finding}.json"
+    if not p.exists():
+        print(f"error: no finding {a.finding}", file=sys.stderr)
+        return 2
+    rec = json.loads(p.read_text())
+    target = (AGENT / rec["target"]) if not Path(rec["target"]).is_absolute() else Path(rec["target"])
+    test = (AGENT / rec["test"]) if not Path(rec["test"]).is_absolute() else Path(rec["test"])
+    src = target.read_text()
+    try:
+        mutated = apply_mutation(src, rec["mutation"])
+    except (ValueError, SyntaxError) as e:
+        print(f"STALE {a.finding}: target changed, mutation no longer applies ({e})")
+        return 2
+    with tempfile.TemporaryDirectory(prefix="pi-falsify-") as td:
+        tmp_bin = Path(td) / "bin"
+        tmp_bin.mkdir()
+        exe = tmp_bin / target.name
+        exe.write_text(mutated)
+        os.chmod(exe, os.stat(exe).st_mode | stat.S_IXUSR)
+        rc, tail = run(["/bin/sh", str(test)], test_env(tmp_bin), a.timeout)
+    if rc == 0:
+        print(f"REPRODUCED {a.finding}: suite still passes the mutant")
+        print(f"  target  {rec['target']} line {rec['mutation']['line']}")
+        print(f"  change  {rec['mutation']['from']} -> {rec['mutation']['to']}")
+        print(f"  suite   {rec['test']} exited 0")
+        return 0
+    print(f"STALE {a.finding}: suite now kills the mutant (rc={rc}) — fix the suite or close it")
+    return 2
+
+
+def _reduce_pair(mbody, obody, check, keep) -> None:
+    """Delta-debug two parallel statement lists while `check()` keeps holding.
+
+    `keep` is the mutated node: no statement containing it is ever removed, so a reduction can
+    never make the mutant identical to the original and win by deletion.
+    """
+    i = 0
+    while i < len(mbody):
+        stmt = mbody[i]
+        if any(n is keep for n in ast.walk(stmt)):
+            i += 1
+            continue
+        mbody.pop(i)
+        other = obody.pop(i)
+        if check():
+            continue
+        mbody.insert(i, stmt)
+        obody.insert(i, other)
+        i += 1
+    for ms, os_ in zip(mbody, obody):
+        for attr in ("body", "orelse", "finalbody"):
+            ml = getattr(ms, attr, None)
+            ol = getattr(os_, attr, None)
+            if isinstance(ml, list) and isinstance(ol, list) and ml and ol \
+                    and all(isinstance(x, ast.stmt) for x in ml) \
+                    and all(isinstance(x, ast.stmt) for x in ol):
+                _reduce_pair(ml, ol, check, keep)
+
+
+def minimize(a) -> int:
+    p = FINDINGS / f"{a.finding}.json"
+    if not p.exists():
+        print(f"error: no finding {a.finding}", file=sys.stderr)
+        return 2
+    rec = json.loads(p.read_text())
+    target = Path(rec["target"])
+    if not target.is_absolute():
+        target = AGENT / target
+    test = Path(rec["test"])
+    if not test.is_absolute():
+        test = AGENT / test
+    src = target.read_text()
+    try:
+        mtree = ast.parse(src)
+        keep = mutate_node(mtree, rec["mutation"])
+        otree = ast.parse(src)
+    except (ValueError, SyntaxError) as e:
+        print(f"STALE {a.finding}: mutation no longer applies ({e})")
+        return 2
+
+    out_dir = BASE / "minimized" / a.finding
+    with tempfile.TemporaryDirectory(prefix="pi-falsify-") as td:
+        exe = Path(td) / target.name
+        env = test_env(Path(td))
+
+        def passes(text: str) -> bool:
+            exe.write_text(text)
+            os.chmod(exe, os.stat(exe).st_mode | stat.S_IXUSR)
+            rc, _ = run(["/bin/sh", str(test)], env, a.timeout)
+            return rc == 0
+
+        state = {"checks": 0, "capped": False}
+
+        def source(src_tree: ast.AST) -> str:
+            return source_of(src_tree, src)
+
+        def check() -> bool:
+            if state["checks"] >= a.max_runs:
+                state["capped"] = True
+                return False
+            state["checks"] += 1
+            return passes(source(mtree)) and passes(source(otree))
+
+        if not passes(source(mtree)):
+            print(f"STALE {a.finding}: the mutant no longer passes its suite — close the finding")
+            return 2
+        if not passes(source(otree)):
+            print(f"error: unmutated {_rel(target)} does not pass its own suite", file=sys.stderr)
+            return 1
+        m_before, o_before = len(mtree.body), len(otree.body)
+        lines_before = len(src.splitlines())
+        _reduce_pair(mtree.body, otree.body, check, keep)
+        mutant, base = source(mtree), source(otree)
+        if not passes(mutant) or not passes(base):
+            print(f"error: reduction produced a witness that does not replay for {a.finding}",
+                  file=sys.stderr)
+            return 1
+        out_dir.mkdir(parents=True, exist_ok=True)
+        (out_dir / "mutant").mkdir(exist_ok=True)
+        (out_dir / "original").mkdir(exist_ok=True)
+        mp = out_dir / "mutant" / target.name
+        op = out_dir / "original" / target.name
+        mp.write_text(mutant)
+        op.write_text(base)
+        os.chmod(mp, 0o755)
+        os.chmod(op, 0o755)
+
+    lines_after = len(mutant.splitlines())
+    res = {"id": a.finding, "target": _rel(target), "test": _rel(test),
+           "lines_before": lines_before, "lines_after": lines_after,
+           "statements_before": m_before + o_before, "statements_after":
+           len(mtree.body) + len(otree.body), "checks": state["checks"],
+           "capped": state["capped"], "mutant": _rel(mp), "original": _rel(op)}
+    if a.json:
+        print(json.dumps(res, indent=1, sort_keys=True))
+        return 0
+    print(f"MINIMIZED {a.finding}")
+    print(f"  target   {res['target']}")
+    print(f"  lines    {lines_before} -> {lines_after}")
+    print(f"  witness  {res['mutant']}")
+    print(f"  check    suite passes this mutant and the unmutated original (re-ran both)")
+    print(f"  runs     {state['checks']} cut attempt(s) of {a.max_runs}"
+          + ("  [capped]" if state["capped"] else ""))
+    return 0
+
+
+ENGINES = (("deterministic", "mutation, shell execution, independent re-run"),
+           ("laya", "classify / route (this forge does not call it)"),
+           ("local", "local LLM hypothesis generation (not called)"),
+           ("free_hosted", "free hosted reasoning (not called)"),
+           ("paid", "paid escalation (disabled: no control permitted spend)"))
+
+
+def _resources(d: dict) -> list[dict]:
+    have = d.get("resources") or {}
+    rows = []
+    for name, role in ENGINES:
+        r = have.get(name) or {}
+        rows.append({"engine": name, "calls": int(r.get("calls", 0)),
+                     "cost_usd": round(float(r.get("cost_usd", 0.0)), 6), "role": role})
+    return rows
+
+
+def resources(a) -> int:
+    p = BASE / "last-scan.json"
+    d = json.loads(p.read_text()) if p.exists() else {}
+    rows = _resources(d)
+    if a.json:
+        print(json.dumps({"resources": rows, "target": d.get("target"),
+                          "mutants": d.get("mutants")}, indent=1, sort_keys=True))
+        return 0
+    print("engine          calls   cost_usd  role")
+    for r in rows:
+        print(f"{r['engine']:14s} {r['calls']:6d}  {r['cost_usd']:9.2f}  {r['role']}")
+    print("paid escalation is refused unless an explicit control allows it; nothing here spent.")
+    return 0
+
+
+def report(a) -> int:
+    p = BASE / "last-scan.json"
+    if not p.exists():
+        print("no scan recorded — run `pi-falsify scan --target ...`")
+        return 0
+    d = json.loads(p.read_text())
+    if a.json:
+        print(json.dumps(d, indent=1, sort_keys=True))
+        return 0
+    print(f"{d['target']}: {d['mutation_score']:.0%} detection, "
+          f"{d['survivors']} survivor(s) of {d['mutants']}")
+    for r in d.get("results", []):
+        if r["outcome"] == "survived":
+            print(f"  {r['id']} line {r['line']} "
+                  f"{r['from']} -> {r['to']}")
+    return 0
+
+
+def list_targets(a) -> int:
+    rows = []
+    for t in sorted((AGENT / "tests").glob("*.sh")):
+        tool = AGENT / "bin" / t.stem
+        if tool.is_file():
+            rows.append(t.stem)
+    for n in rows:
+        print(n)
+    return 0
+
+
+def selftest(a) -> int:
+    with tempfile.TemporaryDirectory() as td:
+        td = Path(td)
+        (td / "bin").mkdir()
+        (td / "tests").mkdir()
+        (td / "bin" / "demo").write_text(
+            "#!/usr/bin/env python3\nimport sys\nif len(sys.argv) < 2 or sys.argv[1] != 'ok':\n"
+            "    sys.exit(1)\nprint('yes' if 1 < 2 else 'no')\n")
+        os.chmod(td / "bin" / "demo", 0o755)
+        (td / "tests" / "demo.sh").write_text(
+            "#!/bin/sh\nset -eu\nBIN=\"${BIN:-$HOME/.pi/agent/bin}\"\n"
+            "[ \"$($BIN/demo ok)\" = yes ]\n")
+        env = {**os.environ, "PI_FALSIFY_DIR": str(td / "state")}
+        cases = [
+            (["scan", "--target", str(td / "bin" / "demo"), "--test", str(td / "tests" / "demo.sh"),
+              "--json"], 0),
+            (["report", "--json"], 0),
+            (["list-targets"], 0),
+            (["reproduce", "nosuch"], 2),
+        ]
+        bad = 0
+        for args, want in cases:
+            r = subprocess.run([sys.executable, __file__, *args], capture_output=True,
+                               text=True, env=env)
+            ok = r.returncode == want
+            bad += 0 if ok else 1
+            print(("ok   " if ok else "FAIL ") + " ".join(args) + f"  rc={r.returncode} want={want}")
+        return 1 if bad else 0
+
+
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser(prog="pi-falsify", description=__doc__.splitlines()[0])
+    sub = ap.add_subparsers(dest="action", required=True)
+
+    p = sub.add_parser("scan", help="mutate a target and run its suite; report survivors")
+    p.add_argument("--target", required=True)
+    p.add_argument("--test")
+    p.add_argument("--limit", type=int, default=0)
+    p.add_argument("--timeout", type=float, default=15.0)
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=scan)
+
+    p = sub.add_parser("reproduce", help="re-run one survivor against the same suite")
+    p.add_argument("finding")
+    p.add_argument("--timeout", type=float, default=60.0)
+    p.set_defaults(func=reproduce)
+    p = sub.add_parser("minimize", help="shrink a survivor to the smallest program that still passes")
+    p.add_argument("finding")
+    p.add_argument("--timeout", type=float, default=60.0)
+    p.add_argument("--max-runs", type=int, default=120)
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=minimize)
+    p = sub.add_parser("resources", help="the last scan's work split by engine")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=resources)
+    p = sub.add_parser("report", help="the last scan's score and survivors")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=report)
+    p = sub.add_parser("list-targets", help="targets that have a tests/<name>.sh")
+    p.set_defaults(func=list_targets)
+    p = sub.add_parser("selftest", help="exercise the forge in a temp tree")
+    p.set_defaults(func=selftest)
+
+    a = ap.parse_args(argv)
+    return a.func(a)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
