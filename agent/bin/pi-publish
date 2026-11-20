@@ -367,6 +367,10 @@ def main():
     ap.add_argument("--status", action="store_true")
     ap.add_argument("--remote", default=REMOTE)
     a = ap.parse_args()
+    # `--force` is documented as "push regardless of the batching rules", so it implies --push:
+    # --force alone used to build a snapshot and exit 0 with nothing on the remote (bug #332).
+    if a.force:
+        a.push = True
     state = load_state()
 
     if a.status:
