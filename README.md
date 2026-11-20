@@ -11,6 +11,6 @@ an explicit allowlist; see `PUBLISHING.md`.
 - `agent/` — harness: AGENTS.md, agents/, skills/, prompts/, extensions/, bin/, research/,
   selfimprove/ (design, decisions, suite, gate, audit, maintenance)
 - `dotfiles/` — shell, systemd user units, autostart, lightdm autologin
-- files: 209 · snapshot: 2026-11-20
+- files: 212 · snapshot: 2026-11-20
 
 Research behind the loop: `agent/research/self-improving-harnesses.md`.

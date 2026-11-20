@@ -1,0 +1,222 @@
+#!/usr/bin/env python3
+"""pi-core-map — a brain-derived architecture map that fails when a mapped component is gone.
+
+The brain package names macroscopic systems by the *function* they perform (relay, gating,
+prediction and error correction, state control). This harness already has components doing those
+jobs. The map records the pairing in core/brain-map.json and resolves every `path` on each run:
+an analogy that cannot notice its target was deleted is decoration, not a check.
+
+  pi-core-map            print the table; exit 1 if any path is missing
+  pi-core-map --quiet    print nothing when every row resolves
+  pi-core-map --gaps     also list capabilities the agenda depends on with no brain row
+  pi-core-map --package  verify every package row (core/brain-map-index.tsv) is claimed once
+  pi-core-map --record   append one line to core/brain-map-ledger.jsonl (the trend)
+  pi-core-map --json     the same, as JSON
+  pi-core-map --root DIR resolve paths under DIR (tests use a fixture)
+  pi-core-map --help
+
+The gap list is the self-improving half: the harness grows (a new tool earns an agenda row)
+and every week the map is told which capabilities it has not absorbed yet. A gap is not a
+failure (exit 0); an unresolved mapped path is (exit 1). --record keeps the resolved/covered
+counts so coverage can be read as a slope rather than an opinion.
+"""
+import json
+import os
+import re
+import sqlite3
+import sys
+import time
+
+ROOT = os.environ.get("PI_CORE_ROOT", os.path.expanduser("~/.pi/agent"))
+
+
+def usage(code):
+    print(__doc__.strip())
+    sys.exit(code)
+
+
+def main(argv):
+    as_json = False
+    quiet = False
+    gaps_wanted = False
+    package_wanted = False
+    record = False
+    global ROOT
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a in ("-h", "--help"):
+            usage(0)
+        elif a == "--json":
+            as_json = True
+        elif a == "--quiet":
+            quiet = True
+        elif a == "--gaps":
+            gaps_wanted = True
+        elif a == "--package":
+            package_wanted = True
+        elif a == "--record":
+            record = True
+        elif a == "--root":
+            if i + 1 >= len(argv):
+                usage(2)
+            ROOT = argv[i + 1]
+            i += 1
+        else:
+            usage(2)
+        i += 1
+
+    path = os.path.join(ROOT, "core", "brain-map.json")
+    try:
+        with open(path, encoding="utf-8") as fh:
+            doc = json.load(fh)
+    except (OSError, ValueError) as exc:
+        print(f"pi-core-map: cannot read {path}: {exc}", file=sys.stderr)
+        return 1
+
+    rows = doc.get("rows") or []
+    if not rows:
+        print("pi-core-map: no rows in the map", file=sys.stderr)
+        return 1
+
+    results = []
+    for r in rows:
+        target = os.path.join(ROOT, r.get("path", ""))
+        ok = bool(r.get("path")) and os.path.exists(target)
+        results.append({**r, "resolved": ok})
+
+    missing = [r for r in results if not r["resolved"]]
+    gaps = agenda_gaps(ROOT, {r.get("path", "") for r in rows}) if gaps_wanted else []
+    pkg = package_check(ROOT, doc, {r.get("id", "") for r in rows}) if package_wanted else None
+    if record:
+        write_ledger(ROOT, results, missing, gaps, pkg)
+    if as_json:
+        print(json.dumps({"source": doc.get("source", ""), "rows": results,
+                          "missing": [r["id"] for r in missing],
+                          "gaps": gaps, "package": pkg}, indent=1))
+        return 0 if not missing and not (pkg and pkg["problems"]) else 1
+    pkg_problems = pkg["problems"] if pkg else []
+    if quiet:
+        if missing:
+            print("brain-map: unresolved " + ", ".join(r["id"] + " -> " + r["path"] for r in missing),
+                  file=sys.stderr)
+        for prob in pkg_problems:
+            print("brain-map: " + prob, file=sys.stderr)
+        if missing or pkg_problems:
+            return 1
+        if gaps:
+            print(f"brain-map: {len(results)} rows resolve; {len(gaps)} agenda capabilities unmapped: "
+                  + ", ".join(gaps))
+        if pkg:
+            print(f"brain-map: package {pkg['rows']} rows, {pkg['claimed']} claimed, "
+                  f"{pkg['excluded']} excluded" + ("" if not pkg_problems else "; " + "; ".join(pkg_problems)))
+        return 1 if pkg_problems else 0
+    else:
+        print(f"brain systems: {len(results)}  resolved: {len(results) - len(missing)}  missing: {len(missing)}")
+        for r in results:
+            mark = "ok " if r["resolved"] else "MISS"
+            print(f"{mark} {r['id']:14s} {r['component']:46s} {r['path']}")
+        if gaps:
+            print(f"unmapped agenda capabilities: {len(gaps)} " + ", ".join(gaps))
+        if pkg:
+            print(f"package: {pkg['rows']} rows, {pkg['claimed']} claimed, {pkg['excluded']} excluded, "
+                  f"{len(pkg_problems)} problem(s)")
+            for prob in pkg_problems:
+                print("  " + prob, file=sys.stderr)
+            if pkg_problems:
+                return 1
+        if missing:
+            print("unresolved: " + ", ".join(r["id"] + " -> " + r["path"] for r in missing),
+                  file=sys.stderr)
+            return 1
+    return 0 if not missing else 1
+
+
+def agenda_gaps(root, mapped):
+    """Capabilities named by an agenda row's command that no brain row covers, sorted.
+
+    A tool the schedule depends on is part of the operating system; if the map has no row for
+    it, the map is behind the harness. Missing or unreadable agenda db is not an error.
+    """
+    db = os.path.join(root, "agenda", "agenda.db")
+    try:
+        con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+        try:
+            cmds = [r[0] or "" for r in con.execute("select command from obligations")]
+        finally:
+            con.close()
+    except sqlite3.Error:
+        return []
+    refs = set()
+    for cmd in cmds:
+        for m in re.findall(r"bin/([A-Za-z0-9_.-]+)", cmd):
+            if m != "pi-core-map":  # the monitor is not a capability the map should absorb
+                refs.add("bin/" + m)
+    return sorted(refs - mapped)
+
+
+def package_check(root, doc, row_ids):
+    """Every row of the source package is claimed by exactly one brain row, or explicitly excluded.
+
+    The package is fixed (124 subsection rows); the index is this tree's accounting of it. A row
+    added to the package with no index line, a line naming a brain row that no longer exists, a
+    duplicate claim, or a brain row nothing claims is a problem — the map is then behind its source.
+    """
+    spec = doc.get("package") or {}
+    index = os.path.join(root, spec.get("index", "core/brain-map-index.tsv"))
+    out = {"rows": 0, "claimed": 0, "excluded": 0, "problems": []}
+    try:
+        with open(index, encoding="utf-8") as fh:
+            lines = [ln.rstrip("\n") for ln in fh if ln.strip() and not ln.startswith("#")]
+    except OSError as exc:
+        out["problems"].append(f"cannot read {index}: {exc}")
+        return out
+    seen = {}
+    claimed_by = {}
+    for ln in lines:
+        parts = ln.split("\t")
+        if len(parts) < 2:
+            out["problems"].append(f"malformed index line: {ln[:60]}")
+            continue
+        tag, dest = parts[0], parts[1]
+        if tag in seen:
+            out["problems"].append(f"package row {tag} claimed twice")
+            continue
+        seen[tag] = dest
+        if dest == "excluded":
+            out["excluded"] += 1
+        elif dest in row_ids:
+            out["claimed"] += 1
+            claimed_by.setdefault(dest, 0)
+            claimed_by[dest] += 1
+        else:
+            out["problems"].append(f"package row {tag} names unknown brain row '{dest}'")
+    out["rows"] = len(seen)
+    want = spec.get("rows")
+    if want and len(seen) != want:
+        out["problems"].append(f"package has {want} rows, index accounts for {len(seen)}")
+    want_x = spec.get("excluded_rows")
+    if want_x is not None and out["excluded"] != want_x:
+        out["problems"].append(f"excluded rows: index {out['excluded']}, map says {want_x}")
+    for rid in sorted(row_ids - set(claimed_by)):
+        out["problems"].append(f"brain row '{rid}' claims no package row")
+    return out
+
+
+def write_ledger(root, results, missing, gaps, pkg=None):
+    """One line per run: the counts a self-improvement slope is read from."""
+    entry = {"ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+             "rows": len(results), "resolved": len(results) - len(missing),
+             "missing": [r["id"] for r in missing], "gaps": len(gaps)}
+    if pkg:
+        entry.update({"package_rows": pkg["rows"], "claimed": pkg["claimed"],
+                      "excluded": pkg["excluded"], "package_problems": pkg["problems"]})
+    try:
+        with open(os.path.join(root, "core", "brain-map-ledger.jsonl"), "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(entry) + "\n")
+    except OSError as exc:
+        print(f"pi-core-map: cannot record: {exc}", file=sys.stderr)
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

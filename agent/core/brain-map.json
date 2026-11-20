@@ -1,0 +1,111 @@
+{
+ "source": "Documents/inbox/brain_regions_connectivity_package.zip (7 CSV tables, 124 subsection rows, brain_connection_atlas.md, signal_pathway_reference.md)",
+ "note": "Each row names one macroscopic system from the package, the pathway function it performs there, and the harness component that performs the same job. The map is a guard, not an analogy: every path must resolve, so deleting a component breaks the check that cited it.",
+ "rows": [
+  {
+   "id": "salience",
+   "region": "Insula + anterior cingulate (salience network)",
+   "function": "gating and selection: decides what is worth acting on",
+   "component": "intent router (act/discuss/clarify)",
+   "path": "bin/pi-intent"
+  },
+  {
+   "id": "basal-ganglia",
+   "region": "Basal ganglia loop (striatum -> GPi/SNr -> thalamus)",
+   "function": "action selection by disinhibition",
+   "component": "agenda chooser (next due row, exit 2 = work it first)",
+   "path": "bin/pi-agenda"
+  },
+  {
+   "id": "hippocampus",
+   "region": "Hippocampal formation + medial temporal lobe",
+   "function": "pattern separation and completion over episodes",
+   "component": "hybrid memory store (BM25 + dense + graph)",
+   "path": "bin/mem"
+  },
+  {
+   "id": "thalamus",
+   "region": "Thalamic relay nuclei",
+   "function": "relay: routes an input to the area that owns it",
+   "component": "inbound text channel and dispatcher",
+   "path": "bin/pi-text"
+  },
+  {
+   "id": "cerebellum",
+   "region": "Cerebellar prediction and correction loops",
+   "function": "prediction and error correction",
+   "component": "weekly self-improvement review and gate",
+   "path": "bin/pi-review"
+  },
+  {
+   "id": "brainstem",
+   "region": "Brainstem autonomic and reticular systems",
+   "function": "state control: keeps background processes alive",
+   "component": "detached jobs and their completion events",
+   "path": "bin/pi-done"
+  },
+  {
+   "id": "hypothalamus",
+   "region": "Hypothalamic and endocrine command",
+   "function": "autonomic and endocrine command (budgets)",
+   "component": "spend caps and applied decisions",
+   "path": "bin/pi-control"
+  },
+  {
+   "id": "amygdala",
+   "region": "Amygdala",
+   "function": "threat tagging before commitment",
+   "component": "preflight checks that block publish",
+   "path": "bin/pi-preflight"
+  },
+  {
+   "id": "prefrontal",
+   "region": "Prefrontal executive cortex",
+   "function": "top-down bias over policy",
+   "component": "loaded conduct and routing rules",
+   "path": "AGENTS.md"
+  },
+  {
+   "id": "white-matter",
+   "region": "White matter and CSF transport interfaces",
+   "function": "transport of a dispatch between components",
+   "component": "delegation transport and contracts",
+   "path": "bin/pi-delegate"
+  },
+  {
+   "id": "sensory",
+   "region": "Primary sensory cortex",
+   "function": "relay of external signal into the system",
+   "component": "internet access (search, get, api)",
+   "path": "bin/pi-web"
+  },
+  {
+   "id": "motor",
+   "region": "Primary motor cortex",
+   "function": "voluntary actuation outward",
+   "component": "human-like pointer and key actuation",
+   "path": "bin/pi-human"
+  },
+  {
+   "id": "neuromodulation",
+   "region": "Dopaminergic and other modulatory nuclei",
+   "function": "gain and plasticity, not data",
+   "component": "open experiment ledger (what to try next)",
+   "path": "bin/pi-mind"
+  },
+  {
+   "id": "association",
+   "region": "Association cortex (recurrent corticocortical loops)",
+   "function": "integration across modalities into a skill",
+   "component": "skill library loaded by description",
+   "path": "skills"
+  }
+ ],
+ "package": {
+  "source": "Documents/inbox/brain_regions_connectivity_package.zip (7 CSV tables, 124 subsection rows, brain_connection_atlas.md, signal_pathway_reference.md)",
+  "rows": 124,
+  "index": "core/brain-map-index.tsv",
+  "excluded_rows": 8,
+  "excluded_reason": "CSF/ventricular space and meninges (07#8-15) are structural support; this harness has no component performing that function, so they are excluded rather than forced into a row."
+ }
+}

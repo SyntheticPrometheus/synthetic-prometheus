@@ -1,0 +1,125 @@
+# package_row	brain_id	csv	major region	subregion
+01#1	association	01	Cerebrum	Cerebral cortex overall
+01#2	association	01	Cerebrum	Left hemisphere
+01#3	association	01	Cerebrum	Right hemisphere
+01#4	prefrontal	01	Frontal lobe	Prefrontal cortex overall
+01#5	prefrontal	01	Frontal lobe	Dorsolateral prefrontal cortex
+01#6	prefrontal	01	Frontal lobe	Orbitofrontal cortex
+01#7	prefrontal	01	Frontal lobe	Ventromedial prefrontal cortex
+01#8	salience	01	Frontal/limbic cortex	Anterior cingulate cortex
+01#9	motor	01	Frontal lobe	Primary motor cortex
+01#10	motor	01	Frontal lobe	Premotor cortex
+01#11	motor	01	Frontal lobe	Supplementary motor area
+01#12	motor	01	Frontal lobe	Frontal eye fields
+01#13	motor	01	Frontal lobe	Broca’s region
+01#14	sensory	01	Parietal lobe	Primary somatosensory cortex
+01#15	sensory	01	Parietal lobe	Somatosensory association cortex
+01#16	sensory	01	Parietal lobe	Superior parietal lobule
+01#17	association	01	Parietal lobe	Inferior parietal lobule
+01#18	association	01	Parietal lobe	Angular gyrus
+01#19	association	01	Parietal lobe	Supramarginal gyrus
+01#20	salience	01	Parietal lobe	Posterior parietal cortex
+01#21	sensory	01	Temporal lobe	Primary auditory cortex
+01#22	sensory	01	Temporal lobe	Auditory association cortex
+01#23	association	01	Temporal lobe	Wernicke/posterior temporal language region
+01#24	hippocampus	01	Temporal lobe	Medial temporal cortex
+01#25	sensory	01	Temporal lobe	Inferior temporal cortex
+01#26	sensory	01	Temporal/occipital cortex	Fusiform gyrus
+01#27	association	01	Temporal lobe	Temporal pole
+01#28	sensory	01	Occipital lobe	Primary visual cortex, V1
+01#29	sensory	01	Occipital lobe	Visual association cortex
+01#30	sensory	01	Occipital–parietal cortex	Dorsal visual stream
+01#31	sensory	01	Occipital–temporal cortex	Ventral visual stream
+01#32	salience	01	Insula	Insular cortex overall
+01#33	sensory	01	Insula	Posterior insula
+01#34	salience	01	Insula	Anterior insula
+02#1	hippocampus	02	Hippocampal formation	Hippocampus overall
+02#2	hippocampus	02	Hippocampal formation	Dentate gyrus
+02#3	hippocampus	02	Hippocampal formation	CA3
+02#4	hippocampus	02	Hippocampal formation	CA1
+02#5	hippocampus	02	Hippocampal formation	Subiculum
+02#6	hippocampus	02	Medial temporal lobe	Entorhinal cortex
+02#7	hippocampus	02	Medial temporal lobe	Perirhinal cortex
+02#8	hippocampus	02	Medial temporal lobe	Parahippocampal cortex
+02#9	amygdala	02	Amygdala	Basolateral amygdala complex
+02#10	amygdala	02	Amygdala	Central amygdala nucleus
+02#11	salience	02	Limbic cortex	Cingulate cortex
+02#12	white-matter	02	Limbic system	Fornix
+02#13	thalamus	02	Limbic system	Mammillary bodies
+02#14	neuromodulation	02	Limbic system	Septal area
+03#1	basal-ganglia	03	Basal ganglia	Striatum overall
+03#2	basal-ganglia	03	Striatum	Caudate nucleus
+03#3	basal-ganglia	03	Striatum	Putamen
+03#4	basal-ganglia	03	Ventral striatum	Nucleus accumbens
+03#5	basal-ganglia	03	Pallidum	Globus pallidus external, GPe
+03#6	basal-ganglia	03	Pallidum	Globus pallidus internal, GPi
+03#7	basal-ganglia	03	Subthalamus	Subthalamic nucleus, STN
+03#8	basal-ganglia	03	Midbrain/basal-ganglia network	Substantia nigra pars compacta, SNc
+03#9	basal-ganglia	03	Midbrain/basal-ganglia network	Substantia nigra pars reticulata, SNr
+03#10	basal-ganglia	03	Ventral pallidal system	Ventral pallidum
+04#1	thalamus	04	Thalamus	Thalamus overall
+04#2	thalamus	04	Thalamus	Lateral geniculate nucleus, LGN
+04#3	thalamus	04	Thalamus	Medial geniculate nucleus, MGN
+04#4	thalamus	04	Thalamus	VPL and VPM nuclei
+04#5	thalamus	04	Thalamus	Ventral anterior and ventral lateral nuclei, VA/VL
+04#6	thalamus	04	Thalamus	Anterior thalamic nuclei
+04#7	thalamus	04	Thalamus	Mediodorsal thalamic nucleus
+04#8	thalamus	04	Thalamus	Pulvinar
+04#9	salience	04	Thalamus	Thalamic reticular nucleus
+04#10	hypothalamus	04	Hypothalamus	Hypothalamus overall
+04#11	hypothalamus	04	Hypothalamus	Suprachiasmatic nucleus, SCN
+04#12	hypothalamus	04	Hypothalamus	Paraventricular nucleus, PVN
+04#13	hypothalamus	04	Hypothalamus	Supraoptic nucleus, SON
+04#14	hypothalamus	04	Hypothalamus	Lateral hypothalamus
+04#15	hypothalamus	04	Hypothalamus	Ventromedial hypothalamus
+04#16	hypothalamus	04	Hypothalamus	Arcuate nucleus
+04#17	thalamus	04	Hypothalamus	Mammillary bodies
+04#18	neuromodulation	04	Epithalamus	Habenula
+04#19	hypothalamus	04	Epithalamus	Pineal gland
+04#20	hypothalamus	04	Pituitary	Anterior pituitary
+04#21	hypothalamus	04	Pituitary	Posterior pituitary
+05#1	cerebellum	05	Cerebellum	Cerebellar cortex overall
+05#2	cerebellum	05	Cerebellum	Anterior lobe / spinocerebellum
+05#3	cerebellum	05	Cerebellum	Posterior lobe / cerebrocerebellum
+05#4	cerebellum	05	Cerebellum	Flocculonodular lobe / vestibulocerebellum
+05#5	cerebellum	05	Cerebellum	Vermis
+05#6	cerebellum	05	Cerebellum	Intermediate cerebellar hemispheres
+05#7	cerebellum	05	Cerebellum	Lateral cerebellar hemispheres
+05#8	cerebellum	05	Cerebellum	Deep cerebellar nuclei overall
+05#9	cerebellum	05	Cerebellum	Dentate nucleus
+05#10	cerebellum	05	Cerebellum	Interposed nuclei
+05#11	cerebellum	05	Cerebellum	Fastigial nucleus
+06#1	salience	06	Midbrain	Superior colliculus
+06#2	sensory	06	Midbrain	Inferior colliculus
+06#3	brainstem	06	Midbrain	Periaqueductal gray, PAG
+06#4	motor	06	Midbrain	Red nucleus
+06#5	neuromodulation	06	Midbrain	Substantia nigra pars compacta
+06#6	basal-ganglia	06	Midbrain	Substantia nigra pars reticulata
+06#7	cerebellum	06	Pons	Pontine nuclei
+06#8	neuromodulation	06	Pons	Locus coeruleus
+06#9	brainstem	06	Pons	Parabrachial nucleus
+06#10	brainstem	06	Pons/medulla	Vestibular nuclei
+06#11	brainstem	06	Medulla	Nucleus of the solitary tract, NTS
+06#12	brainstem	06	Medulla	Dorsal motor nucleus of vagus
+06#13	brainstem	06	Medulla	Nucleus ambiguus
+06#14	cerebellum	06	Medulla	Inferior olivary nucleus
+06#15	white-matter	06	Medulla	Medullary pyramids
+06#16	brainstem	06	Brainstem	Reticular formation
+06#17	brainstem	06	Brainstem	Ascending reticular activating system
+06#18	sensory	06	Brainstem	Cranial-nerve sensory nuclei
+06#19	motor	06	Brainstem	Cranial-nerve motor nuclei
+07#1	sensory	07	Olfactory system	Olfactory bulb
+07#2	sensory	07	Olfactory system	Primary olfactory / piriform cortex
+07#3	white-matter	07	White matter	Corpus callosum
+07#4	white-matter	07	White matter	Association fibers
+07#5	white-matter	07	White matter	Commissural fibers
+07#6	white-matter	07	White matter	Projection fibers
+07#7	white-matter	07	White matter	Internal capsule
+07#8	excluded	07	Ventricular system	Choroid plexus
+07#9	excluded	07	Ventricular system	Lateral ventricles
+07#10	excluded	07	Ventricular system	Third ventricle
+07#11	excluded	07	Ventricular system	Fourth ventricle
+07#12	excluded	07	Support system	Cerebrospinal fluid
+07#13	excluded	07	Support system	Dura mater
+07#14	excluded	07	Support system	Arachnoid mater
+07#15	excluded	07	Support system	Pia mater
