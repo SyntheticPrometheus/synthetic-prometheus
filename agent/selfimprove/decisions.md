@@ -241,3 +241,38 @@ next to the 29 gate cases and exits 0. End-to-end with a stub `pi`: a 0.05 USD r
 limit is recorded `budget:["cost"]`, `budget_exceeded:false`, `cost_over_limit:true`; a stub that
 spawns `sleep 300` is recorded `budget:["wall"]` at 3.0 s and its grandchild pid answers `kill -0`
 with no such process. Stub rows were removed from the ledger — a stub is not a measurement.
+
+## 2026-11-21 — Cycle 17 (agenda #13): spec-adherence-under-bulk measured at k=3 → saturated
+
+Class `audit-mix` + `audit-mix-2` (suite v6, added by the previous session) asks for three
+numbers folded from 4.8k sparse log lines across 12 shards under seven simultaneous rules
+(last-wins retries, alias resolution, literal `5xx`, tentative statuses, exclusions, s/m→ms units,
+alphabetical top tie). Truth is generated from the rows, never typed.
+
+Judge fairness, run first (`python3 selftest.py --task audit-mix{, -2}`): good→PASS,
+tolerant→PASS, bad→FAIL, 0.25 s each. So a failure is the arm's, not the judge's.
+
+Measured, base arm, k=3 on the pair, tag `cycle17-confirm`, suite_sha 2ec10874…, harness_rev
+72330a2, model deepseek/deepseek-v4.1-flash-1017:
+
+| run | pass | wall | cost |
+|---|---|---|---|
+| 20261120T232218 (n=3) | 1/3 | 133 s | $0.032 |
+| 20261120T232453 (n=6) | 5/6 | 529 s | $0.078 |
+| 20261120T233358 (n=6) | 6/6 | 349 s | $0.084 |
+| **20261121T122130 (n=6)** | **6/6** | **364 s** | **$0.092** |
+
+Per-task: audit-mix 3/3 (110/59/52 s), audit-mix-2 3/3 (36/21/85 s). The early 1/3 was the
+class's only apparent headroom and it did not reproduce under a fair, unchanged judge.
+
+Verdict: **saturated**. Fifth falsification of "denser/more-ruled work creates discrimination"
+(cycles 10, 11, 12, 15, 16, now 17). The base arm scripts the fold or follows every stated rule;
+the 4.8k-line, 7-rule input is not a capability edge. Kept anyway: it is the best floor in the
+suite for a weaker arm and it costs $0.09/6 runs.
+
+Agenda #13 therefore stays unmet in substance: the gate still has no capability headroom on any
+of the 19 tasks. Filed as its own task (#379) the one axis that is qualitatively different from
+every failed class so far: **counterfactual rule attribution** — the arm must also report what
+each named rule contributes (`impact.txt`: n/ms recomputed with each of four rules disabled).
+A one-pass fold answers the numbers; attribution requires re-deriving the fold four times, which
+is exactly the plan→act→verify→report behaviour the loop is trying to buy.

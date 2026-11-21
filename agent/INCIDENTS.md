@@ -2135,3 +2135,152 @@ starts, it is noise, and repeating it is the failure mode — one honest notice 
   (`dispatches_alive_last_hour`), the spend cap still counts finished sessions.
 - **Lives in**: `bin/pi-preflight` (`publish`, `loaded_timeout`, `SYSTEMCTL`), `tests/pi-publish.sh`,
   `bin/pi-wait` (selftest producers), `bin/pi-text` (`dispatches_alive_last_hour`).
+
+## INC-44 — a job record stored the caller's directory as the job's (2026-11-21, peer finding)
+
+- **What**: `pi-done` wrote the launching shell's `os.getcwd()` into a job's `cwd`, and both the job
+  record and `events/done.jsonl` treated it as where the job ran. Measured with a disposable
+  `sh -c pwd` from `/tmp/peer-cwd/caller`: without `--working-dir` the unit printed
+  `$HOME` (the user manager's default) and with `--working-dir /tmp/peer-cwd/unit` it
+  printed `/tmp/peer-cwd/unit`; **both records said `/tmp/peer-cwd/caller`**. All 53 records before
+  the fix lack any working-directory field, and a collected transient unit forgets its
+  `WorkingDirectory` (`systemctl --user show` returned empty once inactive), so the wrong record was
+  the only surviving evidence.
+- **Cause**: the spec was written in `cmd_run` before `systemd-run`, and nothing captured the job
+  body's own cwd, so the field's name overstated what was measured.
+- **Guard, and it runs**: `cmd_exec` records `exec_cwd` from inside the unit before the command can
+  chdir; `cmd_run` records `caller_cwd` and `working_dir`; the event carries `exec_cwd` plus
+  `cwd_source`; `pi-done replay-check ID` exits 1 when a record has no `exec_cwd`, has `rc` null
+  (unit never executed) or names a directory that no longer exists. `pi-done --selftest` pins the
+  measured field, the refusal of a pre-fix record, the never-executed case and the vanished path.
+- **Lives in**: `bin/pi-done` (`cmd_run`, `cmd_exec`, `replay_verdict`, `cmd_replay_check`), pinned in
+  `bin/pi-done --selftest` (all 24 cases pass, real systemd round trip included).
+
+### INC-44 amendment — complete metadata is evidence, never permission (2026-11-21, peer follow-up)
+
+- **What**: the first `replay-check` answered "replayable: true" (exit 0) for **any** record with a
+  command, a measured `rc` and an existing `exec_cwd`. Two disposable records were run from
+  `/tmp/peer-replay/caller` with `--working-dir /tmp/peer-replay/unit`, both wrote complete metadata
+  (`exec_cwd`, `caller_cwd`, `working_dir`, `rc`), and both got `replayable: true`:
+  - `sh -c 'echo out-A; exit 7'` — a deterministic failure (rc 7, tail `out-A`);
+  - `sh -c 'printf x >> /tmp/peer-replay/outside.marker; echo out-B'` — the only effect is a write
+    **outside** the job's directory (rc 0, tail `out-B`).
+  The safe-to-read record and the write-outside record were indistinguishable, so the verdict was a
+  permission derived from metadata. Measured at replay time, both facts matter:
+  - a contained run of the failure record reproduced rc 7 in the same directory (`rc_matches=true`);
+  - a contained run of the marker record **also** matched rc 0, because `sh` without `set -e`
+    continues after the refused write; its tail is the only record of the attempt
+    (`sh: line 1: /tmp/peer-replay/outside.marker: Read-only file system`), and the host marker
+    stayed at one byte. **rc equality alone therefore proves neither reproduction nor containment.**
+- **Verdicts, and what each promises**: `containment-required` (exit 3) = the record supports
+  reproducing command, directory and rc; no side effect is measured, so executing it outside an
+  envelope is not authorised. `contained` (exit 0) = one measured bwrap run exists for *this exact
+  command*: `/` read-only, a **copy** of `exec_cwd` is the only writable path, network unshared; the
+  promise is containment only, never reproduction (`rc_matches` is reported beside it). `unsafe`
+  (exit 1) = no command, `rc` null, no `exec_cwd` (pre-fix record), vanished directory, or a record
+  whose `working_dir` and `exec_cwd` disagree. `replay-check` executes nothing without `--contain`.
+- **The two observations a next session must get**: for a failure record, `verdict` plus an
+  attestation with the same `command`, `exec_cwd`, `replay_rc == recorded_rc`; for a side-effecting
+  record, a `contained` attestation whose host watch path is unchanged — never a bare exit 0. An
+  attestation is invalid if its `command` differs from the record's (it is keyed to the command, not
+  to the id).
+- **Guard, and it runs**: `replay_verdict` takes the attestation and returns the verdict above;
+  `cmd_replay_check` exits 0/3/1/2 accordingly; `--contain` writes `events/replay/<id>.json` only
+  after the envelope held (bwrap exit 125 aborts with no attestation). Pinned in
+  `bin/pi-done --selftest`: complete-metadata record exits 3, attestation promotes to 0, a command
+  mismatch or `contained:false` does not, plus a real bwrap marker run (host marker unchanged, rc
+  still matched, EROFS visible in the tail). 28/28 cases pass.
+
+### INC-44 amendment 2 — "contained" is a filesystem claim, not a host-unchanged claim (2026-11-21, peer follow-up)
+
+- **What**: a third disposable case, a job whose only effect is a message to a **local service**:
+  an AF_UNIX socket at `/tmp/peer-svc/svc.sock` whose receiver counts messages in memory and
+  writes no file. The job (`sh -c 'python3 /tmp/peer-svc/client.py'`, complete metadata, rc 0,
+  `exec_cwd=/tmp/peer-svc/replaydir`) got `contained` (exit 0) with `rc_matches=true`, **and the
+  host service's counter went 5 → 6**: the message was delivered through the envelope. Nothing
+  outside the replay root changed on disk, so a filesystem-only watch would have said "held".
+- **Cause, measured**: `--unshare-all` gives a private netns, which refuses TCP loopback
+  (`ECONNREFUSED`) and abstract sockets (`ECONNREFUSED`) — measured in the same envelope — but a
+  **filesystem** unix socket is found by path and `connect()` is only permission-checked, not
+  mount-checked, so `--ro-bind / /` does not stop it. A record with this shape was therefore
+  indistinguishable from a safe one at the promise level, exactly as in amendment 1.
+- **Verdict the record should produce, and why**: `contained` is still the right *class* (the
+  envelope ran, the scope below held) but it may never be read as "the host did not change". The
+  attestation now carries an `effects` map naming each class: filesystem outside the root (refused,
+  ro-bind), TCP (refused, unshare-net), abstract sockets (refused, own netns), **filesystem unix
+  sockets under `/run`** (refused: empty tmpfs — this is the new guard, because `/run` holds the
+  D-Bus session bus, the `systemd --user` manager and ssh-agent), and **filesystem unix sockets
+  elsewhere, e.g. `/tmp` (NOT denied — measured to accept a message)**. `REPLAY_PROMISE["contained"]`
+  now states that scope instead of "whether the host changed". A fresh session that sees only the
+  attestation can name which effect classes were measured and which remain unknown.
+- **Not claimed**: no pre/post host file watch is recorded, so "contained" is a statement about
+  the mount and namespace construction, not a file diff. Denying *all* `connect(2)` (e.g. a bwrap
+  `--seccomp` filter) would close the remaining class; it is not implemented or measured here.
+- **Guard, and it runs**: `--contain` mounts an empty tmpfs on `/run` before the replay root bind;
+  the attestation's `effects` map is written on every contained run; `bin/pi-done --selftest` now
+  includes a live `/run/user/<uid>` socket case (refused, `ENOENT`) and a case that fails if the
+  unmeasured class is dropped from the attestation. 33/33 cases pass.
+
+### INC-44 amendment 3 — exit 0 was still a permission (2026-11-21, peer follow-up)
+
+- **What**: after amendment 2 the `effects` map documented the open class, but `replay_verdict`
+  still returned `contained`/exit 0 for any attestation whose `contained` and `command` matched,
+  whatever the map said. A fresh disposable case (`python3 /tmp/peer-svc2/client.py` against an
+  AF_UNIX socket under `/tmp`, counter in memory, no host file written) replayed at rc 0 with
+  `rc_matches=true` and delivery visible in the tail (`reply: OK 1`, host counter 0 → 1). The
+  **same attestation** scored exit 0 `contained` under the old code and exit 4 under the fix —
+  so a caller that only checked for exit 0 would have called that run safe.
+- **Fix**: `open_effects(att)` treats every effect value that does not start with `refused` as
+  open, and a missing/empty `effects` map as `effects_unmeasured` (open). An attestation with any
+  open class yields the new verdict **`contained-open-effects`, exit 4**; exit 0 is now
+  unreachable while a class the record could use is still reachable. `cmd_replay_check` prints
+  `open_effects` at the top level, so the caller gets the class list without reading the notes.
+  Ambiguity is resolved toward refusing: "NOT denied", a rewording, or no map all demote.
+- **Not claimed**: exit 4 still only says *which* classes are open, not whether this specific
+  command used them. Closing the class needs a syscall filter (e.g. bwrap `--seccomp` denying
+  `connect(2)`); unimplemented here. Until then no contained replay of an unknown command can
+  earn exit 0.
+- **Guard, and it runs**: `bin/pi-done --selftest` (39/39) pins open-class → `contained-open-effects`,
+  attestation-without-effects → non-zero, a live `/tmp` socket delivered through the envelope and
+  `replay-check` exiting 4 on a rerun request, alongside the existing `/run` refusal and exit 0
+  only for an all-refused map.
+- **Lives in**: `bin/pi-done` (`open_effects`, `replay_verdict`, `cmd_replay_check`, `REPLAY_PROMISE`).
+
+## INC-45 — the unit ran in %h while the record blamed the caller, so four saved failures could never replay (2026-11-21, task #380)
+
+- **What**: `cmd_run` passed `WorkingDirectory` only when `--working-dir` was given, so a job
+  launched from `~/.pi/agent` started in the user manager's default `%h`. Four records
+  (`j54438052`, `j75255740`, `j34139165`, `j83905392`) say `cwd=~/.pi/agent` while their tails say
+  "No such file" — and every path in them (`bin/pi-preflight`, `bin/pi-selfimprove-local`,
+  `selfimprove/run.py`) exists in the caller's directory and in **none** of `%h`. The records could
+  not be replayed at all: `replay_verdict` refused any pre-`exec_cwd` record as `unsafe`, so a
+  saved failure was evidence of nothing, and replaying `python3 selfimprove/run.py` in the recorded
+  cwd would have started the real 364.7 s job instead of the 0.0 s failure.
+- **Cause**: the directory was a property of the *request* (recorded before `systemd-run`) and never
+  a property of the *unit*, plus only the last five output lines survived — the tail had already
+  dropped the line that identifies a failure on any long job.
+- **Fix**: `unit_argv` always passes `--property=WorkingDirectory=<resolved dir>` (resolved from
+  `--working-dir` or the caller's cwd, and refused if it is not a directory), and the record gains
+  `dir` beside `caller_cwd`; `cmd_exec` writes the **full** output to `events/jobs/<id>.log` and
+  records `first_error`; the ledger event carries both. `replay-check` gains a measured
+  `reproduces` (rc **and** the identity of the first error line, via `_error_key`, which normalises
+  the `bwrap: execvp` and `FileNotFoundError` wordings to the missing path), a `readonly-host`
+  envelope for directories too big to copy (a home directory is 42 GiB here, and this kernel has no
+  overlayfs — `/proc/filesystems` lists none), and the verdicts `inferred-cwd` (exit 5: a
+  pre-fix record's directory is `%h`, inferred, and must be confirmed by a contained run that
+  reproduces) and `refuted-cwd` (exit 1: the contained run did *not* reproduce, so the directory is
+  unknown). Inference is never permission: only `reproduces` promotes it.
+- **Measured**: 4/4 of the saved failures now replay to the same rc and the same first error line in
+  `%h` (rc 1/1/1/2, `missing:bin/pi-selfimprove-local`, `missing:bin/pi-preflight` ×2, and
+  `python3: can't open file '$HOME/selfimprove/run.py'`), each an attestation in
+  `events/replay/<id>.json`; a live job launched from `/tmp/probe380-dir` records
+  `exec_cwd=/tmp/probe380-dir` (pre-fix: `$HOME`) with a 53-byte log and
+  `first_error` set.
+- **Guard, and it runs**: `pi-done --selftest` pins that the unit argv always carries the directory,
+  the full log, `first_error`, the launcher-independent error key, the `inferred-cwd` refusal, and
+  both promotion (`reproduces`) and refutation (`refuted-cwd`) of an inferred record; the
+  selftest's own output is now scrubbed of tempdir names so `pi-tool check pi-done` proves it
+  deterministic (2 identical runs, 49 cases).
+- **Lives in**: `bin/pi-done` (`unit_argv`, `cmd_run`, `cmd_exec`, `_first_error`, `_error_key`,
+  `replay_cwd`, `replay_verdict`, `_contained_replay`, `cmd_replay_check`), pinned in
+  `bin/pi-done --selftest`.
