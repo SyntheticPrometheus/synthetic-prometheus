@@ -195,7 +195,7 @@ GH_TOPIC = "pi/github-webhook-topic"
 # new publisher cannot appear silently (task #117's reopen condition).
 TEXT_TOPIC_READERS = {
     "bin/pi-text", "bin/pi-accounts", "bin/pi-publish", "bin/pi-commit-guard.py",
-    "bin/pi-preflight", "tests/pi-text.sh",
+    "bin/pi-preflight", "tests/pi-text.sh", "tests/pi-publish.sh",
 }
 
 

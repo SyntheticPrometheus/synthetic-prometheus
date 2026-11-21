@@ -37,6 +37,9 @@ FALLBACK = [
     (r"AKIA[0-9A-Z]{16}", "aws key id"),
     (r"-----BEGIN [A-Z ]*PRIVATE KEY-----", "private key"),
     (r"(?i)(api[_-]?key|secret|password)\s*[:=]\s*['\"][A-Za-z0-9/+=_-]{12,}['\"]", "inline credential"),
+    # a leaked ntfy topic = a public publish right for the text channel (#117, task #220)
+    (r"ntfy\.sh/[A-Za-z0-9_-]{12,}", "ntfy topic URL"),
+    (r"\bpi-[0-9a-f]{24}\b", "ntfy topic name"),
 ]
 
 # paths that must never be staged at all, whatever their contents
