@@ -58,19 +58,22 @@ def record():
         p.parent.mkdir(parents=True, exist_ok=True)
         ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         with p.open("a") as f:
-            for name, ok, detail in results:
+            for name, ok, detail, ms in results:
                 f.write(json.dumps({"ts": ts, "check": name, "ok": bool(ok),
-                                    "detail": (detail or "")[:200]}) + "\n")
+                                    "detail": (detail or "")[:200], "ms": ms}) + "\n")
     except Exception:
         pass
 
 
 def check(name, fn):
+    t0 = time.monotonic()
     try:
         ok, detail = fn()
     except Exception as e:  # a check that crashes is a failure, not a pass
         ok, detail = False, f"crashed: {e}"
-    results.append((name, ok, detail))
+    # duration is a fact about the guard, not decoration: the publish unit's TimeoutStartSec has to
+    # stay above this suite's real runtime, and on 2026-11-20 nothing compared the two (see publish()).
+    results.append((name, ok, detail, round((time.monotonic() - t0) * 1000)))
 
 
 def secrets():
@@ -740,6 +743,23 @@ def text_channel():
     return r.returncode == 0, detail or "ok"
 
 
+def peer_channel():
+    """The third-party channel must be heard: a peer's message is stored only when a poll runs.
+
+    2026-11-20: the owner asked whether peer messages were actually arriving, and nothing checked it
+    — `pi-peer check` verified the topic existed while the poll row could be disabled, and a dead
+    row stores nothing and notifies nobody. `pi-peer check` now fails on a poll older than 45 min
+    (row is 10m) and on a store holding traffic with no completed poll; this check runs it.
+    """
+    tool = AGENT / "bin" / "pi-peer"
+    if not tool.exists():
+        return False, "bin/pi-peer missing"
+    r = subprocess.run([str(tool), "check"], capture_output=True, text=True, timeout=60)
+    detail = "; ".join(l.removeprefix("ok   ").removeprefix("FAIL ") for l in
+                        (r.stdout + r.stderr).splitlines() if l.strip())[:200]
+    return r.returncode == 0, detail or "ok"
+
+
 def cost_cap():
     """Is the context ceiling that is configured the one that is running?
 
@@ -921,6 +941,40 @@ def map_index():
         bad = [x for x in out if x.startswith("FAIL")]
         return False, "; ".join(x[:90] for x in bad[:3]) or "pi-map --check failed"
     return True, (out[-1] if out else "map fresh")
+
+
+def publish():
+    """A publish whose gate outgrew its unit's timeout fails as a `timeout`, not as a verdict.
+
+    2026-11-20: `pi-publish --push` runs this whole preflight before pushing, and the suite now takes
+    ~4 min (`pi-tool check` alone runs every tests/*.sh twice); the unit still said
+    TimeoutStartSec=300. Two runs were SIGTERMed mid-check and systemd reported `timeout` —
+    indistinguishable from a hang, and nothing compared the two numbers. The timeout must stay
+    above 1.5x the last timed full run; until a timed run exists, say so rather than guess.
+    """
+    unit = HOME / ".config/systemd/user/pi-publish.service"
+    if not unit.exists():
+        return True, "no pi-publish.service (publish not scheduled)"
+    m = re.search(r"(?m)^TimeoutStartSec=(\d+)$", unit.read_text(errors="ignore"))
+    if not m:
+        return False, f"{unit.name} has no explicit TimeoutStartSec"
+    timeout = int(m.group(1))
+    rows = []
+    try:
+        for line in (AGENT / "events" / "preflight.jsonl").read_text(errors="ignore").splitlines()[-6000:]:
+            r = json.loads(line)
+            if "ms" in r:
+                rows.append(r)
+    except Exception:
+        rows = []
+    if not rows:
+        return True, f"TimeoutStartSec={timeout}s; no timed run recorded yet"
+    newest = max(r["ts"] for r in rows)
+    total = sum(r["ms"] for r in rows if r["ts"] == newest) / 1000
+    if timeout >= 1.5 * total:
+        return True, f"TimeoutStartSec={timeout}s vs last full run {total:.0f}s"
+    return False, (f"TimeoutStartSec={timeout}s but the last full preflight took {total:.0f}s — the "
+                   "publish job dies as a 'timeout' mid-check; raise the unit's TimeoutStartSec")
 
 
 def github_hooks():
@@ -1213,6 +1267,7 @@ def main():
     check("decisions", decisions)
     check("probe", probe_due)
     check("updates", updates)
+    check("publish", publish)
     check("tools", tools)
     check("map", map_index)
     check("identity", identity)
@@ -1221,6 +1276,7 @@ def main():
     check("intent", intent)
     check("claims", claims)
     check("text", text_channel)
+    check("peer", peer_channel)
     check("cost cap", cost_cap)
     check("audit pack", audit_pack)
     check("control", control)
@@ -1324,7 +1380,7 @@ def main():
         print(f"warn local     offline path unavailable: {e}")
     failed = [r for r in results if not r[1]]
     record()
-    for name, ok, detail in results:
+    for name, ok, detail, _ms in results:
         if not quiet or not ok:
             print(f"{'ok  ' if ok else 'FAIL'} {name:10s} {detail}")
     if failed:

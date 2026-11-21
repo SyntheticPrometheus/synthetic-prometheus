@@ -66,6 +66,7 @@ DOTFILES = [
     ".config/systemd/user/pi-review.service",
     ".config/systemd/user/pi-review.timer",
     ".config/systemd/user/pi-publish.timer",
+    ".config/systemd/user/pi-publish.service",
     ".config/autostart/pi-terminal.desktop",
 ]
 # `.litwalk-cache` holds raw OpenAlex/arXiv batches (13 MB, single files up to 641 KB): cache

@@ -1,0 +1,13 @@
+[Unit]
+Description=Publish a sanitized harness snapshot to GitHub (skips unless the batching rules allow)
+ConditionPathExists=%h/.pi/agent/publish/enabled
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h
+ExecStart=%h/.pi/agent/bin/pi-publish --push
+# pi-publish runs the full preflight before pushing and that suite runs every tests/*.sh twice:
+# measured 2026-11-20 at ~4 min, so the old 300 s SIGTERMed the job mid-check and systemd called it
+# a `timeout` (two runs that day). `pi-preflight`'s `publish` check now fails when this drops below
+# 1.5x the last timed full run, so the number cannot silently fall behind the suite again.
+TimeoutStartSec=900

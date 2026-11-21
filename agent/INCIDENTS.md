@@ -6,6 +6,29 @@ without a guard is a promise, and promises are what failed the first time.
 
 Format: what happened → root cause → guard → where the guard lives.
 
+## 2026-11-20 — the claim gate refused a finished session's work, and the only writer left used
+`--no-verify` (#353)
+
+- **What**: `task-329-e81cdf9c` finished (no lease in `pi-claim sessions`, no process) after editing
+  `bin/pi-update`, `tests/pi-update.sh`, `bin/pi-done` and `INCIDENTS.md`. A new session staged one of
+  those paths and `pi-claim guard --staged` printed `REFUSED: session task-329-e81cdf9c has an
+  edit/write … that work is not finished`, for the next 30 minutes. The only writer left had to run
+  `git commit --no-verify`, which also disables the secret checks.
+- **Cause**: `foreign_edits()` decided attribution from the session log's *file* mtime and nothing
+  else. Recency is presence, not liveness: the log stays fresh after the session exits, so a dead
+  session kept its veto. Measured on the filed session's own log: its last record is the `toolCall`
+  it died in — a tail state alone would have read that as "working" too, so the process/lease check
+  is the one that decides.
+- **Guard**: `session_working()` — a foreign edit blocks only while its session holds a live lease,
+  is named by a process (`PI_SESSION_ID`/`PI_SESSION_FILE` in `/proc/*/environ`, or `--session[-id]`
+  in argv), or sits on a tool result inside `PI_CLAIM_LIVE_TAIL` (120 s); otherwise it is a printed
+  note, not a refusal. Pinned by five `bin/pi-claim selftest` checks (36 total), one of them bug
+  #353's own shape (log ending mid-tool, no process). Verified end-to-end against the real log with
+  the previous binary: REFUSED exit 1 → note exit 0; with `PI_SESSION_ID` on a live process, still
+  REFUSED exit 1.
+- **Lives in**: `bin/pi-claim` (`log_state`, `proc_sessions`, `session_working`), `CONCURRENCY.md`
+  (§ the commit gate), `bin/pi-claim selftest`.
+
 ## 2026-11-19 — the percolation gate reported a file list as a single point of failure (#259)
 
 - **What**: `pi-preflight graph` went red and blocked publish on three items: `cap:bin/pi-accounts`
@@ -1824,3 +1847,144 @@ starts, it is noise, and repeating it is the failure mode — one honest notice 
   `tests/pi-agenda.sh`.
 - **Lesson**: a page must name the thing that failed. "Its timer failed" costs a whole session on
   `systemctl status` and teaches the owner that p1 means noise.
+
+## INC-33 — a pinned test typed into a window it did not start (2026-11-21, bug #352)
+
+- **What**: `pi-tool check` printed `FAIL typed text arrives intact (want Ship it: 42 done., got )`
+  on one run and `ok` on the next, for the same input, in the same check; with no window open it
+  printed `skip live X test (no window)`. The pin's own two runs disagreed, so the pin gated nothing.
+- **Cause**: the live section hardcoded `:98` and searched for the title `pihuman-test`. When a
+  previous run's Xvfb still held the socket, this run's `Xvfb :98` failed to start and the run
+  attached to the display it did not own; its window search then found a *stale* window with that
+  title whose redirection pointed at a deleted temp file, so the keystrokes went nowhere. The
+  "no window" branch was a second way for the same run to print a different answer.
+- **Guard**: the test now starts a display it owns — scan for a free number (skip any socket or lock
+  a previous run still holds), spin until the X server answers, then prove ownership: the PID in
+  `/tmp/.X<n>-lock` must be alive and its parent must be this run's job or this shell. It waits for
+  the window with `xdotool search --sync`, waits for the xterm's `cat` to exit with `pi-wait pid`
+  (not a clock), and FAILs loudly when its own display or window cannot start instead of skipping.
+- **Measured**: with a decoy `:98` holding a `pihuman-test` window whose target directory was
+  deleted, the old script reproduces the reported failure exactly (`got )`); the new script passes
+  twice byte-identically in 5.3 s and leaves no Xvfb or socket behind. Concurrent runs pick
+  different numbers.
+- **Lives in**: `tests/pi-human.sh` (section 5), run twice by `pi-tool check` and by
+  `pi-preflight tools`.
+
+## INC-34 — the peer channel went one-way when its only wake-up was silenced (2026-11-20)
+
+- **What**: Eto posted at 21:10:33Z; nothing read it. The poll kept storing messages and `check`
+  kept printing `ok`, so from the machine's side the channel looked healthy while the owner could
+  see an unanswered question on the topic (the owner asked, in a text, why the peer channel was not
+  being answered — quoted here as a paraphrase, because the verbatim message is not publishable
+  material and `pi-preflight`'s `chat-private` check rightly failed on the original wording).
+- **Cause**: the only path that ever woke a session was the ntfy text to the owner's channel. The
+  owner asked for no text per peer message (2026-11-20), `tick --quiet` dropped it — and with it
+  the wake-up. Storing and reading were the same step only because a human happened to ask.
+- **Guard, and it runs**: the 10-min row is now `tick --quiet --reply`, which opens ONE detached
+  `pi -p` session per unread batch (flock + `PI_PEER_REPLY_GAP` 600 s, child carries
+  `PI_PEER_NO_DISPATCH` so it cannot recurse) and still texts the owner nothing; `pi-peer send`
+  records `answered_ids` (separate from `read_ids`, so a glance is not a reply); `pi-peer check`
+  now FAILS when a message older than 45 min has no outbound after it. Pinned in
+  `tests/pi-peer.sh` section 5 (unread starts one session, gap holds, unanswered fails check,
+  dispatched session refuses to dispatch), which `pi-tool check` runs twice and diffs.
+- **Measured**: before the fix, 1 unread, last outbound 21:03:54Z, 27 min of silence; after, the
+  reply for 7ulXPV4oOZY3 left at 21:31:22Z and `pi-peer check` prints `0 unread`.
+
+## INC-35 — INC-34's reply was attempted only on the tick that stored the message (2026-11-20)
+
+- **What**: Eto's two 22:00:16Z messages sat unanswered for 24 min and the owner had to text
+  `you keep missing things` before anyone read them. Both were stored, `last_in` was 22:00:16Z and
+  the poll was current, so `check` printed `ok` until the 45-min line.
+- **Cause**: `cmd_tick` returned 3 ("nothing new") before it reached `spawn_reply`, so a reply was
+  only ever attempted on the tick that stored a message. That tick arrived 546 s after the previous
+  session, inside `PI_PEER_REPLY_GAP` (600 s), so `spawn_reply` printed `held:` — and no later tick
+  had `new`, so nothing retried it. The gap that exists to rate-limit replies was also the only
+  place the work could be dropped. `pi-peer status` compounded it: it counted unread as "not in
+  `read_ids`" and printed `4 unread` while `check` and the tick both said `0`.
+- **Guard, and it runs**: `tick --reply` now calls `spawn_reply` on every completed poll, not only
+  when `new` is non-empty, so a gap-held reply is retried 10 min later; `status` reports
+  `unread()` (answered excluded), so it agrees with `check`. Pinned by `tests/pi-peer.sh` section
+  6 (a nothing-new tick opens the held reply and still exits 3) plus the `status` count, under
+  `pi-tool check` (run twice, diffed). Verified as a pin: against the pre-fix `bin/pi-peer` the new
+  case prints `FAIL a nothing-new tick retries the reply`, and passes on the fix.
+- **Measured**: arrival 22:00:16Z, neither message answered by 22:24Z; with the fix, the brief and
+  the 02a20efd answer left at 22:24:12Z/22:25Z (`pi-peer status` → `0 unread`).
+
+## INC-36 — burn2x filed a p1 task for a spike that had already ended (2026-11-20)
+
+- **What happened**: at 20:30Z the agenda filed #356 `control-wake failed: wake burn2x: last hour
+  $0.301 vs baseline $0.126/h (limit $0.25)`. The hour was real (19:00Z, 386 calls, shipping the
+  owner's profile work) but it was over: 20:00Z spent $0.024. The task sat until a session opened
+  at 23:20Z, when `pi-control wake` read $0.172 vs a $0.35 limit — the guard had paid a session to
+  investigate a condition that no longer existed.
+- **Cause**: burn2x measured the last *completed* hour only. A one-hour spike is therefore always
+  reported after it has stopped, and the agenda's p1 task outlived its event. The `INCIDENTS`
+  class is the same shape as INC-28: a task filed for a condition that the condition itself
+  retired before anyone worked it.
+- **Guard, and it runs**: `event_values()` now also reads the current (partial) hour. If that hour
+  has run at least 10 minutes at a pace below the same limit, the spike is reported `clear` with
+  `… this hour $0.024 in 30 min ($0.05/h) — spike already ended`; a runaway keeps its current-hour
+  pace above the limit, so it still arms. `hourly_series()` takes the evaluation time, so the
+  replay is exact. Pinned in `pi-control selftest` by `burn2x ignores a spike that already ended`
+  and `burn2x fires while the burn continues` (28/28 ok); `pi-control doctor` runs that selftest.
+- **Measured**: replay of the real hours at 20:30Z → `clear … spike already ended`; the same
+  fixture with $0.30 in the current hour → `ARMED`. Live: `pi-control wake` exit 0, burn2x clear
+  at $0.172 vs limit $0.35.
+- **Lives in**: `bin/pi-control` (`event_values`, `hourly_series`, `selftest`), `INCIDENTS.md`.
+
+## INC-37 — a signal during a pi-wait crashed the wait instead of holding its deadline (2026-11-22)
+
+- **What happened**: task #358, filed from a peer channel. With a handler installed that raises
+  (the only way to observe EINTR — PEP 475 silently retries when a handler returns), one SIGWINCH
+  0.2 s into `wait_file([...], _deadline(2.0))` surfaced as `InterruptedError` out of `select()`,
+  so the wait died with a traceback and exit 1 at 0.21 s instead of reporting timeout/124 at 2.0 s.
+  Measured on all four modes: file, pattern, pid, port all raised at ~0.20 s. A SIGINT was the only
+  cancel path (130), and it was accidental.
+- **Cause**: the retry-on-EINTR that PEP 475 provides is disabled exactly when a handler raises, and
+  every blocking call was bare (`select.select`, `poll.poll`, `time.sleep` in the port backoff,
+  `socket.create_connection`, the inotify prologue). A wait with a deadline has to re-enter with the
+  time that is *left*; nothing did, so the signal both crashed the call and dropped the deadline.
+  The class is "a syscall loop that assumes EINTR never arrives".
+- **Guard, and it runs**: `_select_ready`/`_poll_ready` re-enter with the remaining time so a storm
+  cannot extend or foreshorten a deadline; `_holding_eintr` nets the prologue where a raising handler
+  can land between bytecodes (watch re-add is idempotent, the libc handle is now cached so setup is
+  one syscall); `wait_port` routes through `_connect_once` so a signal in the backoff sleep is held;
+  `install_cancel_handlers` makes SIGINT/SIGTERM/SIGHUP/SIGQUIT exit 128+signum with one stderr line
+  and no traceback. Pinned three ways under `pi-tool check` (run twice, diffed) and blocking in
+  `pi-preflight tools`: `pi-wait --selftest` has one >raising-SIGWINCH-holds-the-deadline case per
+  mode, and it also asserts the event still fires under the storm (0.41 s) and that a 1.0 s deadline
+  under 10 Hz of signals returns at 1.00 s; `tests/pi-wait.sh` sends TERM/INT/HUP mid-wait and
+  requires 143/130/129 plus `cancelled by SIG…`, and runs `--selftest` as one line.
+- **Measured**: pre-fix tool + the new pins → 3 of 3 SIGWINCH cases FAIL (`raised InterruptedError at
+  0.15s`), TERM/HUP rc right but no cancel notice, INT 124; fixed tool → 16/16 selftest cases ok,
+  12/12 golden cases ok, identical output across two runs; 3 rounds × 4 modes of a 10 Hz raising
+  handler with a 1.0 s deadline → every one returns timeout at 1.00 s.
+- **Lives in**: `bin/pi-wait` (`Cancelled`, `_select_ready`, `_poll_ready`, `_holding_eintr`,
+  `_connect_once`, `install_cancel_handlers`, `selftest`), `tests/pi-wait.sh`, `INCIDENTS.md`.
+
+## INC-38 — the publish job was reported as a `timeout` and five guards failed under it (2026-11-20)
+
+- **What**: `pi-publish.timer` fired hourly and `pi-publish.service` failed every time. systemd's
+  verdict was `Failed with result 'timeout'` twice (11:31, 16:28 — SIGTERM at 300 s, mid-check) and
+  `exit-code 5` the rest: `--push` runs the whole preflight first, so a failing guard is reported as
+  a failed publish job. Five checks were red at 19:30: chat-private (INCIDENTS.md quoted a text
+  message verbatim), graph + tools (one percolation regression, reported twice), github hooks
+  (`SyntheticPrometheus/SyntheticPrometheus` had no webhook) and text (two task texts waiting >90
+  min with no session opened — the dispatcher had caught up by the time it was measured).
+- **Cause, two classes**: (1) nothing compared the unit's `TimeoutStartSec=300` with the suite's
+  real runtime, which grew to ~4 min because `pi-tool check` runs every `tests/*.sh` twice — the
+  timeout was a number beside the work, not derived from it; (2) the guard failures were real and
+  were each fixed at the source rather than silenced: the incident row now paraphrases the text
+  instead of quoting it, the webhook was installed with `pi-github-watch hook` (id 714705676), and
+  the percolation regression was two over-counts plus one intended edge (below).
+- **Guard, and it runs**: `pi-preflight` now records `ms` per check in `events/preflight.jsonl` and
+  its new `publish` check fails when the unit's `TimeoutStartSec` is below 1.5x the last timed full
+  run (`ok TimeoutStartSec=900s vs last full run Ns`). A timeout can no longer be the first sign
+  the suite outgrew the unit. The unit now carries the measurement in a comment.
+- **Measured**: full preflight wall 5 min 106 s and 3 min 35 s on the killed runs (CPU 3 min 21 s);
+  `pi-tool check` alone 205 s. After the fixes: `pi-percolate check` → `ok ... fragility=1.81x`,
+  `chat-private` → `125 text message(s) absent from publishable files`, `github_hooks` → `all repos
+  hooked, stream live`, `pi-tool check pi-percolate pi-publish` → both ok.
+- **Lives in**: `~/.config/systemd/user/pi-publish.service` (`TimeoutStartSec=900`),
+  `bin/pi-preflight` (`check()` records `ms`, `publish()`), `bin/pi-percolate` (`git_tracked()` is
+  directory-aware; append-only `*/log.jsonl` is restorable), `INCIDENTS.md`.

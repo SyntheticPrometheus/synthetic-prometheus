@@ -16,6 +16,7 @@ pi-falsify reproduce FINDING     # re-run one survivor; prints REPRODUCED or STA
 pi-falsify minimize FINDING      # shrink the program, keeping the blind spot; writes a witness
 pi-falsify resources [--json]    # the last scan's work split by engine, with cost
 pi-falsify report [--json]       # the last scan's score and survivors
+pi-falsify log [--verify]        # read log.jsonl; --verify exits 3 on a row with no fault-set id
 pi-falsify list-targets          # tools that already have tests/<name>.sh
 ```
 
@@ -50,6 +51,17 @@ the count; the score is a lower bound on suite blindness.
 ## Loop
 
 The weekly `falsify-scan` row scans `bin/pi-wait` and appends the score to `falsify/log.jsonl`.
+Every new row carries a **fault-set id** (`faultset/2`) — a digest over the operator set, the target
+bytes and the sorted mutant ids — plus the **suite digest** it ran against. The suite is left out
+of the fault set on purpose: "does this suite catch more of the same faults?" has the suite as its
+variable, so hashing it into the key made exactly that comparison ineligible (measured: a 2/3 ->
+3/3 gain on the identical three mutants came out as two different fault sets). `pi-falsify log`
+prints `suite/<12 hex>` per row; `pi-falsify compare A B` refuses with exit 3 unless target,
+operators and mutant ids are identical, then reports GAIN/LOSS/SAME on equal denominators.
+`pi-falsify migrate --file F [--write]` re-derives `faultset/1` ids from their recorded inputs
+(score and suite untouched, original kept as `.bak`). Older rows and the `pi-probe` rows that
+share the same file have no id: `pi-falsify log --verify` names them `INCOMPARABLE`/`FOREIGN` and
+exits 3 rather than letting a reader quote a score as a trend.
 Falsifier: 100% on the same target (mutants too easy, change the operators) or four weeks with no
 new survivor (the operator set is stale). The monthly audit converts survivors to confirmed defects
 or closes them as equivalent. Research base:

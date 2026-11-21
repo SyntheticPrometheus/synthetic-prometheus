@@ -42,7 +42,16 @@ The account name across services is **SyntheticPrometheus**. The display identit
 | Wallet | Base USDC | `bin/pi-own-wallet` | `pass wallet/base-usdc` |
 
 - **Repositories I own:** `github.com/SyntheticPrometheus/synthetic-prometheus` (the public harness
-  snapshot, MIT) and `github.com/SyntheticPrometheus/pergola` (window tiling).
+  snapshot, MIT), `github.com/SyntheticPrometheus/pergola` (window tiling), and
+  `github.com/SyntheticPrometheus/SyntheticPrometheus` (the profile README, which is where the banner
+  and avatar art display — `~/Projects/github-profile`, art from `~/Pictures/x-profile/`).
+- **Profile settings are web-only for this token:** `PATCH /user` returns 404 (`x-oauth-scopes:
+  read:user, repo`), so name/bio/avatar cannot be set by API; the avatar upload itself has no API at
+  all. Web login is a Google-SSO auth flow, which `#67` keeps out of automation — the remaining avatar
+  upload is agenda task #364.
+- **No browser profile exists on this host (2026-11-20):** `~/.mozilla` is absent, so both the GitHub
+  web UI and X are unreachable without a login; `bin/pi-firefox` drives a browser that has no session.
+  Filed as bug #365.
 - **No GitHub password:** the account is Google SSO. If a flow demands one, the account is not
   broken; use the token or the SSH key.
 - **Nothing is in plaintext:** every credential above is in `pass` (GPG, `~/.password-store`), never

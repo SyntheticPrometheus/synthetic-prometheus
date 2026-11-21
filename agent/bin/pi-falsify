@@ -23,6 +23,9 @@ prints the command that passes.
   pi-falsify minimize FINDING [--timeout S] [--max-runs N] [--json]
   pi-falsify resources [--json]
   pi-falsify report [--json]
+  pi-falsify log [--verify] [--json] [--file PATH]
+  pi-falsify compare ROW_A ROW_B [--file PATH]
+  pi-falsify migrate --file PATH [--write]
   pi-falsify list-targets
   pi-falsify selftest
 
@@ -37,7 +40,14 @@ paid escalation stays disabled unless a control explicitly permits it.
 Exit: 0 the scan completed (survivors are the result) · 1 baseline suite red / target unreadable
       · 2 usage/error. A survivor is data, not a failure of this command.
 
+compare exits 3, not 0, when the two rows are not on the same fault set: a gain is only
+reported when target, operator set and mutant ids are identical and only the suite moved.
+
 State: $PI_FALSIFY_DIR (default ~/.pi/agent/falsify) — findings/<id>.json, last-scan.json, log.jsonl.
+A log row is only comparable to another row when both carry the same fault-set id: a digest over
+the target, the suite, the operator set and the sorted mutant ids. Rows written before that id
+existed (or by another producer) are reported as INCOMPARABLE/FOREIGN, never scored as a trend.
+`pi-falsify log --verify` exits 3 when any scan row cannot be tied to a fault set.
 Rust is the right home for a large mutation scheduler; this Python slice is deliberately small and
 stdlib-only, and says so instead of pretending to be a fuzzing platform.
 """
@@ -48,6 +58,7 @@ import ast
 import copy
 import hashlib
 import json
+import datetime as dt
 import os
 import shutil
 import stat
@@ -104,6 +115,41 @@ def candidates(tree: ast.AST) -> list[dict]:
                             "from": type(node.op).__name__, "to": nxt.__name__})
     out.sort(key=lambda m: (m["line"], m["col"], m["kind"], m["from"]))
     return out
+
+
+PRODUCER = "pi-falsify/scan"
+FAULTSET_VERSION = "faultset/2"
+KNOWN_SCHEMES = ("faultset/1", "faultset/2")
+
+
+def _sha(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def suite_id(test_sha: str | None) -> str:
+    """Short label so a reviewer can tell two suites apart in one line."""
+    return f"suite/{test_sha[:12]}" if test_sha else "suite/-"
+
+
+def faultset(target_sha: str, ids: list[str], version: str = FAULTSET_VERSION,
+             test_sha: str | None = None) -> str:
+    """Identity of the faults measured: operator set + target + sorted mutant ids.
+
+    faultset/2 deliberately leaves the suite out: the question "does this suite catch
+    more of the same faults?" has the suite as its variable, so hashing it into the
+    key would make exactly the comparison it exists to support ineligible.
+    The suite is still recorded per row (test_sha256, printed as suite/<12 hex>).
+    faultset/1 is only for re-deriving ids already written under the old scheme.
+    """
+    if version == "faultset/1":
+        if not test_sha:
+            raise ValueError("faultset/1 needs test_sha")
+        raw = "\0".join([version, target_sha, test_sha, *sorted(ids)])
+    elif version == FAULTSET_VERSION:
+        raw = "\0".join([version, target_sha, *sorted(ids)])
+    else:
+        raise ValueError(f"unknown fault-set scheme {version!r}")
+    return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 
 def find_id(target: Path, m: dict, src: str) -> str:
@@ -245,9 +291,16 @@ def scan(a) -> int:
         killed = len(results) - len(survivors)
         score = (killed / len(results)) if results else 0.0
         calls = len(results) + 1  # one baseline run, then one per mutant
+        ids = sorted(r["id"] for r in results)
+        target_sha, test_sha = _sha(target.read_bytes()), _sha(test.read_bytes())
         summary = {"target": _rel(target), "test": _rel(test), "mutants": len(results),
                    "killed": killed, "survivors": len(survivors),
                    "mutation_score": round(score, 4),
+                   "producer": PRODUCER,
+                   "ts": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                   "target_sha256": target_sha, "test_sha256": test_sha,
+                   "operators": FAULTSET_VERSION, "mutant_ids": ids,
+                   "faultset": faultset(target_sha, ids, test_sha=test_sha),
                    "resources": {
                        "deterministic": {"calls": calls, "cost_usd": 0.0,
                                          "wall_seconds": round(time.monotonic() - started, 3)},
@@ -470,11 +523,190 @@ def report(a) -> int:
         print(json.dumps(d, indent=1, sort_keys=True))
         return 0
     print(f"{d['target']}: {d['mutation_score']:.0%} detection, "
-          f"{d['survivors']} survivor(s) of {d['mutants']}")
+          f"{d['survivors']} survivor(s) of {d['mutants']}"
+          + (f"  faultset {d['faultset']}" if d.get("faultset") else "  (no fault-set id)"))
     for r in d.get("results", []):
         if r["outcome"] == "survived":
             print(f"  {r['id']} line {r['line']} "
                   f"{r['from']} -> {r['to']}")
+    return 0
+
+
+def _log_row_status(r: dict) -> tuple[str, str]:
+    """(status, detail) for one log line; comparable only when the id recomputes."""
+    if "mutation_score" not in r and "name" in r:
+        return "FOREIGN", f"another producer ({r.get('name')})"
+    if "mutation_score" not in r:
+        return "FOREIGN", "not a scan row"
+    if not r.get("faultset"):
+        return "INCOMPARABLE", "no fault-set id"
+    ids = r.get("mutant_ids")
+    scheme = r.get("operators")
+    if not isinstance(ids, list) or not r.get("target_sha256"):
+        return "CORRUPT", "fault-set id without its inputs"
+    if scheme not in KNOWN_SCHEMES:
+        return "INCOMPARABLE", f"unknown fault-set scheme {scheme!r}"
+    if scheme == "faultset/1" and not r.get("test_sha256"):
+        return "CORRUPT", "fault-set id without its inputs"
+    want = faultset(r["target_sha256"], ids, scheme, test_sha=r.get("test_sha256"))
+    if want != r["faultset"]:
+        return "CORRUPT", "fault-set id does not recompute"
+    if len(ids) != r.get("mutants"):
+        return "CORRUPT", "mutant count disagrees with mutant-set ids"
+    return "COMPARABLE", r["faultset"]
+
+
+def log(a) -> int:
+    p = Path(a.file) if a.file else BASE / "log.jsonl"
+    if not p.exists():
+        print("no scan log yet — run `pi-falsify scan --target ...`")
+        return 0
+    rows, statuses = [], []
+    for lineno, line in enumerate(p.read_text().splitlines(), 1):
+        if not line.strip():
+            continue
+        try:
+            r = json.loads(line)
+        except json.JSONDecodeError as e:
+            rows.append({"row": lineno, "status": "CORRUPT", "detail": f"bad JSON: {e}"})
+            statuses.append("CORRUPT")
+            continue
+        status, detail = _log_row_status(r)
+        statuses.append(status)
+        rows.append({"row": lineno, "status": status, "detail": detail,
+                     "ts": r.get("ts"), "target": r.get("target"), "test": r.get("test"),
+                     "mutation_score": r.get("mutation_score"),
+                     "killed": r.get("killed"), "mutants": r.get("mutants"),
+                     "suite": suite_id(r.get("test_sha256")),
+                     "faultset": r.get("faultset")})
+    bad = statuses.count("INCOMPARABLE") + statuses.count("CORRUPT")
+    if a.json:
+        print(json.dumps({"rows": rows,
+                          "comparable": statuses.count("COMPARABLE"),
+                          "incomparable": statuses.count("INCOMPARABLE"),
+                          "corrupt": statuses.count("CORRUPT"),
+                          "foreign": statuses.count("FOREIGN")}, indent=1, sort_keys=True))
+    elif a.verify:
+        for r in rows:
+            print(f"row {r['row']:<3d} {r['status']:<12s} {r['detail']}")
+        print(f"{statuses.count('COMPARABLE')} comparable, {statuses.count('INCOMPARABLE')} "
+              f"incomparable, {statuses.count('CORRUPT')} corrupt, "
+              f"{statuses.count('FOREIGN')} foreign")
+    else:
+        print("row  faultset        suite              score  killed/mutants  target -- test")
+        for r in rows:
+            score = ("%.0f%%" % (100 * r["mutation_score"])
+                     if r.get("mutation_score") is not None else "-")
+            counts = (f"{r['killed']}/{r['mutants']}"
+                      if r.get("mutants") is not None else "-")
+            label = r.get("faultset") or r["status"]
+            print(f"{r['row']:<4d} {label:<15s} {r['suite']:<18s} {score:>5s}  "
+                  f"{counts:<14s}  {r.get('target') or '-'} -- {r.get('test') or '-'}")
+    return 3 if bad else 0
+
+
+def _read_rows(path: Path) -> list[dict | None]:
+    """Log rows by 1-based line number; None for blank lines, {} for bad JSON."""
+    out: list[dict | None] = []
+    for line in path.read_text().splitlines():
+        if not line.strip():
+            out.append(None)
+            continue
+        try:
+            out.append(json.loads(line))
+        except json.JSONDecodeError:
+            out.append({})
+    return out
+
+
+def compare(a) -> int:
+    """Compare two log rows on the same fault set; the suite is the variable."""
+    p = Path(a.file) if a.file else BASE / "log.jsonl"
+    if not p.exists():
+        print(f"no log at {p}", file=sys.stderr)
+        return 2
+    rows = _read_rows(p)
+    picked = []
+    for n in (a.row_a, a.row_b):
+        r = rows[n - 1] if 0 < n <= len(rows) else None
+        if r is None:
+            print(f"REFUSED row {n}: no such log row", file=sys.stderr)
+            return 3
+        status, detail = _log_row_status(r)
+        if status != "COMPARABLE":
+            print(f"REFUSED row {n}: {status} ({detail})", file=sys.stderr)
+            return 3
+        picked.append((n, r))
+    (na, ra), (nb, rb) = picked
+    if ra["faultset"] != rb["faultset"]:
+        print(f"REFUSED different fault sets: row {na} {ra['faultset']} vs "
+              f"row {nb} {rb['faultset']} — the mutant set or target changed, "
+              f"so the scores are not on the same faults", file=sys.stderr)
+        return 3
+    # Same fault set: these fields are fixed by construction, and are named so a reader
+    # can see the comparison rests on equal denominators, not on equal-looking numbers.
+    print(f"faultset   {ra['faultset']}  (fixed: target {ra.get('target')}, "
+          f"{len(ra['mutant_ids'])} mutants, scheme {ra.get('operators')})")
+    da, db = ra.get("killed", 0), rb.get("killed", 0)
+    print(f"changed    {suite_id(ra.get('test_sha256'))} -> {suite_id(rb.get('test_sha256'))}"
+          f"  ({ra.get('test')})")
+    print(f"score      row {na} {da}/{ra.get('mutants')} -> row {nb} {db}/{rb.get('mutants')}")
+    if db > da:
+        print(f"verdict    GAIN +{db - da} mutant(s) killed on the same fault set")
+    elif db < da:
+        print(f"verdict    LOSS -{da - db} mutant(s) killed on the same fault set")
+    else:
+        print("verdict    SAME killed count on the same fault set")
+    return 0
+
+
+def migrate(a) -> int:
+    """Re-derive a row's fault-set id under the current scheme from its recorded inputs.
+
+    Only the key is rewritten; score, mutant ids and suite digest are untouched, so the
+    evidence stays the same and the new identity is checkable from it. Dry run unless --write.
+    """
+    p = Path(a.file)
+    if not p.exists():
+        print(f"no log at {p}", file=sys.stderr)
+        return 2
+    raw = p.read_text().splitlines()
+    out, changed, refused = [], 0, 0
+    for lineno, line in enumerate(raw, 1):
+        if not line.strip():
+            out.append(line)
+            continue
+        try:
+            r = json.loads(line)
+        except json.JSONDecodeError:
+            out.append(line)
+            continue
+        if "mutation_score" not in r or not r.get("mutant_ids") or not r.get("target_sha256"):
+            out.append(line)
+            continue
+        want = faultset(r["target_sha256"], r["mutant_ids"], FAULTSET_VERSION,
+                        test_sha=r.get("test_sha256"))
+        old = r.get("faultset")
+        if old == want and r.get("operators") == FAULTSET_VERSION:
+            out.append(line)
+            continue
+        print(f"row {lineno:<3d} {old or '(none)'} -> {want}  "
+              f"{suite_id(r.get('test_sha256'))}  {r.get('killed')}/{r.get('mutants')}")
+        r["faultset"], r["operators"] = want, FAULTSET_VERSION
+        out.append(json.dumps(r, sort_keys=True))
+        changed += 1
+        refused += 1 if old and old != faultset(
+            r["target_sha256"], r["mutant_ids"], "faultset/1",
+            test_sha=r.get("test_sha256")) else 0
+    if a.write and changed:
+        p.with_suffix(p.suffix + ".bak").write_text("\n".join(raw) + "\n")
+        p.write_text("\n".join(out) + "\n")
+        print(f"rewrote {changed} row(s) under {FAULTSET_VERSION}; original kept at {p}.bak")
+    else:
+        print(f"{changed} row(s) would move to {FAULTSET_VERSION}"
+              + ("" if a.write else " — pass --write to apply"))
+    if refused:
+        print(f"warning: {refused} id(s) did not recompute under faultset/1 either — inspect")
     return 0
 
 
@@ -547,6 +779,20 @@ def main(argv=None) -> int:
     p = sub.add_parser("report", help="the last scan's score and survivors")
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=report)
+    p = sub.add_parser("log", help="read log.jsonl; --verify refuses rows with no fault-set id")
+    p.add_argument("--verify", action="store_true")
+    p.add_argument("--json", action="store_true")
+    p.add_argument("--file")
+    p.set_defaults(func=log)
+    p = sub.add_parser("compare", help="compare two rows on one fault set; the suite may differ")
+    p.add_argument("row_a", type=int)
+    p.add_argument("row_b", type=int)
+    p.add_argument("--file")
+    p.set_defaults(func=compare)
+    p = sub.add_parser("migrate", help="re-derive old fault-set ids from their recorded inputs")
+    p.add_argument("--file", required=True)
+    p.add_argument("--write", action="store_true")
+    p.set_defaults(func=migrate)
     p = sub.add_parser("list-targets", help="targets that have a tests/<name>.sh")
     p.set_defaults(func=list_targets)
     p = sub.add_parser("selftest", help="exercise the forge in a temp tree")
