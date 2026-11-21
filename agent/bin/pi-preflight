@@ -34,6 +34,8 @@ from pathlib import Path
 HOME = Path.home()
 AGENT = HOME / ".pi" / "agent"
 PUB = AGENT / "publish" / "repo"
+# the binary is a name, not a path, because a pin has to be able to stub it (tests/pi-publish.sh)
+SYSTEMCTL = os.environ.get("PI_SYSTEMCTL", "systemctl")
 OSI = ("MIT License", "Apache License", "BSD", "GNU GENERAL PUBLIC LICENSE", "Mozilla Public License",
        "ISC License", "The Unlicense", "Creative Commons Zero")
 # header-like phrases only: a bare "proprietary" in prose (e.g. this repo's own policy text) is not a license
@@ -766,8 +768,11 @@ def cost_cap():
     2026-11-16: 62% of a $14/day burn sat above a 248k-token ceiling that settings.json claimed to
     enforce, while the observed compactions fired at 676k-1.11M tokensBefore — the setting had never
     applied to a live session, and nothing compared the two numbers. `pi-burn --cap` does that
-    comparison offline (no network, no completion); it fails only when a compaction *after* the
-    setting's mtime fired above the ceiling, and says "unverified" until one does.
+    comparison offline (no network, no completion); it fails only when a compaction inside a session
+    opened after the ceiling last changed fired above it, and says "unverified" until one does. The
+    boundary is `pi-burn`'s `ceiling_since` (the commit that introduced today's ceiling), not
+    settings.json's mtime: that file is edited for unrelated reasons and its mtime once labelled
+    every recent session "sunk" (INCID-40, 2026-11-21).
     """
     tool = AGENT / "bin" / "pi-burn"
     if not tool.exists():
@@ -776,7 +781,7 @@ def cost_cap():
     lines = [l for l in (r.stdout + r.stderr).splitlines() if l.strip()]
     detail = ""
     for l in lines:
-        if l.startswith(("ceiling", "above", "guard", "fail")):
+        if l.startswith(("ceiling", "above", "boundary", "guard", "fail")):
             detail += (l.split(None, 1)[1] if " " in l else l) + " | "
     return r.returncode == 0, detail.strip(" |")[:220] or "no output"
 
@@ -959,6 +964,14 @@ def publish():
     if not m:
         return False, f"{unit.name} has no explicit TimeoutStartSec"
     timeout = int(m.group(1))
+    # The file is not the contract — systemd holds what it loaded. INC-43: the unit was raised to
+    # 900 s on 2026-11-20 and never `daemon-reload`ed, so every run still died at the old 300 s and
+    # systemd called it a `timeout`; this check read the file and passed while the job kept failing.
+    loaded = loaded_timeout()
+    if loaded is not None and loaded < timeout:
+        return False, (f"{unit.name} says TimeoutStartSec={timeout}s but systemd loaded {loaded}s — run "
+                       "`systemctl --user daemon-reload`; the job dies as a 'timeout' at the old value")
+    effective = min(timeout, loaded) if loaded else timeout
     rows = []
     try:
         for line in (AGENT / "events" / "preflight.jsonl").read_text(errors="ignore").splitlines()[-6000:]:
@@ -968,13 +981,32 @@ def publish():
     except Exception:
         rows = []
     if not rows:
-        return True, f"TimeoutStartSec={timeout}s; no timed run recorded yet"
+        return True, f"TimeoutStartSec={effective}s; no timed run recorded yet"
     newest = max(r["ts"] for r in rows)
     total = sum(r["ms"] for r in rows if r["ts"] == newest) / 1000
-    if timeout >= 1.5 * total:
-        return True, f"TimeoutStartSec={timeout}s vs last full run {total:.0f}s"
-    return False, (f"TimeoutStartSec={timeout}s but the last full preflight took {total:.0f}s — the "
+    if effective >= 1.5 * total:
+        return True, f"TimeoutStartSec={effective}s vs last full run {total:.0f}s"
+    return False, (f"TimeoutStartSec={effective}s but the last full preflight took {total:.0f}s — the "
                    "publish job dies as a 'timeout' mid-check; raise the unit's TimeoutStartSec")
+
+
+def loaded_timeout():
+    """The timeout systemd actually holds for pi-publish.service, in seconds; None if unreadable.
+
+    Managed by pi-preflight's `publish` check, and stubbed in tests/pi-publish.sh via PI_SYSTEMCTL
+    so the pin never needs a real unit load.
+    """
+    try:
+        r = subprocess.run([SYSTEMCTL, "--user", "show", "pi-publish.service", "--value",
+                            "-p", "TimeoutStartUSec"], capture_output=True, text=True, timeout=10)
+    except Exception:
+        return None
+    v = (r.stdout or "").strip()
+    mm = re.fullmatch(r"(\d+(?:\.\d+)?)(us|ms|s|min|h|d)?", v)
+    if not mm:
+        return None
+    n = float(mm.group(1))
+    return int(n * {"us": 1e-6, "ms": 1e-3, "s": 1, "min": 60, "h": 3600, "d": 86400}[mm.group(2) or "s"])
 
 
 def github_hooks():
@@ -1290,6 +1322,24 @@ def main():
     except Exception as e:
         mail = f"unavailable: {e}"
     print(f"warn mail      {mail}")
+    # non-fatal: the GUI browser's saved sessions. A live, logged-in profile under the XDG path was
+    # called missing because only ~/.mozilla was checked (bug #365), so name the resolved path and
+    # its logins every run instead of trusting a claim in IDENTITY.md.
+    try:
+        r = subprocess.run([str(AGENT / "bin" / "pi-firefox"), "profile"],
+                           capture_output=True, text=True, timeout=20)
+        kv = {}
+        for line in (r.stdout or r.stderr).strip().splitlines():
+            if " " in line:
+                k, v = line.split(None, 1); kv[k] = v.strip()
+        if r.returncode != 0 or "path" not in kv:
+            print("warn browser   NO FIREFOX PROFILE — X and GitHub web need a login")
+        else:
+            logins = kv.get("logins", "no cookie store")
+            bad = "github=none" in logins or "x=none" in logins
+            print(("warn browser   " if bad else "ok   browser   ") + f"{kv['path']}; {logins}")
+    except Exception as e:
+        print(f"warn browser   unavailable: {e}")
     # non-fatal: the earning rail. Token rot, gate changes and an ignored queue are all silent
     # otherwise — and an unworked queue is money I decided not to take.
     try:

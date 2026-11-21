@@ -220,3 +220,24 @@ Measured, `python3 selfimprove/replay.py --selftest`:
 `replay.py` full family: 2/2 PASS (~0.9 s/task). `pi-review` runs the selftest as the `replay`
 signal; `tests/pi-selfimprove-replay.sh` pins the three observations and is byte-identical across
 two runs. Scope: wiring/safety contracts, not model capability; model-driven replay stays #308/#267.
+
+## 2026-11-21 — Issue #1 finding 3 closed for real: group kill, per-task cost label, pinned
+
+The 2026-11-17 commit loaded `policy.json`'s `run` section and bounded the verifier by timeout, but
+two halves of the finding were still prose: `subprocess.run(timeout=)` kills only the pid it started,
+so pi's bash-tool grandchildren and the verifier's children outlived the run; and
+`max_cost_per_task_usd` appeared only in the record header, so no task was ever labelled.
+
+What changed: both the agent and the verifier now run through `run_bounded()` — own session
+(`start_new_session=True`), and on timeout `os.killpg(SIGKILL)` then a reap, so nothing survives.
+Every task carries `budget` (any of wall/verifier/memory/cost), `cost_usd`, `cost_over_limit`;
+`budget_exceeded` keeps its old meaning (the run did not finish), and a cost overrun is the separate
+post-run label the policy calls for. `run_policy()` is a function, not an inline read, so a test can
+point it at an edited file.
+
+Measured: `selftest_run.py` 5/5 (policy loaded, edited policy changes enforcement, output/exit code
+preserved, a timed-out grandchild is gone, cost labelled not capped); `maintain.py --check` runs it
+next to the 29 gate cases and exits 0. End-to-end with a stub `pi`: a 0.05 USD reply under a 0.02
+limit is recorded `budget:["cost"]`, `budget_exceeded:false`, `cost_over_limit:true`; a stub that
+spawns `sleep 300` is recorded `budget:["wall"]` at 3.0 s and its grandchild pid answers `kill -0`
+with no such process. Stub rows were removed from the ledger — a stub is not a measurement.

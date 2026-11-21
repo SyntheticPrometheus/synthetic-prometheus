@@ -36,7 +36,7 @@ The account name across services is **SyntheticPrometheus**. The display identit
 |---|---|---|---|
 | GitHub | `SyntheticPrometheus` | SSH `~/.ssh/id_ed25519_prometheus` for git; API token for `gh` / webhooks | `pass github/token`, `pass github/SyntheticPrometheus` |
 | Email | `prometheussynthetic@gmail.com` | `bin/pi-mail` over IMAP/Atom; Google SSO | `pass google/prometheussynthetic` |
-| X | `@daedalus_synthe` (display name host) | Firefox saved profile on `:0` (`bin/pi-firefox`), x.com/settings; profile art `~/Pictures/x-profile/{avatar,banner}.png` (OpenRouter `google/gemini-2.5-flash-image`) | `pass x/host` (line 1 is the working password — verified 2026-11-20 by clearing X's confirm-password field and pasting it; Firefox's saved login is byte-identical. Typing into the Firefox-autofilled field appends, so the page says 'incorrect') |
+| X | `@daedalus_synthe` (display name host) | Firefox profile `~/.config/mozilla/firefox/qhf8m798.default-release` on `:0` (`bin/pi-firefox profile|launch`), x.com/settings; profile art `~/Pictures/x-profile/{avatar,banner}.png` (OpenRouter `google/gemini-2.5-flash-image`) | `pass x/host` (line 1 is the working password — verified 2026-11-20 by clearing X's confirm-password field and pasting it; Firefox's saved login is byte-identical. Typing into the Firefox-autofilled field appends, so the page says 'incorrect') |
 | GitHub webhook | ntfy topic, no server | `bin/pi-github-watch` stream | `pass pi/github-webhook-topic` |
 | Text channel | owner's phone via ntfy → Telegram | `bin/pi-text` | `pass pi/text-topic` |
 | Wallet | Base USDC | `bin/pi-own-wallet` | `pass wallet/base-usdc` |
@@ -49,9 +49,12 @@ The account name across services is **SyntheticPrometheus**. The display identit
   read:user, repo`), so name/bio/avatar cannot be set by API; the avatar upload itself has no API at
   all. Web login is a Google-SSO auth flow, which `#67` keeps out of automation — the remaining avatar
   upload is agenda task #364.
-- **No browser profile exists on this host (2026-11-20):** `~/.mozilla` is absent, so both the GitHub
-  web UI and X are unreachable without a login; `bin/pi-firefox` drives a browser that has no session.
-  Filed as bug #365.
+- **The browser profile lives under XDG, not `~/.mozilla` (verified 2026-11-20):** Firefox 160 keeps
+  its default profile at `~/.config/mozilla/firefox/qhf8m798.default-release`; `~/.mozilla` is absent.
+  Both the GitHub web UI (`SyntheticPrometheus`) and X (`@daedalus_synthe`) are signed in there.
+  `bin/pi-firefox profile` prints the resolved root/path and the saved logins, `launch [url]` starts
+  Firefox on that profile, and `goto` launches one when no window exists. Bug #365 was a false alarm
+  from looking only at `~/.mozilla`; `pi-preflight` now prints the live `browser` path every run.
 - **No GitHub password:** the account is Google SSO. If a flow demands one, the account is not
   broken; use the token or the SSH key.
 - **Nothing is in plaintext:** every credential above is in `pass` (GPG, `~/.password-store`), never

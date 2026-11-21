@@ -1,6 +1,6 @@
 {
- "version": 5,
- "note": "Pinned judge. Never edited by an arm. Verifier runs with cwd = task dir; exit 0 = pass. verify_files are rewritten after the arm runs. v3 adds log-fanout (30 shards: context-lossy aggregate, the recon-delegation probe). v4 adds parallel-fix (six independent modules: the parallel-delegation probe). v3: semantic-shards, chain-40, join-60 added as headroom for the saturated suite (cycle 15); inputs come from suite/fixtures/*.py. v5 adds the authored-brief class (release-brief, upgrade-brief): authored output under ~15 simultaneous constraints (word caps, banned words, section order, cross-file self-hash) \u2014 the class that cannot be folded by a script, so the base arm can drop below 1.0 and the gate has headroom for a capability gain (cycle 16, agenda #13).",
+ "version": 6,
+ "note": "Pinned judge. Never edited by an arm. Verifier runs with cwd = task dir; exit 0 = pass. verify_files are rewritten after the arm runs. v3 adds log-fanout (30 shards: context-lossy aggregate, the recon-delegation probe). v4 adds parallel-fix (six independent modules: the parallel-delegation probe). v3: semantic-shards, chain-40, join-60 added as headroom for the saturated suite (cycle 15); inputs come from suite/fixtures/*.py. v5 adds the authored-brief class (release-brief, upgrade-brief): authored output under ~15 simultaneous constraints (word caps, banned words, section order, cross-file self-hash) \u2014 the class that cannot be folded by a script, so the base arm can drop below 1.0 and the gate has headroom for a capability gain (cycle 16, agenda #13). v6 adds audit-mix (cycle 17, agenda #13): spec-adherence under bulk \u2014 4.8k sparse log lines, twelve shards and seven simultaneously stated reduction rules (last-wins retries, alias resolution, literal 5xx, tentative statuses, exclusions, s->ms units, alphabetical top-service ties) where the observed base failure mode is a quick fold that silently skips a rule; truth is generated with the data.",
  "tasks": [
   {
    "id": "accounting-sum",
@@ -292,6 +292,18 @@
    "id": "upgrade-brief",
    "fixture": "upgrade-brief.py",
    "prompt": "Write RELEASE_NOTES.md and release.json for version 5.1, using changes.csv and following every rule in POLICY.md exactly. The judge checks POLICY.md rule by rule; one violated rule fails the task.",
+   "verify": "python3 _verify.py"
+  },
+  {
+   "id": "audit-mix",
+   "fixture": "audit-mix.py",
+   "prompt": "Produce the audit numbers in logs/ by following SPEC.md exactly. Write n.txt (count of 5xx events), ms.txt (total milliseconds of the non-tentative ones) and top.txt (canonical service with the most counted 5xx events). Then reply with the three values.",
+   "verify": "python3 _verify.py"
+  },
+  {
+   "id": "audit-mix-2",
+   "fixture": "audit-mix-2.py",
+   "prompt": "Produce the audit numbers in logs/ by following SPEC.md exactly. Write n.txt (count of 5xx events), ms.txt (total milliseconds of the non-tentative ones) and top.txt (canonical service with the most counted 5xx events). Then reply with the three values.",
    "verify": "python3 _verify.py"
   }
  ]

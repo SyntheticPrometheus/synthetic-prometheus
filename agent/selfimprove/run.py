@@ -14,6 +14,7 @@ import hashlib
 import json
 import os
 import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -97,8 +98,62 @@ def mem_available_mb():
     return 10_000
 
 
+def run_policy(path=None):
+    """The declared resource contract, loaded from policy.json's `run` section. The runner used to
+    hardcode these (issue #1 review, finding 3); the defaults below are only a fallback for a tree
+    with no policy file, and must stay equal to policy.json v3."""
+    p = Path(path) if path else HERE / "policy.json"
+    pol = json.loads(p.read_text()).get("run", {}) if p.exists() else {}
+    return {"wall_s": int(pol.get("max_wall_per_task_s", 240)),
+            "memory_guard_mb": int(pol.get("memory_guard_mb", 1200)),
+            "memory_cap_mb": int(pol.get("memory_cap_mb", 2500)),
+            "verifier_timeout_s": int(pol.get("verifier_timeout_s", 60)),
+            "cost_per_task_usd": pol.get("max_cost_per_task_usd")}
+
+
+def _kill_group(proc):
+    """Kill the child AND every descendant. subprocess.run(timeout=) kills only the pid it started:
+    pi's bash-tool grandchildren and the verifier's children kept running after the run was recorded
+    (issue #1 review, finding 3), holding memory and writing into the workdir."""
+    try:
+        os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+    except (ProcessLookupError, PermissionError):
+        try:
+            proc.kill()
+        except Exception:
+            pass
+
+
+def run_bounded(cmd, cwd=None, env=None, timeout=None):
+    """Run cmd in its own session under a hard wall bound. Returns (stdout, stderr, rc, timed_out).
+    A timed-out child is killed by process group, so nothing it spawned survives the run."""
+    p = subprocess.Popen(cmd, cwd=cwd, env=env, stdin=subprocess.DEVNULL,
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                         start_new_session=True)
+    try:
+        out, err = p.communicate(timeout=timeout)
+        return out or "", err or "", p.returncode, False
+    except subprocess.TimeoutExpired:
+        _kill_group(p)
+        out, err = p.communicate()
+        return out or "", f"{err or ''}\n[killed: wall bound {timeout}s]", 124, True
+
+
+def budget_labels(timed_out, verifier_timed_out, cost, cost_limit):
+    """Which bound a task hit, as its own outcome rather than as a task failure. `cost` is a
+    post-run acceptance label (policy note): the run already happened, so it cannot be a cap."""
+    labels = []
+    if timed_out:
+        labels.append("wall")
+    if verifier_timed_out:
+        labels.append("verifier")
+    if cost_limit is not None and (cost or 0) > float(cost_limit):
+        labels.append("cost")
+    return labels
+
+
 def run_task(task, workdir, arm_text, timeout, subagent=False, usage_mode=False, model=None,
-             mem_guard_mb=1200, mem_cap_mb=2500, verify_timeout=60):
+             mem_guard_mb=1200, mem_cap_mb=2500, verify_timeout=60, cost_limit=None):
     workdir.mkdir(parents=True, exist_ok=True)
     task = fixtures.task(task)          # expand large generated inputs, judge files, verifier
     for name, content in task.get("files", {}).items():
@@ -122,17 +177,13 @@ def run_task(task, workdir, arm_text, timeout, subagent=False, usage_mode=False,
                 "verify_err": f"skipped: only {mem_available_mb()} MB available "
                               f"(guard {mem_guard_mb} MB)",
                 "agent_rc": -1, "wall_s": 0.0, "reply": "", "usage": {}, "files": [],
-                "budget_exceeded": True, "timed_out": False}
+                "budget": ["memory"], "budget_exceeded": True, "timed_out": False,
+                "verify_timed_out": False, "cost_over_limit": False}
     if shutil.which("systemd-run"):
         cmd = ["systemd-run", "--user", "--scope", "--quiet", "-p", f"MemoryMax={mem_cap_mb}M",
                "-p", "MemorySwapMax=1G", "--"] + cmd
     t0 = time.time()
-    try:
-        p = subprocess.run(cmd, cwd=workdir, capture_output=True, text=True,
-                           timeout=timeout, env=env, stdin=subprocess.DEVNULL)
-        out, err, rc = p.stdout, p.stderr, p.returncode
-    except subprocess.TimeoutExpired as e:
-        out, err, rc = (e.stdout or b"").decode() if isinstance(e.stdout, bytes) else (e.stdout or ""), "timeout", 124
+    out, err, rc, timed_out = run_bounded(cmd, cwd=workdir, env=env, timeout=timeout)
     wall = round(time.time() - t0, 1)
     if usage_mode:
         tum, tusage, tident = parse_json_stream(out)
@@ -142,15 +193,14 @@ def run_task(task, workdir, arm_text, timeout, subagent=False, usage_mode=False,
     for name, content in task.get("verify_files", {}).items():
         (workdir / name).parent.mkdir(parents=True, exist_ok=True)
         (workdir / name).write_text(content)
-    # A verifier is a subprocess like any other: it gets a bound, and a hung one is a budget
-    # outcome, not a task failure (it tells us nothing about the arm).
-    try:
-        verify = subprocess.run(["bash", "-c", task["verify"]], cwd=workdir,
-                                capture_output=True, text=True, timeout=verify_timeout)
-        vrc, verr, vto = verify.returncode, verify.stderr.strip(), False
-    except subprocess.TimeoutExpired:
-        vrc, verr, vto = 124, f"verifier timed out after {verify_timeout}s", True
-    timed_out = rc == 124
+    # A verifier is a subprocess like any other: it gets a bound and the same group kill, and a
+    # hung one is a budget outcome, not a task failure (it tells us nothing about the arm).
+    _, verr, vrc, vto = run_bounded(["bash", "-c", task["verify"]], cwd=workdir,
+                                    timeout=verify_timeout)
+    verr = verr.strip()
+    timed_out = timed_out or rc == 124   # pi's own wall guard exits 124 too
+    cost = float((tusage or {}).get("cost") or 0.0)
+    labels = budget_labels(timed_out, vto, cost, cost_limit)
     return {
         "id": task["id"],
         "pass": vrc == 0 and not timed_out,
@@ -163,7 +213,12 @@ def run_task(task, workdir, arm_text, timeout, subagent=False, usage_mode=False,
         "model_ident": tident,
         "timed_out": timed_out,
         "verify_timed_out": vto,
-        "budget_exceeded": timed_out or vto,
+        "cost_usd": round(cost, 6),
+        "cost_over_limit": "cost" in labels,
+        "budget": labels,
+        # a run that hit wall/verifier/memory did not finish; a cost overrun happened after the
+        # fact and is a separate post-run label, so the two must not share a flag
+        "budget_exceeded": any(l in ("wall", "verifier") for l in labels),
         "files": sorted(p.name for p in workdir.iterdir()),
     }
 
@@ -189,14 +244,11 @@ def main():
     ap.add_argument("--dry", action="store_true")
     a = ap.parse_args()
     # The declared resource contract lives in policy.json; the runner used to hardcode it.
-    pol = json.loads((HERE / "policy.json").read_text()).get("run", {}) \
-        if (HERE / "policy.json").exists() else {}
+    pol = run_policy()
     if a.timeout is None:
-        a.timeout = int(pol.get("max_wall_per_task_s", 240))
-    mem_guard_mb = int(pol.get("memory_guard_mb", 1200))
-    mem_cap_mb = int(pol.get("memory_cap_mb", 2500))
-    verify_timeout = int(pol.get("verifier_timeout_s", 60))
-    cost_limit = pol.get("max_cost_per_task_usd")
+        a.timeout = pol["wall_s"]
+    mem_guard_mb, mem_cap_mb = pol["memory_guard_mb"], pol["memory_cap_mb"]
+    verify_timeout, cost_limit = pol["verifier_timeout_s"], pol["cost_per_task_usd"]
 
     suite = json.loads(SUITE.read_text())
     arm = Path(a.arm).resolve()
@@ -218,7 +270,7 @@ def main():
             r = run_task(t, outdir / f"{t['id']}-r{rep+1}", arm_text, a.timeout,
                          subagent=a.subagent, usage_mode=a.usage, model=a.model or None,
                          mem_guard_mb=mem_guard_mb, mem_cap_mb=mem_cap_mb,
-                         verify_timeout=verify_timeout)
+                         verify_timeout=verify_timeout, cost_limit=cost_limit)
             r["rep"] = rep + 1
             print(f"{arm_name:16s} {t['id']:16s} r{rep+1} {'PASS' if r['pass'] else 'FAIL'} "
                   f"{r['wall_s']:6.1f}s", flush=True)
@@ -236,6 +288,7 @@ def main():
     ident = next(iter(seen.values()), {})
     ident_all = [f"{p}/{m}" for p, m, _ in sorted(seen)]
     over_budget = [r["id"] for r in results if r.get("budget_exceeded")]
+    over_cost = [r["id"] for r in results if r.get("cost_over_limit")]
     record = {
         "stamp": stamp,
         "policy_sha": sha(HERE / "policy.json") if (HERE / "policy.json").exists() else None,
@@ -261,6 +314,7 @@ def main():
         "tokens_out": sum((r.get("usage") or {}).get("output", 0) for r in results),
         "cost_usd": round(sum((r.get("usage") or {}).get("cost", 0.0) for r in results), 6),
         "budget_exceeded": over_budget,
+        "cost_over_limit": over_cost,        # post-run label; never a reason to fail a task
         "budget_limits": {"wall_per_task_s": a.timeout, "verifier_s": verify_timeout,
                           "memory_guard_mb": mem_guard_mb,
                           "cost_per_task_usd": cost_limit,
@@ -275,7 +329,7 @@ def main():
                               "model_response", "arm", "arm_sha", "parent", "harness_rev",
                               "suite_sha", "policy_sha", "reps", "n", "passed", "pass_rate",
                               "wall_s", "tokens_in", "tokens_out", "cost_usd",
-                              "budget_exceeded")}) + "\n")
+                              "budget_exceeded", "cost_over_limit")}) + "\n")
     print(f"\n{arm_name}: {passed}/{len(results)} pass, {record['wall_s']}s, "
           f"tokens {record['tokens_in']}→{record['tokens_out']}, ${record['cost_usd']:.4f} → {outdir}")
 

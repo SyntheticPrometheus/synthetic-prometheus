@@ -240,8 +240,12 @@ def money_section(days: float) -> dict:
         out["per_day"] = float(m.group(1)) if m else None
         bands = re.findall(r"^\s*([<>0-9k\-]+)\s+\$?([\d.]+)\s+([\d.]+)%", text, re.M)
         out["bands"] = [(b[0].strip(), float(b[2])) for b in bands][:5]
-        top = re.findall(r"^\s*([\d.]+)\s+([\d.]+)% (/.*)$", text, re.M)
-        out["top_sessions"] = [(float(t[1]), t[2].split("/")[-1][:44]) for t in top[:3]]
+        # `live|sunk` sits between the share and the path (pi-burn --drivers, 2026-11-21): a session
+        # opened before the current reserve is cost history, and the audit must not rank it as a
+        # live driver. Older two-column output still parses because the tag is optional.
+        top = re.findall(r"^\s*([\d.]+)\s+([\d.]+)%\s+(?:(live|sunk)\s+)?(/.*)$", text, re.M)
+        out["top_sessions"] = [((t[2] or "live") + ":" + t[3].split("/")[-1][:44], float(t[1]))
+                               for t in top[:3]]
     else:
         out["drivers"] = text.strip()[:140]
     # the decision numbers (recent rate, runway) from the same log, offline: --json would sample

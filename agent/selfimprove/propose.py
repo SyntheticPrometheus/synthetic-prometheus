@@ -6,7 +6,37 @@
 This is the Self-Harness / RHI step (2606.09498, 2607.15524): mine the failure patterns from the
 recorded runs, then ask for a minimal edit tied to those failures. It never evaluates or accepts
 anything — `run.py` and `gate.py` own that, and the gate is not editable by the proposal.
+
+Timeout and payload are one decision, not two (task #213). Measured on 2026-11-21 through this
+script's own `pi --print` path on `local/qwen2.5-1.5b-instruct-q4_k_m` (warm router, 6 failures),
+with the router's `print_timing` lines for the same calls:
+
+    prompt chars   wall secs   prompt eval            generation
+    2,713            64.6       1,910 tok @ 12.6 t/s   45 tok @ 6.8 t/s
+    4,713            43.0
+    6,713            48.6
+    12,713          158.9       1,910 tok @ 12.6 t/s   45 tok @ 6.8 t/s
+
+A call costs STARTUP + chars/PREFILL + generated/GEN, and generation is the term that has no
+bound of its own: one --timeout 100 run spent 47 s on a 3,900-char prefill and then emitted 919
+tokens at 9.5 t/s for another 97 s, timing out with a half-written proposal. The model's
+maxTokens is 1,024 (models.json), so the worst case is 20 + 171 + 128 = 319 s for the default
+payload — which a 300 s default covered with no margin, and a 100 s one could never cover. Hence:
+the payload cap is derived from the timeout, the default timeout is the measured worst case with
+margin (600 s, 1.9x), and a local model with a timeout below the floor refuses in a second
+instead of burning it and returning nothing.
 """
+
+# Measured 2026-11-21 (router print_timing over the table above): prompt eval 12.6 tok/s at ~6.6
+# chars/token = 83 chars/s (70 used, pessimistic); generation 9.5 t/s and 1,024 maxTokens = 128 s
+# (8 t/s used); ~20 s of every call is model/slot start-up that no payload change affects.
+PREFILL_CHARS_PER_S = 70
+GEN_SECONDS = 128
+STARTUP_S = 20
+MAX_PAYLOAD_CHARS = 12000      # the dump a 6-failure run needs; measured at 158.9 s above
+MIN_PAYLOAD_CHARS = 2000
+# A local model cannot draft anything in less than this, whatever the payload.
+LOCAL_MIN_TIMEOUT_S = STARTUP_S + MIN_PAYLOAD_CHARS // PREFILL_CHARS_PER_S + GEN_SECONDS
 import argparse
 import json
 import shutil
@@ -70,11 +100,12 @@ def main():
                     help="pi --model pattern for the proposer (e.g. a local GGUF: costs $0 "
                          "and can run unattended overnight; default = pi's own model")
     ap.add_argument("--out", default="")
-    ap.add_argument("--timeout", type=int, default=300,
-                    help="seconds for the proposer call; a local GGUF needs more (default 300)")
-    ap.add_argument("--prompt-chars", type=int, default=12000,
-                    help="cap on the failure dump handed to the proposer; a 1.5B GGUF on this "
-                         "host prefills ~12000 chars in the time a short call allows (bug #149)")
+    ap.add_argument("--timeout", type=int, default=600,
+                    help="seconds for the proposer call (default 600 = 1.9x the measured 319 s "
+                         "worst case for a local 1.5B at the default payload; bug #213)")
+    ap.add_argument("--prompt-chars", type=int, default=0,
+                    help="cap on the failure dump handed to the proposer, overriding the default; "
+                         "default derives it from --timeout and the measured prefill rate (bug #213)")
     ap.add_argument("--dry-run-proposer", dest="unused", action="store_true", help=__import__("argparse").SUPPRESS)
     ap.add_argument("--dry", action="store_true")
     a = ap.parse_args()
@@ -84,7 +115,17 @@ def main():
     if not fails:
         print(f"no failures in {run_dir.name}; nothing to propose")
         return
-    prompt = PROMPT.format(failures=json.dumps(fails, indent=1)[:max(2000, a.prompt_chars)])
+    if a.model.startswith("local/") and a.timeout < LOCAL_MIN_TIMEOUT_S:
+        raise SystemExit(
+            f"propose: --timeout {a.timeout}s cannot draft on {a.model}: a local GGUF needs "
+            f">= {LOCAL_MIN_TIMEOUT_S}s (measured 2026-11-21: {MIN_PAYLOAD_CHARS}-char prefill + "
+            f"the model's 1024-token generation cap at 8 tok/s). Use --timeout "
+            f"{LOCAL_MIN_TIMEOUT_S} or more; a shorter call only burns the budget")
+
+    # A payload the timeout cannot afford is worse than a small one: it drafts nothing.
+    affordable = int(PREFILL_CHARS_PER_S * (a.timeout - STARTUP_S - GEN_SECONDS))
+    cap = a.prompt_chars or min(MAX_PAYLOAD_CHARS, max(MIN_PAYLOAD_CHARS, affordable))
+    prompt = PROMPT.format(failures=json.dumps(fails, indent=1)[:cap])
     if a.dry:
         print(prompt[:2000])
         return

@@ -6,6 +6,22 @@ without a guard is a promise, and promises are what failed the first time.
 
 Format: what happened → root cause → guard → where the guard lives.
 
+## 2026-11-20 — a live, logged-in Firefox profile was reported missing (#365)
+
+- **What**: bug #365 said `~/.mozilla` was absent, so X and GitHub web sessions were unreachable and
+  IDENTITY.md was lying about a saved profile. Both sessions were in fact live: GitHub as
+  `SyntheticPrometheus`, X as `@daedalus_synthe`, proven by `bin/pi-firefox goto` + screenshot.
+- **Cause**: Firefox 160 here keeps its default profile under `$XDG_CONFIG_HOME/mozilla/firefox`
+  (`~/.config/mozilla/firefox/qhf8m798.default-release`), not the legacy `~/.mozilla/firefox`.
+  The diagnosis checked the legacy path only, and `bin/pi-firefox` had no way to say which profile it
+  used or to start Firefox on it — "no window" was read as "no session".
+- **Guard**: `bin/pi-firefox` resolves both profile roots, `profile` prints the path and the saved
+  GitHub/X logins, `launch [url]` starts Firefox on it, and `focus`/`goto` launch when no window
+  exists. `pi-preflight` prints an `ok/warn browser` line with the live path and logins every run.
+  `tests/pi-human.sh` (4b) pins the locator against a fake XDG profile and pins that "none" is said
+  instead of guessed.
+- **Lives in**: `bin/pi-firefox`, `bin/pi-preflight`, `tests/pi-human.sh`, IDENTITY.md.
+
 ## 2026-11-20 — the claim gate refused a finished session's work, and the only writer left used
 `--no-verify` (#353)
 
@@ -1988,3 +2004,110 @@ starts, it is noise, and repeating it is the failure mode — one honest notice 
 - **Lives in**: `~/.config/systemd/user/pi-publish.service` (`TimeoutStartSec=900`),
   `bin/pi-preflight` (`check()` records `ms`, `publish()`), `bin/pi-percolate` (`git_tracked()` is
   directory-aware; append-only `*/log.jsonl` is restorable), `INCIDENTS.md`.
+
+## INC-39 — a PR sat for a signoff that did not exist, then merged past a gate I had just called pre-merge (2026-11-21)
+
+- **What**: pergola PR #1 from Etothetaui was created 2026-11-17T19:14Z and merged 22:03Z, ~2h50m
+  later. The first half of that wait was me holding it for "the repo owner" to approve — on a repo
+  where I am the owner. The second half ended with a reply that called the headless e2e run a
+  pre-merge gate and then squash-merged while it was still running. The contributor answered with a
+  process note naming both: resolve authority before waiting for signoff, and either wait for a
+  required check or call it a post-merge soak with a stated rollback condition.
+- **Cause, one class**: gate semantics were prose, not state. Nothing in the review held a check as
+  `pending` with a SHA and an exit code, so "gate" and "soak" were the same sentence, and "who
+  signs off" was assumed from the shape of the thread rather than read from the repo.
+- **Guard, and it is loaded**: `skills/contributor-pr` §0a (`gh repo view --json viewerPermission`
+  resolves the actor before any wait) and §0b (a per-check ledger of name/SHA/exit code with
+  `pending` blocking the merge; anything still running at merge time must be called a post-merge
+  soak with a rollback trigger and a publish time). The skill is the review procedure, so it is read
+  before the next PR reaches that step.
+- **Measured**: after the merge, `cargo test --workspace` on 761b035 reproduced 135 passed / 0 failed
+  (74 + 53 + 8) and the e2e run was the only open item; PR #2 (13 files) was then reviewed with the
+  check state stated before the merge decision.
+- **Lives in**: `skills/contributor-pr/SKILL.md` (§0a, §0b), `research/peer-interrogation.md`.
+
+## INC-39 — a thin tool-error hour filed a p1 task, twice over (2026-11-21, bug #368)
+
+- **What**: `control-wake` armed on "6 errors in 87 calls (6.9%) vs baseline 3.3% (limit 6.5%)" and
+  filed priority-1 task #368. Re-measured from the transcripts, that hour held 117 tool results, so
+  the rate was 5.1%, under the 6.5% limit. And at the real 3.3% baseline, 6 in 87 is a one-sided
+  binomial p=0.068: not evidence even with the right denominator.
+- **Cause, two classes**: (1) the denominator was an assistant message, so a message carrying several
+  parallel tool calls counted once — the rate could exceed 100% and thin hours looked worse than they
+  were; (2) the trigger had a rate and an error floor but no significance test, so six coincidences in
+  a quiet hour were enough to wake someone at priority 1.
+- **Guard, and it runs**: `pi-control` counts a *call* as a `toolResult` row (cache is versioned,
+  `CALLS_SEMANTICS=2`, so old assistant-message buckets are rebuilt rather than mixed), and
+  `tool-errors` now requires a one-sided binomial tail `p <= alpha` (0.05, `control/policy.json`)
+  on top of `rate > limit` and the error floor. `pi-control selftest` pins 4d (the real #368 shape:
+  6/87 at 3.3% must stay clear), 4e (30/400 at 7.5% must still arm) and 4f (one message with three
+  parallel calls is 3 calls); `pi-control doctor` runs the selftest and fails on any FAIL.
+- **Measured**: pre-fix `pi-control events` → `6/87 (6.9%) ARMED`; post-fix on the same transcripts
+  the hour is `6/117 (5.1%)` p=0.535 clear, `pi-control wake` exits 0, selftest 31/31, doctor ok.
+- **Lives in**: `bin/pi-control` (`scan_sessions`, `binom_tail`, `event_values`), `control/policy.json`
+  (`alpha`), `INCIDENTS.md`.
+
+## INC-40 — the burn audit dated its own ceiling by file mtime, and the audit asked it for the truth (2026-11-21, task #121)
+
+- **What**: task #121 asked whether the `>250k` replayed-context band was still populated 24 h after
+  `compaction.modelOverrides[...].reserveTokens=800000` landed (ceiling 248,576). `pi-burn --drivers 7`
+  answered ">250k = 69.5% of $/day", which reads as "the override is not in force", while `--cap` on the
+  same logs answered "0 calls over the ceiling". Both were right about different sessions: the whole
+  `>250k` table was one session opened 2026-11-15T14:05Z, four days before the ceiling existed.
+- **Cause, two classes**: (1) `--drivers` never split live from sunk spend, and `--cap` decided "which
+  config ran" from `settings.json`'s **mtime** — a file edited for unrelated reasons (`lastChangelogVersion`),
+  so its 2026-11-20T19:36Z mtime made every session of the last three days "sunk" and the guard said
+  "unverified". (2) `--drivers` sat *below* the OpenRouter key check and the spend sample, so the only
+  local, offline money instrument needed a key and wrote a sample to measure: `tests/pi-burn.sh` could
+  never cover it, which is why (1) survived four days.
+- **Guard, and it runs**: `pi-burn` has one `ceiling_since` — the newest commit at which the effective
+  ceiling for `defaultModel` became its current value, falling back to mtime only for an uncommitted
+  change; `--cap` judges sessions against it and prints `since`; `--drivers` prints a live band table
+  plus a `sunk <band>` line, tags each top session `live`/`sunk`, and now runs above the key check.
+  `--cap` also reports a call over the ceiling by ≤2,048 tokens as `boundary` (the compaction trigger
+  itself: measured +173 and +23 tokens, $0.003), not as a leak. `tests/pi-burn.sh` pins all of it:
+  no live `>250k` band from a pre-setting session, the sunk line, the boundary/defect split, the
+  offline `--drivers` run.
+- **Measured**: `--cap` → `since 2026-11-16T19:18:24Z`, 0 calls above, 2 boundary, 8,200 sunk; live
+  sessions peak at 248,064 cacheRead and the 2026-11-20 session compacted at 248,677 — the ceiling
+  fires. `--drivers 7` → live bands 17.6/29.1/35.3/18.0%, sunk `>250k $4.23/day`.
+- **Lives in**: `bin/pi-burn` (`ceiling_since`, `--cap`, `--drivers`), `tests/pi-burn.sh`,
+  `skills/audit/scripts/window.py` (parses the `live|sunk` tag).
+
+## INC-41 — the pi-human test read X focus from a second connection and failed green code (2026-11-21, task #329)
+
+- **What**: `pi-done` job j27976803 (`preflight --quiet`, 02:32–02:35Z) failed on one check:
+  `tools  FAIL pi-human  test failed: FAIL test window has focus; nondeterministic output`. The pin
+  passed on re-run and passed again now, so the failing subject was the test, not `pi-human`.
+- **Cause**: `tests/pi-human.sh` set focus with one `xdotool` process and read it back with another.
+  Two processes are two X clients, and the server may serve the reader's request first, so a focus
+  that *was* set correctly is read against the previous owner. `pi-tool check` runs every pin twice
+  and diffs, so a race that only sometimes loses turns into a gate failure with no defect behind it.
+- **Guard, and it runs**: focus and the focus read now ride one connection in one order —
+  `xdotool windowfocus --sync "$wid" getwindowfocus` — which also waits for the focus to be actual
+  before reading. The check still fails when focus genuinely does not land (that is why it exists).
+- **Measured**: `sh tests/pi-human.sh` twice → identical 22-line output, `PASS pi-human` both, exit 0;
+  probed the chained form live on a scratch Xvfb (returned the window id it focused).
+- **Lives in**: `tests/pi-human.sh` (live X block), `pi-preflight` `tools` check.
+
+## INC-42 — a proposer timeout and payload were two guesses, so a 6-failure run drafted nothing (2026-11-21, task #213)
+
+- **What**: the local self-improvement draft (`propose.py` on a 1.5B GGUF) was called with a 100 s
+  timeout and its 12,000-char default dump (12,713-char prompt). It timed out, and the run reported
+  "candidate: none drafted". Both numbers were guesses: 300 s / 12,000 chars entered on 2026-11-17
+  with no measurement behind them.
+- **Cause**: the call has *two* costs and only one was being reasoned about. Measured 2026-11-21
+  through the script's own `pi --print` path: prefill runs at 12.6 tok/s (83 chars/s) and generation
+  at 9.5 tok/s with the model's 1,024-token `maxTokens` cap. A 12,713-char prompt costs ~171 s of
+  prefill plus up to ~128 s of generation = 319 s worst case, so a 300 s default had no margin and a
+  100 s call could never finish. A re-run at 100 s with a 3,913-char prompt spent 47 s prefilling and
+  then emitted 919 tokens for another 97 s — generation, not payload, is the unbounded term.
+- **Guard, and it runs**: the payload cap is *derived* from the timeout
+  (`70 chars/s * (timeout - 20 startup - 128 generation)`, floor 2,000, capped at 12,000), the default
+  timeout is the measured worst case with 1.9x margin (600 s), and a `local/*` model below the floor
+  (176 s) refuses in under a second naming the measured minimum instead of burning the budget.
+- **Measured**: pins are hermetic (stub `pi` records the prompt length) and pass twice identically;
+  live default run on `local/qwen2.5-1.5b-instruct-q4_k_m` with 6 failures → `wrote arms/...md`
+  (rc=0) in 231 s, against a 319 s bound and a 600 s default. A 100 s local call now refuses at 0 s.
+- **Lives in**: `selfimprove/propose.py` (`PREFILL_CHARS_PER_S`, `GEN_SECONDS`, `LOCAL_MIN_TIMEOUT_S`),
+  `tests/pi-selfimprove-local.sh` (prompt-length, refusal and constant pins).

@@ -158,3 +158,34 @@ thing being controlled, and every decision logged well enough to be audited afte
 
 Honest residual risk: their gains shrink on a well-tuned short recipe, and most of their runs are n=1. Our
 harness is a well-tuned long recipe with a 5-day runway, so expect the *ordering* above and not the margins.
+
+## Shipped, and measured — 2026-11-21 07:35Z (task #132, second-pass items 1–2)
+
+Both items were built as `bin/pi-control` (`caps | events | decide`) and are now wired and pinned;
+neither needed a model turn, which is the whole point of the ranking above.
+
+**(1) Event wake-up on top of the cadence floor — done, measured live.**
+Agenda row `control-wake` (1h, `exec:…/bin/pi-control wake`), enabled, 104 journaled runs, last run
+2026-11-21 01:30 local with `last_ok=1` and 0 strikes. Contract, verified end to end rather than in
+process: an armed trigger exits 2, which `pi-agenda`'s `run_exec` turns into exactly one priority-1 task
+carrying the row id as `ref`; a held trigger exits 0 ("already woken") and an over-cap tick exits 3
+("idle"), so neither a 6 h cooldown nor a busy day files a task every hour (#317, #138/#147). Current
+state: `burn2x` clear at $0.101/h against a $0.133/h baseline (limit $0.27), `tool-errors` 6/146 calls
+(4.1%, p=0.26), `verify-streak` pass,pass,pass. Per-group caps `delegate $0.45/$2.50`,
+`text $1.43/$3.00`, `text-work $0.64/$4.00`, backstop $1.06/$12.00 — the global number is a backstop,
+as OPAL's 18,400 fix says it should be.
+
+**(2) Decision id + TTL + one application + logged drop — built, pinned, and still unused by a consumer.**
+`pi-control propose KEY --ttl S` prints `key@gen`; `act TOKEN -- cmd` applies once, no-ops a retry, and
+drops (exit 4) when the TTL passed, writing `propose,apply,noop,drop` to `control/journal.jsonl` so a
+drop is auditable. Measured gap, stated honestly: the only record in the live journal is
+`text-throttle` from 2026-11-17 with `why: "test"`, and nothing outside `pi-control` calls `propose`/
+`act` — the mechanism exists, the async decision it was meant to carry has not been named yet. That
+remainder is filed as an agenda task rather than left as a plausible sentence here.
+
+**The guard that makes the class not rot.** `tests/pi-control.sh` (11 checks, `pi-tool check
+pi-control` green twice with identical output) drives the real CLIs in a sandbox: minted token → one
+apply → retry no-op → expired token dropped with its journal line, and agenda side exit 3 files no task
+while exit 2 files exactly one p1 task that a re-tick re-annotates instead of duplicating. Before this,
+the whole controller was covered only by its own in-process `selftest` (31/31) — green mechanism,
+unproven wiring, which is the precise shape of the failure it was written to prevent.

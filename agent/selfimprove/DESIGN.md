@@ -47,8 +47,8 @@ Rules taken from the literature, enforced in code:
 |---|---|---|
 | propose one mechanism (weakness mining) | `propose.py` | done — mines failures from a run, asks for <= 6 lines |
 | audit before measuring (tamper check) | `audit.py` + `policy.json` | done — refuses judge-mentioning text, base-line removal, and over-budget diffs (annealed per net-accepted arm) |
-| measure with k reps + cost | `run.py` | done — default `--mode json` usage capture, memory guard, cgroup cap, `--parent` lineage, `harness_rev` |
-| decide | `gate.py` | done — audit first, then policy thresholds (k>=3, delta>=2, no regression); voids unequal reps, missing/duplicate rep IDs, suite drift, policy/task-selection mismatch and differing or unknown model identities; `selftest_gate.py` pins 19 cases |
+| measure with k reps + cost | `run.py` | done — default `--mode json` usage capture, memory guard, cgroup cap, `--parent` lineage, `harness_rev`; the `policy.json` `run` section is loaded (`run_policy()`), agent and verifier subprocesses run in their own session and a timeout kills the whole group, and a budget hit is a labelled outcome (`budget`: wall/verifier/memory/cost) rather than a silent failure — `selftest_run.py` pins 5 cases |
+| decide | `gate.py` | done — audit first, then policy thresholds (k>=3, delta>=2, no regression); voids unequal reps, missing/duplicate rep IDs, suite drift, policy/task-selection mismatch and differing or unknown model identities; `selftest_gate.py` pins 29 cases |
 | archive | `arms/archive/` + `decisions.md` | done — header names parent; DECISIONS entries are append-only |
 | provenance | `git` in `~/.pi/agent` | done — harness commits, `harness_rev` recorded per run |
 | maintain | `maintain.py` + weekly timer | done — integrity, research index, lineage, proposal yield, prune |
@@ -161,7 +161,8 @@ harness, not an installer.
   The external review ran `selftest_gate.py` and `maintain.py --check` on Python 3.13/Windows and
   both passed; model runs were not exercised there.
 - **Minimal checks that need no model:**
-  `python3 agent/selfimprove/selftest_gate.py` (19 gate cases) and
+  `python3 agent/selfimprove/selftest_gate.py` (29 gate cases),
+  `python3 agent/selfimprove/selftest_run.py` (5 runner cases) and
   `python3 agent/selfimprove/maintain.py --check` (suite hash, ledger chain, archive completeness).
 - **Needs a model:** `run.py --arm arms/base.md --tasks <id> --reps 3` (spends tokens; `--model
   local/<gguf>` makes it $0 when a local router is configured).

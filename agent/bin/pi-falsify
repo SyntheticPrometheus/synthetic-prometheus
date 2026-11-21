@@ -18,7 +18,7 @@ Injected defects are calibration, not a real bug: a survivor says "the suite is 
 a hypothesis to examine, never a claim that production code is wrong. `reproduce` re-runs one and
 prints the command that passes.
 
-  pi-falsify scan --target bin/pi-wait [--test tests/pi-wait.sh] [--limit N] [--timeout S] [--json]
+  pi-falsify scan --target bin/pi-wait [--test tests/pi-wait.sh] [--order ORDER] [--limit N] [--timeout S] [--json]
   pi-falsify reproduce FINDING [--timeout S]
   pi-falsify minimize FINDING [--timeout S] [--max-runs N] [--json]
   pi-falsify resources [--json]
@@ -26,6 +26,7 @@ prints the command that passes.
   pi-falsify log [--verify] [--json] [--file PATH]
   pi-falsify compare ROW_A ROW_B [--file PATH]
   pi-falsify migrate --file PATH [--write]
+  pi-falsify prescan --readiness PATH
   pi-falsify list-targets
   pi-falsify selftest
 
@@ -44,9 +45,25 @@ compare exits 3, not 0, when the two rows are not on the same fault set: a gain 
 reported when target, operator set and mutant ids are identical and only the suite moved.
 
 State: $PI_FALSIFY_DIR (default ~/.pi/agent/falsify) — findings/<id>.json, last-scan.json, log.jsonl.
+A finding id names its site (line and column) since scheme site/1: two identical source lines are
+two faults, and each keeps its own record. Records written before that scheme carry only the old
+8-hex id; when that id is shared by more than one site they are reported AMBIGUOUS and reproduce
+says which site it replays, instead of letting one site stand in for the other.
 A log row is only comparable to another row when both carry the same fault-set id: a digest over
 the target, the suite, the operator set and the sorted mutant ids. Rows written before that id
-existed (or by another producer) are reported as INCOMPARABLE/FOREIGN, never scored as a trend.
+existed (or by another producer) are reported as INCOMPARABLE/FOREIGN, never scored as a trend;
+a row whose mutant ids repeat cannot distinguish those sites and is AMBIGUOUS, not a trend either.
+
+Scan has two identities. `faultset` covers the mutants actually executed (sorted), so it is
+order-free by construction: two full scans in different orders are comparable, and a suite change
+is comparable on the same visited set. `universe_id` covers every candidate before the order and
+limit slice, so an ordering experiment is admitted only when both rows share it even though their
+visited fault sets differ. A row records `order`, `limit`, `source_order`/`source_kinds` (the
+canonical order), `universe_id` and `execution` (the ids in the order they ran). `log --verify`
+recomputes the expected sequence from those fields and refuses a row whose execution does not
+follow its declared order; a bare `order` label proves nothing. `--limit` applies AFTER the
+order, so two limited runs in different orders visit different subsets (different faultset, same
+universe_id) and `compare` still refuses to score them against each other.
 `pi-falsify log --verify` exits 3 when any scan row cannot be tied to a fault set.
 Rust is the right home for a large mutation scheduler; this Python slice is deliberately small and
 stdlib-only, and says so instead of pretending to be a fuzzing platform.
@@ -118,8 +135,11 @@ def candidates(tree: ast.AST) -> list[dict]:
 
 
 PRODUCER = "pi-falsify/scan"
-FAULTSET_VERSION = "faultset/2"
-KNOWN_SCHEMES = ("faultset/1", "faultset/2")
+ID_SCHEME = "site/1"
+FAULTSET_VERSION = "faultset/3"
+KNOWN_SCHEMES = ("faultset/1", "faultset/2", "faultset/3")
+ORDER_CHOICES = ("source", "reverse", "operator-priority")
+KIND_PRIORITY = {"compare": 0, "boolop": 1, "binop": 2, "const": 3}
 
 
 def _sha(data: bytes) -> str:
@@ -145,17 +165,73 @@ def faultset(target_sha: str, ids: list[str], version: str = FAULTSET_VERSION,
         if not test_sha:
             raise ValueError("faultset/1 needs test_sha")
         raw = "\0".join([version, target_sha, test_sha, *sorted(ids)])
-    elif version == FAULTSET_VERSION:
+    elif version in ("faultset/2", FAULTSET_VERSION):
+        # /3 keeps the /2 construction: only the mutant id scheme moved, and the version
+        # string keeps old rows checkable under the scheme they were written with.
         raw = "\0".join([version, target_sha, *sorted(ids)])
     else:
         raise ValueError(f"unknown fault-set scheme {version!r}")
     return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 
+def order_sites(sites: list[tuple[dict, str]], order: str) -> list[tuple[dict, str]]:
+    """Apply an execution order to (mutation, site-id) pairs; source is the canonical order."""
+    if order == "reverse":
+        return list(reversed(sites))
+    if order == "operator-priority":
+        # Stable: within one operator, the canonical source order still decides.
+        return sorted(sites, key=lambda s: KIND_PRIORITY[s[0]["kind"]])
+    return list(sites)
+
+
+def expected_execution(row: dict) -> list[str] | None:
+    """The sequence a row claims it ran, recomputed from its saved order fields alone.
+
+    This is what makes the record checkable: `order` and `limit` are declarations, `execution`
+    is the run, and this is the expectation they must meet. No target file is needed, so a
+    reader of the log can tell whether the order claim and the execution agree.
+    """
+    so, kinds = row.get("source_order"), row.get("source_kinds")
+    order = row.get("order")
+    if not isinstance(so, list) or not isinstance(kinds, list) or len(kinds) != len(so):
+        return None
+    if order == "reverse":
+        seq = list(reversed(so))
+    elif order == "operator-priority":
+        seq = [so[i] for i in sorted(range(len(so)),
+                                     key=lambda j: KIND_PRIORITY.get(kinds[j], 99))]
+    elif order == "source":
+        seq = list(so)
+    else:
+        return None
+    limit = int(row.get("limit") or 0)
+    return seq[:limit] if limit else seq
+
+
 def find_id(target: Path, m: dict, src: str) -> str:
+    """Identity of one mutation SITE: line and column are part of it.
+
+    Two identical lines are two faults (a suite can kill one and miss the other), so a digest
+    that leaves the site out makes them share a finding file and one silently overwrites the
+    other. 16 hex chars keep a scan's site ids out of birthday reach.
+    """
+    line = src.splitlines()[m["line"] - 1].strip() if m["line"] <= len(src.splitlines()) else ""
+    raw = (f"{target.name}|{m['kind']}|{m['from']}|{m['to']}|"
+           f"{m['line']}|{m['col']}|{line}")
+    return hashlib.sha256(raw.encode()).hexdigest()[:16]
+
+
+def legacy_id(target: Path, m: dict, src: str) -> str:
+    """The pre-site id, only to tell an old record whose id it was and where it was ambiguous."""
     line = src.splitlines()[m["line"] - 1].strip() if m["line"] <= len(src.splitlines()) else ""
     raw = f"{target.name}|{m['kind']}|{m['from']}|{m['to']}|{line}"
     return hashlib.sha1(raw.encode()).hexdigest()[:8]
+
+
+def legacy_sites(target: Path, src: str, ident: str) -> list[int]:
+    """Lines of every mutation site an old id could have named."""
+    return sorted({m["line"] for m in candidates(ast.parse(src))
+                   if legacy_id(target, m, src) == ident})
 
 
 def mutate_node(tree: ast.AST, m: dict) -> ast.AST:
@@ -226,6 +302,9 @@ def test_env(tmp_bin: Path) -> dict:
 
 
 def scan(a) -> int:
+    if a.limit < 0:
+        print("error: --limit must be >= 0", file=sys.stderr)
+        return 2
     target = Path(a.target)
     if not target.is_absolute():
         target = (Path.cwd() / target)
@@ -260,15 +339,24 @@ def scan(a) -> int:
             print(f"error: baseline suite is not green (rc={rc}): {tail}", file=sys.stderr)
             return 1
 
-        muts = candidates(ast.parse(src))
-        if a.limit:
-            muts = muts[:a.limit]
-        results, survivors = [], []
-        for m in muts:
+        # The universe is every applicable site before the order/limit slice: it is
+        # order-free evidence that two runs saw the same potential faults.
+        sites: list[tuple[dict, str]] = []
+        for m in candidates(ast.parse(src)):
             try:
-                mutated = apply_mutation(src, m)
+                apply_mutation(src, m)
             except (ValueError, SyntaxError):
                 continue
+            sites.append((m, find_id(target, m, src)))
+        source_order = [i for _, i in sites]
+        source_kinds = [m["kind"] for m, _ in sites]
+        seq = order_sites(sites, a.order)
+        if a.limit:
+            seq = seq[:a.limit]
+        execution = [i for _, i in seq]
+        results, survivors, seen = [], [], {}
+        for m, mid in seq:
+            mutated = apply_mutation(src, m)
             exe.write_text(mutated)
             os.chmod(exe, os.stat(exe).st_mode | stat.S_IXUSR)
             rc, tail = run(["/bin/sh", str(test)], env, a.timeout)
@@ -278,13 +366,23 @@ def scan(a) -> int:
                 outcome = "survived"
             else:
                 outcome = "killed"
-            march = {**m, "id": find_id(target, m, src), "outcome": outcome,
+            prev = seen.get(mid)
+            if prev is not None and prev != m:
+                # The class guard for the overwrite this fixture exposed: never write one
+                # site's record over another's, whatever the id formula does next.
+                print(f"error: two mutation sites share id {mid} "
+                      f"(lines {prev['line']} and {m['line']}); refusing to overwrite a finding",
+                      file=sys.stderr)
+                return 1
+            seen[mid] = m
+            march = {**m, "id": mid, "outcome": outcome,
                      "test_rc": rc, "test_tail": tail}
             results.append(march)
             if outcome == "survived":
                 survivors.append(march)
                 rec = {"id": march["id"], "target": _rel(target), "test": _rel(test),
-                       "mutation": m, "line_text": src.splitlines()[m["line"] - 1].strip(),
+                       "id_scheme": ID_SCHEME, "mutation": m,
+                       "line_text": src.splitlines()[m["line"] - 1].strip(),
                        "repro": f"pi-falsify reproduce {march['id']}"}
                 (FINDINGS / f"{march['id']}.json").write_text(json.dumps(rec, indent=1,
                                                                         sort_keys=True) + "\n")
@@ -296,11 +394,16 @@ def scan(a) -> int:
         summary = {"target": _rel(target), "test": _rel(test), "mutants": len(results),
                    "killed": killed, "survivors": len(survivors),
                    "mutation_score": round(score, 4),
-                   "producer": PRODUCER,
+                   "producer": PRODUCER, "id_scheme": ID_SCHEME,
                    "ts": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
                    "target_sha256": target_sha, "test_sha256": test_sha,
                    "operators": FAULTSET_VERSION, "mutant_ids": ids,
                    "faultset": faultset(target_sha, ids, test_sha=test_sha),
+                   "order": a.order, "limit": a.limit,
+                   "source_order": source_order, "source_kinds": source_kinds,
+                   "universe_id": faultset(target_sha, sorted(source_order),
+                                            test_sha=test_sha),
+                   "execution": execution,
                    "resources": {
                        "deterministic": {"calls": calls, "cost_usd": 0.0,
                                          "wall_seconds": round(time.monotonic() - started, 3)},
@@ -343,6 +446,15 @@ def reproduce(a) -> int:
     target = (AGENT / rec["target"]) if not Path(rec["target"]).is_absolute() else Path(rec["target"])
     test = (AGENT / rec["test"]) if not Path(rec["test"]).is_absolute() else Path(rec["test"])
     src = target.read_text()
+    if rec.get("id_scheme") != ID_SCHEME:
+        try:
+            old_sites = legacy_sites(target, src, rec["id"])
+        except SyntaxError:
+            old_sites = []
+        if len(old_sites) > 1:
+            print(f"AMBIGUOUS {a.finding}: this legacy id names {len(old_sites)} sites "
+                  f"(lines {', '.join(map(str, old_sites))}); this record replays line "
+                  f"{rec['mutation']['line']} only")
     try:
         mutated = apply_mutation(src, rec["mutation"])
     except (ValueError, SyntaxError) as e:
@@ -525,6 +637,10 @@ def report(a) -> int:
     print(f"{d['target']}: {d['mutation_score']:.0%} detection, "
           f"{d['survivors']} survivor(s) of {d['mutants']}"
           + (f"  faultset {d['faultset']}" if d.get("faultset") else "  (no fault-set id)"))
+    if d.get("order"):
+        print(f"order      {d['order']} limit {d.get('limit', 0)}, executed "
+              f"{len(d.get('execution', []))}/{len(d.get('source_order', []))}, "
+              f"universe {d.get('universe_id')}")
     for r in d.get("results", []):
         if r["outcome"] == "survived":
             print(f"  {r['id']} line {r['line']} "
@@ -551,9 +667,37 @@ def _log_row_status(r: dict) -> tuple[str, str]:
     want = faultset(r["target_sha256"], ids, scheme, test_sha=r.get("test_sha256"))
     if want != r["faultset"]:
         return "CORRUPT", "fault-set id does not recompute"
+    if len(set(ids)) != len(ids):
+        dup = sorted({i for i in ids if ids.count(i) > 1})
+        return "AMBIGUOUS", (f"{len(ids) - len(set(ids))} mutant(s) share id(s) "
+                             f"{', '.join(dup)}; the row cannot tell their sites apart")
     if len(ids) != r.get("mutants"):
         return "CORRUPT", "mutant count disagrees with mutant-set ids"
-    return "COMPARABLE", r["faultset"]
+    if r.get("source_order") is not None or r.get("execution") is not None or r.get("order"):
+        so, ex, kinds = r.get("source_order"), r.get("execution"), r.get("source_kinds")
+        if not isinstance(so, list) or not isinstance(ex, list) or not isinstance(kinds, list):
+            return "CORRUPT", "order record without its inputs"
+        if len(set(so)) != len(so) or len(set(ex)) != len(ex):
+            return "CORRUPT", "order record repeats a mutant id"
+        if sorted(ex) != sorted(ids):
+            return "CORRUPT", "execution does not match the visited mutant set"
+        if set(ex) - set(so):
+            return "CORRUPT", "execution names a mutant outside the universe"
+        want_u = faultset(r["target_sha256"], sorted(so), scheme,
+                          test_sha=r.get("test_sha256"))
+        if r.get("universe_id") != want_u:
+            return "CORRUPT", "universe id does not recompute"
+        if len(kinds) != len(so):
+            return "CORRUPT", "source kinds do not match the universe"
+        want = expected_execution(r)
+        if want is None:
+            return "CORRUPT", f"unknown order {r.get('order')!r}"
+        if ex != want:
+            return "CORRUPT", f"execution does not follow {r.get('order')} order"
+    detail = r["faultset"]
+    if r.get("order"):
+        detail += (f"  order={r['order']} executed={len(r['execution'])}/{len(r['source_order'])}")
+    return "COMPARABLE", detail
 
 
 def log(a) -> int:
@@ -579,18 +723,21 @@ def log(a) -> int:
                      "killed": r.get("killed"), "mutants": r.get("mutants"),
                      "suite": suite_id(r.get("test_sha256")),
                      "faultset": r.get("faultset")})
-    bad = statuses.count("INCOMPARABLE") + statuses.count("CORRUPT")
+    bad = (statuses.count("INCOMPARABLE") + statuses.count("CORRUPT")
+           + statuses.count("AMBIGUOUS"))
     if a.json:
         print(json.dumps({"rows": rows,
                           "comparable": statuses.count("COMPARABLE"),
                           "incomparable": statuses.count("INCOMPARABLE"),
                           "corrupt": statuses.count("CORRUPT"),
+                          "ambiguous": statuses.count("AMBIGUOUS"),
                           "foreign": statuses.count("FOREIGN")}, indent=1, sort_keys=True))
     elif a.verify:
         for r in rows:
             print(f"row {r['row']:<3d} {r['status']:<12s} {r['detail']}")
         print(f"{statuses.count('COMPARABLE')} comparable, {statuses.count('INCOMPARABLE')} "
               f"incomparable, {statuses.count('CORRUPT')} corrupt, "
+              f"{statuses.count('AMBIGUOUS')} ambiguous, "
               f"{statuses.count('FOREIGN')} foreign")
     else:
         print("row  faultset        suite              score  killed/mutants  target -- test")
@@ -643,10 +790,19 @@ def compare(a) -> int:
               f"row {nb} {rb['faultset']} — the mutant set or target changed, "
               f"so the scores are not on the same faults", file=sys.stderr)
         return 3
+    ua, ub = ra.get("universe_id"), rb.get("universe_id")
+    if ua and ub and ua != ub:
+        print(f"REFUSED same visited set but different candidate universe: row {na} {ua} vs "
+              f"row {nb} {ub} — the target or the mutation generator changed between them",
+              file=sys.stderr)
+        return 3
     # Same fault set: these fields are fixed by construction, and are named so a reader
     # can see the comparison rests on equal denominators, not on equal-looking numbers.
     print(f"faultset   {ra['faultset']}  (fixed: target {ra.get('target')}, "
           f"{len(ra['mutant_ids'])} mutants, scheme {ra.get('operators')})")
+    print(f"universe   {ua or '(not recorded)'} vs {ub or '(not recorded)'}")
+    print(f"order      {ra.get('order') or '(not recorded)'} vs "
+          f"{rb.get('order') or '(not recorded)'}")
     da, db = ra.get("killed", 0), rb.get("killed", 0)
     print(f"changed    {suite_id(ra.get('test_sha256'))} -> {suite_id(rb.get('test_sha256'))}"
           f"  ({ra.get('test')})")
@@ -657,6 +813,389 @@ def compare(a) -> int:
         print(f"verdict    LOSS -{da - db} mutant(s) killed on the same fault set")
     else:
         print("verdict    SAME killed count on the same fault set")
+    return 0
+
+
+PRESCAN_CLAIMS = {
+    # Stage 1 may compare confirmed *suite* blind spots. A reviewed suite that is green on
+    # the baseline, plus a test that kills the mutant, is the confirmation for that claim;
+    # an oracle is not required for it. The oracle confirms a different claim.
+    "suite-blind-spots-relative": ["G2", "G3", "G4", "G5", "G6", "G7"],
+    # "This survivor is wrong against the spec on the unmodified program" needs an oracle
+    # that fails there, plus a negative control; the reviewed suite cannot stand in for it.
+    "spec-violation-on-unmodified": ["G1"],
+}
+PRESCAN_GATE_NAMES = {
+    "G1": "oracle arm + negative control",
+    "G2": "sealed manifests",
+    "G3": "isolation rehearsal",
+    "G4": "blinded deduped queue",
+    "G5": "independent adjudicator",
+    "G6": "budgets and cost unit",
+    "G7": "pre-registration",
+}
+
+
+def _g2_required(g: dict) -> int:
+    """Sealed pairs a G2 record must carry: stage 1 runs 3 cases, stage 2 adopts on 5.
+
+    Stage 1's decision authority is KILL/PROCEED only (3/3 is p=0.125, direction);
+    adoption needs 5/5 at p=0.03125. A 3-pair record therefore passes only when it
+    declares stage 1, and its verdict says adoption is not authorized.
+    """
+    return 3 if g.get("stage") == 1 else 5
+
+
+def _gate_name(gid: str, g: dict) -> str:
+    if gid == "G2":
+        n = _g2_required(g)
+        return f"sealed manifests {n}/{n}"
+    return PRESCAN_GATE_NAMES[gid]
+
+
+PRESCAN_QUEUE_FIELDS = {"arm", "order", "position", "timestamp", "ts", "target", "suite",
+                       "arm_label", "execution", "faultset"}
+
+
+def _prescan_hash(path: Path) -> str | None:
+    return hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else None
+
+
+def _prescan_norm(path: Path) -> str | None:
+    """Content identity that survives a rename plus cosmetic edits.
+
+    Raw sha256 identifies exact bytes, so a consulted case copied under a new name and
+    given one comment line has a new hash and would pass a hash-only reuse check. This
+    strips blank lines and whole-line comments and collapses internal whitespace, so
+    the same artifact with a tidy-up edit keeps its identity. It is deliberately narrow:
+    it detects trivial edits, not a semantic rewrite, and it cannot detect a file whose
+    consulted hash the record simply omits.
+    """
+    if not path.is_file():
+        return None
+    data = path.read_bytes()
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError:
+        return hashlib.sha256(data).hexdigest()
+    lines = []
+    for line in text.splitlines():
+        s = line.strip()
+        if not s or s.startswith("#"):
+            continue
+        lines.append(" ".join(s.split()))
+    return hashlib.sha256("\n".join(lines).encode()).hexdigest()
+
+
+def _prescan_artifact(rec: dict, base: Path, where: str) -> tuple[Path | None, str, str]:
+    """(path, detail, error) for {'artifact': rel, 'sha256': hex}."""
+    rel, want = rec.get("artifact"), rec.get("sha256")
+    if not rel or not want:
+        return None, "", f"{where}: artifact or sha256 absent"
+    p = Path(rel)
+    p = p if p.is_absolute() else base / p
+    got = _prescan_hash(p)
+    if got is None:
+        return None, "", f"{where}: artifact {rel} missing"
+    if got != want:
+        return None, "", f"{where}: {rel} sha256 {got[:12]} != recorded {str(want)[:12]}"
+    return p, rel, ""
+
+
+def _prescan_run(cmd: list, target: str, timeout: float, base: Path) -> int | None:
+    argv = []
+    for x in cmd:
+        s = str(x)
+        if s == "{target}":
+            argv.append(str(target))
+        else:
+            argv.append(s.replace("{base}", str(base)))
+    try:
+        return subprocess.run(argv, capture_output=True, text=True, timeout=timeout).returncode
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+
+
+def _prescan_gate(gid: str, g: dict, base: Path) -> tuple[str, str, str]:
+    """(verdict, detail, expected-if-not-pass) for one pre-scan gate."""
+    if gid == "G1":
+        oracle, nc = g.get("oracle") or {}, g.get("negative_control") or {}
+        cmd, tgt = oracle.get("command"), oracle.get("target")
+        if not cmd or not tgt:
+            return "STOP", "no oracle command/target", "oracle.command and oracle.target present"
+        if any("tests/" in str(x) or str(x).endswith("collide.sh") for x in cmd):
+            return "STOP", "oracle command invokes the reviewed suite", \
+                "an oracle independent of tests/"
+        p = Path(tgt)
+        p = p if p.is_absolute() else base / p
+        rc = _prescan_run(cmd, str(p), 10, base)
+        if rc == 0 or rc is None:
+            return "STOP", f"oracle exits {rc!r} on the unmodified target", \
+                "a nonzero exit on the unmodified program"
+        ncmd, nbase = nc.get("command"), nc.get("base")
+        if not ncmd or not nbase:
+            return "STOP", "no negative control", "negative_control.command and .base present"
+        np = Path(nbase)
+        np = np if np.is_absolute() else base / np
+        nrc = _prescan_run(ncmd, str(np), 10, base)
+        if nrc in (0, None):
+            return "STOP", f"negative control exits {nrc!r} on the hard-coded baseline", \
+                "the control rejects the baseline answer (nonzero exit)"
+        # Rejecting the unmodified program and the hard-coded answer is not enough: an oracle
+        # that exits 1 on everything passes both. The same command must accept a known-correct
+        # implementation, which is the arm an always-fail oracle cannot fake.
+        ac = g.get("accept_control") or {}
+        abase = ac.get("base")
+        if not abase:
+            return "STOP", "no accept control", \
+                "accept_control.base = a known-correct implementation"
+        ap = Path(abase)
+        ap = ap if ap.is_absolute() else base / ap
+        arc = _prescan_run(cmd, str(ap), 10, base)
+        if arc != 0:
+            return "STOP", f"oracle rejects a correct implementation (rc={arc!r})", \
+                "exit 0 on a known-correct implementation"
+        return "PASS", (f"oracle rc={rc} on unmodified target; control rc={nrc} on hard-coded "
+                        f"baseline; accepts correct rc={arc}"), ""
+    if gid == "G2":
+        sealed, consulted = g.get("sealed") or [], set(g.get("consulted_sha256") or [])
+        stage = g.get("stage", 2)
+        if stage not in (1, 2):
+            return "STOP", f"stage {stage!r}", "stage 1 (3 pairs) or stage 2 (5 pairs)"
+        need = _g2_required(g)
+        if stage == 1:
+            expected = "exactly 3 independently sealed target+suite pairs for stage 1"
+        else:
+            expected = "5 independently sealed target+suite pairs"
+        if len(sealed) != need:
+            if stage == 1:
+                return "STOP", f"{len(sealed)} pairs", expected
+            return "STOP", f"sealed {len(sealed)}/{need}", expected
+        bad, seen, sealed_pairs = [], [], []
+        for i, s in enumerate(sealed, 1):
+            p, _, err = _prescan_artifact(s, base, f"sealed[{i}]")
+            if err:
+                bad.append(err)
+            # A target alone is not a target+suite pair. The suite is sealed with the target
+            # in the same entry, so a reviewer can map each suite to the target it belongs to.
+            suite = s.get("suite")
+            if not isinstance(suite, dict):
+                bad.append(f"sealed[{i}]: suite absent")
+            else:
+                sp, _, serr = _prescan_artifact(suite, base, f"sealed[{i}] suite")
+                if serr:
+                    bad.append(serr)
+                elif sp and suite.get("sha256"):
+                    if suite["sha256"] == s.get("sha256"):
+                        bad.append(f"sealed[{i}]: suite sha256 equals target sha256")
+            for k in ("sealed_at", "commit"):
+                if not s.get(k):
+                    bad.append(f"sealed[{i}]: {k} absent")
+            if p and s.get("sha256"):
+                # Five entries that hash the same artifact are one target copied five times,
+                # not five independently prepared pairs.
+                if s["sha256"] in seen:
+                    bad.append(f"sealed[{i}]: duplicate sha256 {str(s['sha256'])[:12]}")
+                seen.append(s["sha256"])
+            if p:
+                sealed_pairs.append((i, p, suite if isinstance(suite, dict) else None))
+        # A consulted entry given by path lets the checker compute identity instead of
+        # trusting a hash list: a renamed copy keeps its raw hash, and a rename plus a
+        # cosmetic edit keeps its normalized identity. Both are reuse.
+        if not (consulted or g.get("consulted")):
+            # Every ordering record was consulted through falsify/ordering/; a record that
+            # declares nothing consulted is omitting evidence, not proving independence.
+            bad.append("consulted list absent: record the consulted fixture by path or sha256")
+        consulted_paths = {}
+        for j, c in enumerate(g.get("consulted") or [], 1):
+            cp, _, cerr = _prescan_artifact(c, base, f"consulted[{j}]")
+            if cerr:
+                bad.append(cerr)
+            elif cp:
+                consulted_paths.setdefault(_prescan_norm(cp), c.get("artifact"))
+        if bad:
+            return "STOP", bad[0], \
+                "every sealed target+suite pair present, each with its recorded sha256, " \
+                "seal time and commit"
+        if len(set(seen)) != need:
+            return "STOP", f"{len(set(seen))} distinct sealed targets", \
+                f"{need} distinct independently prepared target+suite pairs"
+        # Report the entry, not just the offending hash, so a reviewer can point at the
+        # pair: a raw hit is a renamed copy, a normalized-only hit is a rename plus a
+        # cosmetic edit. `suites` is folded in so a reused suite is caught as well.
+        for i, tp, suite in sealed_pairs:
+            items = [("target", tp)]
+            if suite and suite.get("artifact"):
+                sp = Path(suite["artifact"])
+                items.append(("suite", sp if sp.is_absolute() else base / sp))
+            for kind, ap in items:
+                raw = _prescan_hash(ap)
+                if raw and raw in consulted:
+                    return "STOP", (f"consulted sha256 present in the sealed set at "
+                                    f"sealed[{i}] {kind} (raw {raw[:12]}; renamed copy of a "
+                                    f"consulted artifact)"), \
+                        "no consulted fixture in the sealed set, by raw or normalized identity"
+                nid = _prescan_norm(ap)
+                if nid in consulted_paths:
+                    return "STOP", (f"consulted content present at sealed[{i}] {kind} "
+                                    f"(normalized {nid[:12]}, raw {str(raw)[:12]}; consulted "
+                                    f"{consulted_paths[nid]})"), \
+                        "no consulted fixture in the sealed set, by raw or normalized identity"
+        if stage == 1:
+            return "PASS", (f"3/3 sealed pairs (target+suite), consulted sha absent; "
+                            f"stage 1 only: KILL/PROCEED, adoption NOT authorized"), ""
+        return "PASS", ("5/5 sealed pairs (target+suite), consulted sha absent; "
+                        "adoption still needs the blinded 5/5 outcome"), ""
+    if gid == "G3":
+        rehearsals = g.get("rehearsals") or []
+        kinds = {r.get("kind") for r in rehearsals}
+        if not {"runner-blind", "labels-hidden"} <= kinds:
+            return "STOP", f"rehearsal kinds {sorted(k for k in kinds if k)}", \
+                "runner-blind and labels-hidden rehearsals"
+        forced = [r for r in rehearsals if r.get("failed_on_purpose")]
+        for i, r in enumerate(rehearsals, 1):
+            _, _, err = _prescan_artifact(r, base, f"rehearsal[{i}]")
+            if err:
+                return "STOP", err, "each rehearsal record present with its sha256"
+        if not forced:
+            return "STOP", "no rehearsal failed on purpose", "one guard made to fail on purpose"
+        return "PASS", f"2 rehearsals, {len(forced)} forced failure, records hashed", \
+            ""
+    if gid == "G4":
+        q, _, err = _prescan_artifact(g.get("queue") or {}, base, "queue")
+        if err:
+            return "STOP", err, "a queue file present with its recorded sha256"
+        key, _, kerr = _prescan_artifact(g.get("key") or {}, base, "key")
+        if kerr:
+            return "STOP", kerr, "the key stored apart, hashed before the queue was written"
+        rows, leak = [], set()
+        for line in q.read_text().splitlines():
+            if not line.strip():
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError as e:
+                return "STOP", f"queue row is not JSON: {e}", "one JSON object per queue row"
+            rows.append(row)
+            leak |= PRESCAN_QUEUE_FIELDS & set(row)
+        if leak:
+            return "STOP", f"queue leaks {', '.join(sorted(leak))}", \
+                "queue fields limited to mutant and mutation descriptor"
+        if g.get("dedupe") != "full-descriptor":
+            return "STOP", f"dedupe {g.get('dedupe')!r}", "dedupe on the full descriptor"
+        return "PASS", f"queue {len(rows)} rows, fields {sorted(rows[0]) if rows else []}, key apart", ""
+    if gid == "G5":
+        adj = g.get("adjudicator") or {}
+        missing = [k for k in ("name", "authored_fixture", "sees", "key_sealed_before_open")
+                   if k not in adj]
+        if missing:
+            return "STOP", f"adjudicator record lacks {', '.join(missing)}", \
+                "name, authored_fixture, sees, key_sealed_before_open"
+        if adj["authored_fixture"] is not False:
+            return "STOP", "adjudicator authored the fixture/queue/ordering code", \
+                "authored_fixture=false"
+        if adj["sees"] != ["queue", "spec"]:
+            return "STOP", f"adjudicator sees {adj['sees']!r}", "sees queue and spec only"
+        if adj["key_sealed_before_open"] is not True:
+            return "STOP", "key opened before the queue sha256 was recorded", \
+                "key_sealed_before_open=true"
+        return "PASS", f"{adj['name']}; independence and seal order are attestations, not machine-verified", ""
+    if gid == "G6":
+        b = g.get("budgets") or {}
+        arms = b.get("arms") or {}
+        if set(arms) != {"A", "B"} or any(v != 60 for v in arms.values()):
+            return "STOP", f"budgets {arms}", "60 suite executions per arm"
+        if b.get("cap") != 10:
+            return "STOP", f"adjudication cap {b.get('cap')!r}", "first-10-survivor cap"
+        if not b.get("unit"):
+            return "STOP", "no cost unit", "a declared unit (suite runs + c*adjudications)"
+        return "PASS", "60/60 runs, cap 10, unit declared", ""
+    if gid == "G7":
+        pre = g.get("prereg") or {}
+        p, rel, err = _prescan_artifact(pre, base, "prereg")
+        if err:
+            return "STOP", err, "a pre-registration file with its recorded sha256"
+        try:
+            d = json.loads(p.read_text())
+        except json.JSONDecodeError as e:
+            return "STOP", f"prereg not JSON: {e}", "a JSON pre-registration"
+        for k in ("claim", "falsifier", "review_by", "stage1_rule"):
+            if not d.get(k):
+                return "STOP", f"prereg lacks {k}", f"prereg.{k} present"
+        if d.get("rule_locked_before_data") is not True:
+            return "STOP", "rule not locked before data", "rule_locked_before_data=true"
+        return "PASS", f"claim {d['claim']}, review_by {d['review_by']}, rule locked", ""
+    return "STOP", "unknown gate", "a known gate"
+
+
+def prescan(a) -> int:
+    """Check only the pre-scan phase of a readiness record; never spend a scan."""
+    p = Path(a.readiness)
+    if not p.is_file():
+        print(f"no readiness record at {p}", file=sys.stderr)
+        return 2
+    try:
+        doc = json.loads(p.read_text())
+    except json.JSONDecodeError as e:
+        print(f"readiness record is not JSON: {e}", file=sys.stderr)
+        return 2
+    base = p.parent.resolve()
+    claim = doc.get("claim")
+    gates = doc.get("gates") or {}
+    needed = PRESCAN_CLAIMS.get(claim)
+    out: list[str] = []
+    out.append(f"record     {p}  claim={claim!r}")
+    if needed is None:
+        out.append(f"STOP G? unknown claim {claim!r}; allowed: "
+                   f"{', '.join(sorted(PRESCAN_CLAIMS))}")
+        print("\n".join(out))
+        return 3
+    out.append("phase      pre-scan only; gates measured after the first scan are DEFERRED")
+    out.append(f"claim needs {', '.join(needed)}" +
+               ("  (G1 is a separate claim: spec-violation-on-unmodified)"
+                if "G1" not in needed else ""))
+    failed: list[tuple[str, str, str]] = []
+    for gid in ("G1", "G2", "G3", "G4", "G5", "G6", "G7"):
+        g = gates.get(gid) or {}
+        phase = g.get("phase", "pre")
+        name = _gate_name(gid, g)
+        if gid not in needed:
+            out.append(f"{gid:<2s} {name:<30s} N/A    not required by claim {claim!r}")
+            continue
+        if phase == "post":
+            out.append(f"{gid:<2s} {name:<30s} STOP   declared phase=post, but this gate is "
+                       f"required before the first scan")
+            failed.append((gid, "phase=post", "phase=pre"))
+            continue
+        verdict, detail, expected = _prescan_gate(gid, g, base)
+        out.append(f"{gid:<2s} {name:<30s} {verdict:<6s} {detail}")
+        if verdict == "STOP":
+            failed.append((gid, detail, expected))
+    post = gates.get("G6c") or {}
+    if post:
+        unit = post.get("unit") or "c (reviewer seconds per adjudication)"
+        if post.get("phase") != "post":
+            out.append(f"G6c {unit:<30s} STOP   declared phase=pre; it cannot exist before the "
+                       f"first adjudication")
+            failed.append(("G6c", "phase=pre with no value", "phase=post, measured during the run"))
+        else:
+            out.append(f"G6c {unit:<30s} DEFERRED measured only after the first scan/adjudication")
+    if failed:
+        gid, detail, expected = failed[0]
+        others = [f[0] for f in failed[1:]]
+        extra = f" Also failed: {', '.join(others)}." if others else ""
+        print("\n".join(out))
+        print(f"STOP: pilot budget not spent. Failed {gid}: "
+              f"{_gate_name(gid, gates.get(gid) or {}) if gid != 'G6c' else 'cost unit'}. "
+              f"Expected {expected}, saw {detail}.{extra} No scan run; cycle 47 unchanged.")
+        return 3
+    print("\n".join(out))
+    stage = (gates.get("G2") or {}).get("stage", 2)
+    stage_note = (" Stage 1: 3/3 pairs; KILL/PROCEED only; adoption needs 5/5."
+                  if stage == 1 else "")
+    print(f"PASS: pre-scan phase complete for claim {claim!r}; gates {', '.join(needed)} "
+          f"checked, G6c deferred. No scan run. This admits no ordering and no 5/5 claim."
+          f"{stage_note}")
     return 0
 
 
@@ -682,6 +1221,13 @@ def migrate(a) -> int:
             out.append(line)
             continue
         if "mutation_score" not in r or not r.get("mutant_ids") or not r.get("target_sha256"):
+            out.append(line)
+            continue
+        if r.get("id_scheme") != ID_SCHEME:
+            # A /1 or /2 id is a digest over old ids; relabelling it /3 would name the same
+            # ambiguous sites with a new version. Only a re-scan can create site ids.
+            print(f"row {lineno:<3d} stays under {r.get('operators') or 'unknown scheme'}: "
+                  f"its ids predate site ids and cannot be relabelled without a re-scan")
             out.append(line)
             continue
         want = faultset(r["target_sha256"], r["mutant_ids"], FAULTSET_VERSION,
@@ -758,7 +1304,10 @@ def main(argv=None) -> int:
     p = sub.add_parser("scan", help="mutate a target and run its suite; report survivors")
     p.add_argument("--target", required=True)
     p.add_argument("--test")
-    p.add_argument("--limit", type=int, default=0)
+    p.add_argument("--order", choices=ORDER_CHOICES, default="source",
+                   help="execution order for the mutant set; it never enters the fault-set id")
+    p.add_argument("--limit", type=int, default=0,
+                   help="execute only the first N mutants AFTER ordering")
     p.add_argument("--timeout", type=float, default=15.0)
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=scan)
@@ -789,6 +1338,9 @@ def main(argv=None) -> int:
     p.add_argument("row_b", type=int)
     p.add_argument("--file")
     p.set_defaults(func=compare)
+    p = sub.add_parser("prescan", help="check the pre-scan phase of a readiness record; spend no scan")
+    p.add_argument("--readiness", required=True)
+    p.set_defaults(func=prescan)
     p = sub.add_parser("migrate", help="re-derive old fault-set ids from their recorded inputs")
     p.add_argument("--file", required=True)
     p.add_argument("--write", action="store_true")

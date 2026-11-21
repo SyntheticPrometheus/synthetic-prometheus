@@ -44,6 +44,30 @@ over-predicts `bug`. So: 3B for formatting/structured output, 1.5B for labelling
 throughput-bound. Do not generalise one task's ranking to another (`raw.json` in this directory keeps
 every graded output).
 
+## Quality per second — `bpb`, the number the tok/s table was missing
+
+Measured 2026-11-21 with `bin/local-bpb` on the frozen corpus `local/bpb-corpus.txt` (5,989 B of
+this repo's own prose; sha256 in every row). Recipe: `llama-perplexity -c 256 --chunks 1 -t 2`,
+`bpb = log2(PPL) * tokens / bytes` — bits per byte, vocabulary-independent, lower better. Full
+table and reasoning: `techwatch/bpb-table.md`.
+
+| model | bpb | tok/s | score (tok/s ÷ bpb) |
+|---|---|---|---|
+| Qwen3-0.6B-Q8_0 | 1.630 | 40.6 | **24.9** |
+| qwen2.5-1.5b-instruct-Q4_K_M | **1.517** | 25.4 | 16.8 |
+| Qwen3-1.7B-Q4_K_M | 1.562 | 23.6 | 15.1 |
+| Llama-3.2-3B-Instruct-Q4_K_M | 1.434 | 11.2 | 7.8 |
+| gemma-4-E2B-it-Q4_0 | 2.045 | 9.6 | 4.7 |
+| Ornith-1.5-9B.i1-IQ2_M | **1.341** | 4.3 | 3.2 |
+
+The rule this buys: **a model is chosen on two numbers, not one.** Quality alone says Ornith-9B
+(18 % better per byte, 9.5× slower); speed alone says Qwen3-0.6B. The middle is
+`qwen2.5-1.5b-Q4_K_M` — best bpb of the fast models, 7 % better per byte than the 0.6B for 37 %
+less throughput, and the one that also won the 4-way classification suite. `gemma-4-E2B` is the
+worst of both worlds here (PPL 54 on our own prose, quarter speed) — do not default to it.
+`raon-1-nano` has no number: this llama.cpp build (12110) does not know the `raon1nano`
+architecture, so it does not load — an unmeasured model is not a candidate.
+
 ## The error gate (this is what makes unattended offline use safe)
 
 Repeated sampling does **not** help: 3 votes at temp 0.8 changed 28/40 → 27/40 and escalated 0 items,
@@ -288,6 +312,11 @@ exercises the failure path.
   forward pass; long texts padded together OOM the box past ~24. The 6-way memory-`kind` taxonomy is
   beyond it (poor zero-shot accuracy on overlapping label sets) — that is a task to escalate, not a
   model to blame.
+- `~/.pi/agent/bin/local-bpb` — quality, not just speed: one JSON line per GGUF with
+  `ppl`, `bpb` (bits/byte, vocabulary-independent, lower better), `eval_tok_s` and
+  `score = eval_tok_s / bpb` on the fixed corpus `local/bpb-corpus.txt` (sha256 in every row),
+  recipe `llama-perplexity -c 256 --chunks 1 -t 2` from `research/karpathy-transfer.md`. Pinned by
+  `tests/local-bpb.sh`; the shelf's ranking lives in `techwatch/bpb-table.md`.
 - `~/.pi/agent/bin/local-batch` — unattended: resumable by id (a kill, OOM, or reboot costs one item),
   progress + ETA on stderr, corroboration gate, residue written to an escalation file, exit 1 when
   anything is unresolved.
