@@ -94,8 +94,10 @@ something it could not do today?" Catches: breadth-first work that never unblock
 ## 4. What is still open
 
 - The `pergola-health` activation flake: separated from the parking claim, cause unknown.
-- Cycle 47's 60-run pilot: unspent, because the oracle arm it needs is not built; the ordering
-  blindness rehearsal is still a plan.
+- Cycle 47's 60-run pilot: unspent, because the sealed pairs and the rest of G2-G7 are not built.
+  The oracle arm (G1) belongs to the separate claim `spec-violation-on-unmodified`, not to the
+  ordering comparison (`suite-blind-spots-relative`); `bin/pi-falsify prescan` prints G1 as N/A
+  for the latter. The ordering blindness rehearsal is still a plan.
 - Eto's attachment-only delivery case: confirmed (the post woke the conversation).
 
 ## 5. Running this without a peer
