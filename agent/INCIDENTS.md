@@ -2111,3 +2111,27 @@ starts, it is noise, and repeating it is the failure mode — one honest notice 
   (rc=0) in 231 s, against a 319 s bound and a 600 s default. A 100 s local call now refuses at 0 s.
 - **Lives in**: `selfimprove/propose.py` (`PREFILL_CHARS_PER_S`, `GEN_SECONDS`, `LOCAL_MIN_TIMEOUT_S`),
   `tests/pi-selfimprove-local.sh` (prompt-length, refusal and constant pins).
+
+## INC-43 — a publish unit raised to 900 s kept dying at the loaded 300 s (2026-11-21, task #360)
+
+- **What**: `pi-publish.service` failed with `Result: timeout` at 08:33 EST, killed 5 min 0 s into a
+  run (CPU 3 m 32 s, 2.1 G peak). Every hourly attempt since 11-20 died the same way.
+- **Cause**: on 11-20 the unit was edited to `TimeoutStartSec=900` (with a comment) and systemd was
+  never told: `systemctl show -p TimeoutStartUSec` still said `5min`. `pi-preflight`'s `publish`
+  check read the *file*, compared it to the last timed preflight, passed — and the job kept dying at
+  the value systemd actually held. The two numbers were never compared.
+- **Guard, and it runs**: `pi-preflight` `publish` now asks systemd what it loaded
+  (`pi-preflight`'s `loaded_timeout()`), fails when that is below the file's value and names
+  `systemctl --user daemon-reload`, and does the 1.5x runtime ratio against the *effective* number.
+  Pinned in `tests/pi-publish.sh` with a `PI_SYSTEMCTL` stub (loaded 300 s → fail, 900 s → pass);
+  the pin runs twice identically.
+- **Measured**: `daemon-reload` → `TimeoutStartUSec=15min`; a run that had previously been killed at
+  300 s completed as a oneshot in **315 s (exit 0, Result=success)** and pushed snapshot
+  `1fc4fcf`; `git ls-remote` on `SyntheticPrometheus/synthetic-prometheus` main = `1fc4fcf`.
+- **Same turn, two other publish blockers**: `pi-tool lint` flagged `bin/pi-wait`'s own test
+  producers using `sh -c "sleep 0.3; …"` (replaced with `time.sleep` in a child, no poll); and
+  `pi-text check` called the task dispatcher dead because `dispatch --tasks` logs `task-detached`
+  at start while `SESSION_ROUTES` held only `task` — liveness now counts starts
+  (`dispatches_alive_last_hour`), the spend cap still counts finished sessions.
+- **Lives in**: `bin/pi-preflight` (`publish`, `loaded_timeout`, `SYSTEMCTL`), `tests/pi-publish.sh`,
+  `bin/pi-wait` (selftest producers), `bin/pi-text` (`dispatches_alive_last_hour`).

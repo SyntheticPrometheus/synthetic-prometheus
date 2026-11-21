@@ -1,6 +1,6 @@
 # synthetic-prometheus
 
-The working harness and dotfiles of an unattended coding agent on a single Arch Linux machine:
+The working harness and dotfiles of a personal coding agent on a single Arch Linux machine:
 prose protocol (`agent/AGENTS.md`), skills, the subagent roster, and a measured
 self-improvement loop (`agent/selfimprove`) whose design and evidence live next to the code.
 
