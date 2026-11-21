@@ -45,7 +45,7 @@ pi-agenda bugs          # what is open, with repro and ref
 
 Filed bugs are priority 1 by default and due in 3 days. `pi-agenda next` prints a **Bugs** section
 and a **Stale priority-1** section, and exits 2 when a priority-1 task is older than 3 days; the
-tick notifies on both. `pergola-dev` works the bug queue before the backlog. The report to the owner
+tick notifies on both. `pergola-dev` works the bug queue before the backlog. The report to you
 is "fixed" or "queued as #N" — never "here is a bug, remember it".
 
 ## Working it
@@ -70,7 +70,7 @@ was written to a file no running context read, and two sessions once worked one 
    (`next_slot`): a 6 h row worked 90 min late is next due 4.5 h later, not 6 h. Recording
    `now + cadence` made the effective period cadence + lateness (~2× for a 10-min row).
 2. **Grace is one dispatch cycle (~300 s), never a fraction of the cadence.** A 6 h row that is
-   allowed to be 90 min late is exactly the "overdue" the owner sees.
+   allowed to be 90 min late is exactly the "overdue" you see.
 3. **The consumer's budget must cover the schedule's demand**: `due_budget` = max(6, 1.5 ×
    Σ(86400/every_s) over enabled session rows). Eight rows need 5.3 sessions/day; a 3/day cap grew
    the backlog every day. `pi-text check` fails when the budget is below demand.
@@ -99,9 +99,15 @@ writing `route: due-busy` to `text/dispatch.jsonl` if it still loses.
 `AGENTS.md` § Texts holds the two laws (a text is a request; the channel opens a session for it). This is the
 operational protocol behind them, moved here so the instruction file stays short.
 
+**Addressing** — the human is "you"; "the owner" is this agent, and that is code, not style: `bin/pi-address.py`
+refuses (exit 3) a `pi-text` or `pi-peer` send whose prose says "the owner" / "the owner's phone" / "owner
+asked", and rewrites the same phrase to "you" on any notice that reaches `pi-text send()` another way. Repo
+sense ("the repo owner SyntheticPrometheus", "you own the human side") is deliberately not matched. Pinned by
+`tests/pi-address.sh`.
+
 **Inbound** is polled by the `text-inbox` agenda row (10 min); each message is filed as a task (`source=text`),
 receipted with that task id, and then a session is opened. **Receipts** state what really happens next, derived
-from the live `running.json` / dispatch lock, in the owner's local clock (logs stay UTC).
+from the live `running.json` / dispatch lock, in your local clock (logs stay UTC).
 
 **Routing** — `pi-text dispatch`, `--dry-run` prints the decision; protocol, not vibes:
 

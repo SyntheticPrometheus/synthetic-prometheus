@@ -7,6 +7,10 @@
     "require_no_regression": true,
     "cost_win_frac": 0.1
   },
+  "confirmation": {
+    "alpha": 0.2,
+    "note": "issue #1 finding 4: development suite = regression floor; a post-freeze seeded family decides promotion. One-sided exact sign test over discordant tasks; alpha 0.2 = at least 3 of 7 tasks won with no loss. Stated weaker independence: the generators are public, the seed and instantiated cases are not."
+  },
   "proposal": {
     "max_added_lines": 12,
     "anneal_per_accepted_arm": 2,

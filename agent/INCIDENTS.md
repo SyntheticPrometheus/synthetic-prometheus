@@ -2246,6 +2246,33 @@ starts, it is noise, and repeating it is the failure mode — one honest notice 
   only for an all-refused map.
 - **Lives in**: `bin/pi-done` (`open_effects`, `replay_verdict`, `cmd_replay_check`, `REPLAY_PROMISE`).
 
+### INC-44 amendment 4 — the handoff is a field, and the marker test waits for a caller (2026-11-21, peer close-out)
+
+- **What**: the textual consumer scan was measured against four disposable callers: (a) `if rc == 4: exit 4`
+  passes and leaves no marker; (b) `case 4) log "rc=4"; retry` **also passes** and writes the marker
+  (false pass); (c) `log "rc=$rc"; retry` is flagged and writes the marker; (d) prose naming "exit 4"
+  and retrying is flagged (safe false negative). The scan therefore promises that exit 4 is *named*,
+  never that control flow stops — the first real caller owes an executable marker test.
+- **The gap that test exposed**: `replay-check` printed no machine-readable authorization on either
+  exit 0 or exit 4 (measured on a synthetic record + attestation), and the `contained` promise did
+  not say the attestation described an *earlier* run. A consumer that checked only exit 0 could read
+  containment as permission to execute, and one that read only the prose had to infer it.
+- **Fix**: every verdict now prints `execution_authorized: false`, `authorization: "separate decision
+  required before executing the recorded command"` and `attestation_scope: "earlier-run"` (or
+  `"none"`). The `contained` and `contained-open-effects` promises now say the measurement was of an
+  EARLIER run and is not authorization to execute the command again.
+- **Paused, and where the check lives**: there is no in-tree consumer (`pi-preflight`'s `completions`
+  calls `pi-done check`, not `replay-check`), so the replay branch pauses here. The marker fixture is
+  not written against a caller that does not exist: the first proposed consumer inherits it — exit 4
+  stops with the reason preserved, the recorded command is not run a second time, and the marker stays
+  absent — and reads `execution_authorized` rather than inferring permission from exit 0. The condition
+  is recorded here and in `pi-preflight`'s `replay_consumers` docstring, which remains a tripwire.
+- **Guard, and it runs**: `bin/pi-done --selftest` (50/50, deterministic over two runs) pins exit 0
+  still not permission, exit 4, and the three handoff fields on the JSON; `pi-preflight`'s
+  `replay_consumers` passes and now names the field in its pass message.
+- **Lives in**: `bin/pi-done` (`REPLAY_PROMISE`, `cmd_replay_check`), `bin/pi-preflight`
+  (`replay_consumers`).
+
 ## INC-45 — the unit ran in %h while the record blamed the caller, so four saved failures could never replay (2026-11-21, task #380)
 
 - **What**: `cmd_run` passed `WorkingDirectory` only when `--working-dir` was given, so a job

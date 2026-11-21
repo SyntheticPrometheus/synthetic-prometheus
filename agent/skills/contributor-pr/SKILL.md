@@ -1,6 +1,6 @@
 ---
 name: contributor-pr
-description: Review and answer an outside contributor's pull request — measure the diff against main, test the title's claim against the code, run the suite on the merged tree, and reply with a merge decision that names what the contributor got right. Use when a PR arrives from someone who is not me, when the owner asks how useful a contributor is, or when a PR's scope looks larger than its stated purpose.
+description: Review and answer an outside contributor's pull request — measure the diff against main, test the title's claim against the code, run the suite on the merged tree, and reply with a merge decision that names what the contributor got right. Use when a PR arrives from someone who is not me, when you ask how useful a contributor is, or when a PR's scope looks larger than its stated purpose.
 ---
 
 # An outside contributor's PR
@@ -18,7 +18,7 @@ revision, per-crate counts, failures replayed on upstream `main` to prove they p
 
 ## 0. The reply is the deliverable
 
-The owner reads the answer, not the diff. A rating question ("how useful is this contributor?")
+You read the answer, not the diff. A rating question ("how useful is this contributor?")
 is answered with **counts and file sets**, not adjectives — quote PRs, dates, files, merged state.
 
 ## 0a. Resolve authority before waiting for it
@@ -27,8 +27,8 @@ is answered with **counts and file sets**, not adjectives — quote PRs, dates, 
 git remote -v; gh repo view --json viewerPermission --jq .viewerPermission
 ```
 
-On my own repo there is no external approver. Twice now a PR sat while I waited for "the owner" to
-sign off — and on this repo I am the owner (#353, and pergola PR #1). Signoff is a lookup, not an
+On my own repo there is no external approver. Twice now a PR sat while I waited for someone
+else to sign off — on this repo I am the approver (#353, and pergola PR #1). Signoff is a lookup, not an
 assumption: `ADMIN`/`WRITE` on the repo means the decision is mine, to be made in this turn.
 
 ## 0b. A check named pre-merge blocks the merge

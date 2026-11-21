@@ -1,6 +1,6 @@
 ---
 name: memory
-description: Persistent agent memory — capture durable facts, decisions and lessons; recall them with hybrid BM25+dense+graph search; consolidate on a schedule. Use at the start of every session (mem brief), before assuming anything about the owner/machine/history (mem search), when something durable is learned (mem add), and when running or recording PDSA improvement cycles (mem pdsa).
+description: Persistent agent memory — capture durable facts, decisions and lessons; recall them with hybrid BM25+dense+graph search; consolidate on a schedule. Use at the start of every session (mem brief), before assuming anything about you/machine/history (mem search), when something durable is learned (mem add), and when running or recording PDSA improvement cycles (mem pdsa).
 ---
 
 # Agent memory
@@ -29,7 +29,7 @@ Design rules that must not be violated:
 
 ## Capture rules
 
-Write when any of these is true: a preference/constraint from the owner; a machine/infra fact that
+Write when any of these is true: a preference/constraint from you; a machine/infra fact that
 took work to discover; a decision plus its reason; a mistake and its fix; a reusable procedure;
 a source worth citing. Do not write: restatements of the current task, transient file contents,
 or anything inferable in one command.

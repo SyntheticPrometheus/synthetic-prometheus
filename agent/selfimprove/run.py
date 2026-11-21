@@ -31,14 +31,17 @@ AGENT_DIR = Path(os.environ.get("PI_AGENT_DIR", str(Path.home() / ".pi" / "agent
 SUBAGENT_EXT = AGENT_DIR / "extensions" / "subagent" / "index.ts"
 
 
-def suite_sha(root=None):
+def suite_sha(root=None, suite_path=None):
     """Fingerprint of the judge, not just its index. suite.json names the tasks, but
     suite/fixtures/*.py builds their inputs and verifiers: regenerating a fixture changes what the
     arm is scored on while suite.json stays byte-identical. Hash both, sorted, file name included
-    (2026-11-17 review, finding 2 — verified: an edited fixture left suite_sha unchanged)."""
+    (2026-11-17 review, finding 2 — verified: an edited fixture left suite_sha unchanged).
+    A confirmation suite is generated outside suite/, so its own bytes are the index and the
+    generators below it are still hashed: the family code is part of the judge."""
     base = Path(root) if root else HERE
     h = hashlib.sha256()
-    files = sorted([base / "suite" / "suite.json"] + list((base / "suite" / "fixtures").glob("*.py")))
+    index = Path(suite_path) if suite_path else base / "suite" / "suite.json"
+    files = sorted([index] + list((base / "suite" / "fixtures").glob("*.py")))
     for p in files:
         h.update(p.name.encode() + b"\0" + p.read_bytes() + b"\0")
     return h.hexdigest()
@@ -227,6 +230,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--arm", required=True)
     ap.add_argument("--tasks", default="")
+    ap.add_argument("--suite", default="",
+                    help="suite JSON to score (default suite/suite.json); a confirmation family "
+                         "lives outside suite/ and is bound by --variant-seed + --confirm-sha")
+    ap.add_argument("--variant-seed", default="",
+                    help="confirmation seed from the freeze manifest (provenance, never a verdict)")
+    ap.add_argument("--confirm-sha", default="",
+                    help="confirm.py manifest sha this run belongs to")
     ap.add_argument("--reps", type=int, default=1)
     ap.add_argument("--tag", default="")
     ap.add_argument("--parent", default="",
@@ -250,12 +260,13 @@ def main():
     mem_guard_mb, mem_cap_mb = pol["memory_guard_mb"], pol["memory_cap_mb"]
     verify_timeout, cost_limit = pol["verifier_timeout_s"], pol["cost_per_task_usd"]
 
-    suite = json.loads(SUITE.read_text())
+    suite_path = Path(a.suite).resolve() if a.suite else SUITE
+    suite = json.loads(suite_path.read_text())
     arm = Path(a.arm).resolve()
     arm_text = arm.read_text()
     ids = [t for t in a.tasks.split(",") if t]
     tasks = [t for t in suite["tasks"] if not ids or t["id"] in ids]
-    suite_sha_start = suite_sha()
+    suite_sha_start = suite_sha(suite_path=suite_path) if a.suite else suite_sha()
     stamp = time.strftime("%Y%m%dT%H%M%S")
     arm_name = arm.stem
     outdir = RUNS / f"{stamp}-{arm_name}"
@@ -303,8 +314,11 @@ def main():
         "arm_sha": sha(arm),
         "parent": a.parent or None,
         "harness_rev": git_rev(HERE.parent),
+        "suite_path": str(suite_path),
+        "variant_seed": a.variant_seed or None,
+        "confirm_sha": a.confirm_sha or None,
         "suite_sha": suite_sha_start,
-        "suite_sha_at_end": suite_sha(),
+        "suite_sha_at_end": (suite_sha(suite_path=suite_path) if a.suite else suite_sha()),
         "reps": a.reps,
         "n": len(results),
         "passed": passed,

@@ -1,6 +1,6 @@
 ---
 name: research-to-ship
-description: Turn a topic (or a list) into research, a doubled set of tangential topics, a systems-impact analysis, a self-improving loop, an implementation and a push — with testers and debators attacking every stage. Use when the owner asks to research something and actually change the system with it, when a technology might obsolete a tool or a row, or when a finding must end in a shipped commit rather than a digest.
+description: Turn a topic (or a list) into research, a doubled set of tangential topics, a systems-impact analysis, a self-improving loop, an implementation and a push — with testers and debators attacking every stage. Use when you ask to research something and actually change the system with it, when a technology might obsolete a tool or a row, or when a finding must end in a shipped commit rather than a digest.
 ---
 
 # research-to-ship — a run, not a read

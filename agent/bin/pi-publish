@@ -57,6 +57,7 @@ ALLOW = [
     "selfimprove/audit.py", "selfimprove/gate.py", "selfimprove/maintain.py",
     "selfimprove/policy.json", "selfimprove/propose.py", "selfimprove/run.py",
     "selfimprove/selftest.py", "selfimprove/selftest_gate.py", "selfimprove/fixtures.py",
+    "selfimprove/confirm.py", "selfimprove/selftest_confirm.py",
     "selfimprove/review.md",
 ]
 DOTFILES = [

@@ -49,6 +49,7 @@ Rules taken from the literature, enforced in code:
 | audit before measuring (tamper check) | `audit.py` + `policy.json` | done — refuses judge-mentioning text, base-line removal, and over-budget diffs (annealed per net-accepted arm) |
 | measure with k reps + cost | `run.py` | done — default `--mode json` usage capture, memory guard, cgroup cap, `--parent` lineage, `harness_rev`; the `policy.json` `run` section is loaded (`run_policy()`), agent and verifier subprocesses run in their own session and a timeout kills the whole group, and a budget hit is a labelled outcome (`budget`: wall/verifier/memory/cost) rather than a silent failure — `selftest_run.py` pins 5 cases |
 | decide | `gate.py` | done — audit first, then policy thresholds (k>=3, delta>=2, no regression); voids unequal reps, missing/duplicate rep IDs, suite drift, policy/task-selection mismatch and differing or unknown model identities; `selftest_gate.py` pins 29 cases |
+| fresh confirmation | `confirm.py` + `suite/fixtures/_holdout.py` | done — freeze the candidate first, generate a seeded family afterwards (2 audit + 2 brief variants with unseen seeds, 3 `settlement-audit` tasks from a family the dev suite does not contain), measure both arms in alternating order, require the accepted dev floor, and decide on the unseen family only; `selftest_confirm.py` pins 9 refusals/verdicts |
 | archive | `arms/archive/` + `decisions.md` | done — header names parent; DECISIONS entries are append-only |
 | provenance | `git` in `~/.pi/agent` | done — harness commits, `harness_rev` recorded per run |
 | maintain | `maintain.py` + weekly timer | done — integrity, research index, lineage, proposal yield, prune |
@@ -116,6 +117,33 @@ this is the safe substrate those tasks can run on, not a substitute for them.
   promotion (2026-11-20, roadmap G08/G09).
 - `ledger.jsonl` — append-only: arm hash, parent, suite hash, reps, per-task results, decision.
 - `maintain.py` — housekeeping: prune `runs/` beyond N, verify ledger chain, report drift.
+
+## Fresh confirmation (issue #1, finding 4)
+
+The development suite is visible while the arm is written, so it is a regression floor, not proof.
+`confirm.py` adds the missing step and makes the gap it cannot close explicit:
+
+1. `freeze --arm X` — records the arm sha, a random nonce and `seed=H(sha+nonce)` **before** any
+   result exists. Refused if that arm already has a measured run (freezing after seeing a score is
+   not a freeze) or was frozen before (a second confirmation of the same bytes is fishing).
+2. `build --arm X` — instantiates the family with that seed: unseen seeds in two existing
+   generators plus three `settlement-audit` tasks (new family: multi-rule CSV arithmetic,
+   exclusions, threshold and ordering) whose data, expected answer and known-wrong answer are all
+   generated. Refused if the arm changed after its freeze, or if the family directory exists
+   (a family is generated once, never regenerated to fit the numbers).
+3. `measure --base B --cand X` — runs each rep as a separate single-rep run, alternating arm order
+   every rep, and merges the reps with real IDs 1..k.
+4. `decide --dir D --dev-base R --dev-cand R` — the development pair must pass `gate.py` first
+   (the floor); then the confirmation pair must pass provenance (seed, generated judge hash, run
+   stamp after freeze, frozen arm bytes) and the one-sided exact sign test at
+   `policy.json confirmation.alpha` (0.2: at least 3 of 7 tasks won, no loss). Per-task outcomes,
+   Wilson intervals and the p-value are printed. An equal-pass token win is `CONFIRM_COST`, never a
+   capability gain.
+
+Honest limit, stated rather than hidden: the generator code is public, so this is *seeded
+post-freeze variants*, not a judge the proposer could never inspect. What the seed guarantees is
+that the instantiated cases did not exist when the candidate was written. The seven-task family
+costs about 42 single-rep task runs per confirmation; the pinned 9-case test costs nothing.
 
 ## At ceiling: the cost axis (cycle 15)
 

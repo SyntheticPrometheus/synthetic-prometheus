@@ -62,7 +62,7 @@ per source (blocked, throttled, rate limited, no results) into `~/.cache/pi-web/
   mode here: five consecutive `KeyError: 'issues'` calls in one session on the GitHub search API
   (the key is `items`).
 - No login walls, no CAPTCHA solving, no browser. If a source needs a session, the answer is a real
-  API or a runbook step driven by the owner (`skills/account-setup`), not a scrape.
+  API or a runbook step driven by you (`skills/account-setup`), not a scrape.
 
 ## Guard and PDSA
 

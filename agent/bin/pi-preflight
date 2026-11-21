@@ -1074,6 +1074,55 @@ def completions():
     return True, "no unread failed completion"
 
 
+def replay_consumers(roots=None):
+    """A consumer of `pi-done replay-check` must *name* exit 4 or its verdict — a tripwire, not proof.
+
+    Measured 2026-11-21 (peer follow-up): replay-check has no in-tree consumer yet — its only
+    exit-code reader is pi-done's own selftest; the nearest consumer of pi-done, this suite's
+    `completions`, calls `pi-done check`, not replay-check. A disposable record with an open
+    effect class exits 4 (`contained-open-effects`: the envelope ran, one class is still
+    reachable). A stub that branched on 4 stopped with the reason and ran nothing; a stub that
+    read "nonzero" as "retry" re-ran the recorded command and left its marker. Exit 4 is a stop
+    signal, not a transient error.
+
+    What this scan can promise, and no more: a bin/ or extensions/ consumer that reads the code
+    without naming 4 or the verdict is flagged. It is a *textual* tripwire, measured against four
+    disposable callers — an honest `if rc == 4: exit 4` passes and leaves no marker; a caller that
+    logs `rc=4` and retries also passes and leaves the marker (false pass); a caller that logs
+    `rc=$rc` and retries is flagged *and* leaves the marker; one that says "exit 4" in prose and
+    retries is flagged (safe false negative). And it scans only bin/ + extensions/, not skills/,
+    prompts/, units or tests. So this check cannot promise control flow: the first real consumer
+    owes an executable test — rc 4 -> exit 4 with the reason, no second execution, no marker — and
+    must read replay-check's `execution_authorized: false` / `attestation_scope: earlier-run`
+    rather than treat exit 0 as permission. The marker fixture lives with that integration, not
+    here: there is no caller in-tree for it to test until one is proposed.
+    """
+    roots = roots or [AGENT / "bin", AGENT / "extensions"]
+    allow = {AGENT / "bin" / "pi-done"}
+    bad = []
+    for root in roots:
+        for p in Path(root).rglob("*"):
+            if not p.is_file() or p in allow or p.suffix in {".pyc", ".log"}:
+                continue
+            try:
+                txt = p.read_text(errors="ignore")
+            except OSError:
+                continue
+            if "replay-check" not in txt:
+                continue
+            if "contained-open-effects" in txt or re.search(
+                    r"(?:rc|code|returncode|status)[\"']?\s*(?:==|=|-eq)\s*4\b", txt):
+                continue
+            bad.append(str(p.relative_to(AGENT)) if p.is_relative_to(AGENT) else str(p))
+    if bad:
+        return False, ("replay-check consumer(s) name neither exit 4 nor the verdict: "
+                       + ", ".join(bad[:5])
+                       + " — 4 means stop and surface the reason, never retry (textual only: "
+                       "a caller that logs 4 and still retries passes this scan)")
+    return True, ("no replay-check consumer leaves exit 4 unnamed (textual tripwire only; exit 0 "
+                  "is also not permission — see execution_authorized in its JSON)")
+
+
 def intent():
     """The router's policy must be the one that was replayed.
 
@@ -1304,6 +1353,7 @@ def main():
     check("map", map_index)
     check("identity", identity)
     check("completions", completions)
+    check("replay consumers", replay_consumers)
     check("github hooks", github_hooks)
     check("intent", intent)
     check("claims", claims)

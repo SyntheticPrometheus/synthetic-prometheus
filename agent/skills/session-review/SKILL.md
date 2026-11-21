@@ -1,6 +1,6 @@
 ---
 name: session-review
-description: Mine pi session logs for friction — repeated asks, user corrections, capability gaps, tool errors, long tool chains — and turn the recurring ones into skills, prompts, protocols or memory rows. Use when the owner asks to review recent sessions, when interactions feel repetitive or slow, or on a weekly reflection pass.
+description: Mine pi session logs for friction — repeated asks, user corrections, capability gaps, tool errors, long tool chains — and turn the recurring ones into skills, prompts, protocols or memory rows. Use when you ask to review recent sessions, when interactions feel repetitive or slow, or on a weekly reflection pass.
 ---
 
 # Session review — turn friction into harness changes
@@ -33,10 +33,10 @@ missing skill or just a hard task.
 | The same manual procedure in ≥2 sessions | **skill** (`skills/<name>/SKILL.md`) |
 | A capability the agent keeps re-explaining | **memory row** + a line in `AGENTS.md` |
 | A check that must always run | **guard** in `bin/pi-preflight` or a hook; add to `INCIDENTS.md` |
-| A workflow the owner triggers by name | **prompt template** (`prompts/*.md`) |
+| A workflow you trigger by name | **prompt template** (`prompts/*.md`) |
 | Behavior that should happen without being asked | **extension** (`extensions/*.ts`) |
 | A one-off preference or fact | **memory row** only |
-| A doc the owner reads | `AGENTS.md` / `PUBLISHING.md` / `PASSWORDS.md` |
+| A doc you read | `AGENTS.md` / `PUBLISHING.md` / `PASSWORDS.md` |
 
 A skill is the right answer only when the workflow **repeats**, is **not already covered** by a
 `bin/` tool or a protocol doc, and has a **checkable output**. Otherwise write the memory row.

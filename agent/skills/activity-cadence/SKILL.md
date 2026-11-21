@@ -1,6 +1,6 @@
 ---
 name: activity-cadence
-description: Choose how often and at what clock a semi-automated account posts to a third-party service (GitHub pushes, issues, comments, mail, social APIs) so its history looks like an active human rather than a cron — measure peers first, then set rate, gap, burst and waking-hour gates. Use whenever a tool posts on a schedule the owner did not choose, when an account risks looking automated, or when someone asks to raise or lower a posting cap.
+description: Choose how often and at what clock a semi-automated account posts to a third-party service (GitHub pushes, issues, comments, mail, social APIs) so its history looks like an active human rather than a cron — measure peers first, then set rate, gap, burst and waking-hour gates. Use whenever a tool posts on a schedule you did not choose, when an account risks looking automated, or when someone asks to raise or lower a posting cap.
 ---
 
 # Activity cadence — the clock is the fingerprint

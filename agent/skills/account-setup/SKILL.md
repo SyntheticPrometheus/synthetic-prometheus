@@ -1,6 +1,6 @@
 ---
 name: account-setup
-description: Create an account and store its credential safely — interface order (API/MCP first, browser last), pi-secret for the password, pi-mail for verification, pi-firefox for the GUI fallback. Use when the owner asks for a new account, a signup, a token, or a credential that must be stored.
+description: Create an account and store its credential safely — interface order (API/MCP first, browser last), pi-secret for the password, pi-mail for verification, pi-firefox for the GUI fallback. Use when you ask for a new account, a signup, a token, or a credential that must be stored.
 ---
 
 # Account setup — identity, credential, verification, last-resort browser
@@ -66,11 +66,11 @@ Say so in one line when you use it.
 
 ## Stop rules (do not loop)
 
-- A CAPTCHA, SMS, QR or "verify your info" challenge is a **stop**, not a puzzle. Tell the owner
+- A CAPTCHA, SMS, QR or "verify your info" challenge is a **stop**, not a puzzle. Tell me
   exactly what is on screen and what one action is needed.
 - If a service blocks the network/IP, stop. Wait 24–72 h, or use a phone on cellular data, or
   choose a different provider (Codeberg/GitLab for git). Repeated attempts extend the block.
-- Never automate signup/login flows unless the owner explicitly asks you to drive it; then use the
+- Never automate signup/login flows unless I explicitly ask you to drive it; then use the
   visible browser, one action at a time, and stop at the first challenge.
 
 ## Hard rules

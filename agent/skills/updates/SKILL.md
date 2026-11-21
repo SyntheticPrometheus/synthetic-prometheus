@@ -25,7 +25,7 @@ pi-update apply --detach --quiet          # row `updates`, 1w
 ```
 
 It starts `pi-done run --title 'updates: apply' --phone`, which means: the upgrade outlives the
-shell, `OnFailure` writes `events/done.jsonl`, and the owner gets one text saying how it went.
+shell, `OnFailure` writes `events/done.jsonl`, and you get one text saying how it went.
 `pi-done check` (the `job-done` row and preflight `completions`) fails on an unseen failure, so a
 broken upgrade is not a silent one.
 
@@ -89,7 +89,7 @@ of running it. `rollback pi` writes `current-version` only, and says so.
   `--dbpath` exists so that inspecting updates cannot leave the real database half-synced.
 - **Never update pi from inside a long session's critical path**: `apply` detaches for this reason,
   and the running process keeps its loaded release. A pi update applies to the *next* session.
-- **Never auto-merge a `.pacnew`** or reboot. Both are decisions with the owner's data in them.
+- **Never auto-merge a `.pacnew`** or reboot. Both are decisions with your data in them.
 - **A failed apply files a priority-1 task** and leaves its log; a kernel change leaves a marker that
   `pi-preflight` reads.
 

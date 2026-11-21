@@ -59,7 +59,8 @@ def check():
     # The gate is the thing that decides whether the harness may change, so its own rules are a
     # pinned test, not a promise (external review 2026-11-17: an unequal-reps pair read as +3).
     # ... and so is the runner's resource contract (policy loaded, group killed, cost labelled).
-    for name, line in (("gate", "selftest_gate.py"), ("runner", "selftest_run.py")):
+    for name, line in (("gate", "selftest_gate.py"), ("runner", "selftest_run.py"),
+                       ("confirm", "selftest_confirm.py")):
         st = subprocess.run([sys.executable, str(HERE / line)], capture_output=True, text=True)
         tail = (st.stdout or st.stderr).strip().splitlines()
         if st.returncode != 0:

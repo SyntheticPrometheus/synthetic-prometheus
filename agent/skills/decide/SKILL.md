@@ -1,6 +1,6 @@
 ---
 name: decide
-description: Record and re-measure a decision the owner delegated or that changes a recurring row, a spend or a guard — frame it as options with a metric, measure first, fix the mechanism, name a guard that runs and a dated falsifier, then close it kept/reverted/superseded. Use when the owner says "you decide", "best for the system", "make the call", when a change alters an agenda row or a cost, and when a decision record comes due.
+description: Record and re-measure a decision you delegated or that changes a recurring row, a spend or a guard — frame it as options with a metric, measure first, fix the mechanism, name a guard that runs and a dated falsifier, then close it kept/reverted/superseded. Use when you say "you decide", "best for the system", "make the call", when a change alters an agenda row or a cost, and when a decision record comes due.
 ---
 
 # Decide — a decision is finished when its falsifier is read

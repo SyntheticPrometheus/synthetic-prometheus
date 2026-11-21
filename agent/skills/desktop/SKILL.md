@@ -1,6 +1,6 @@
 ---
 name: desktop
-description: Change the XFCE desktop safely — power/blank/sleep, panel indicators (battery, volume), autologin/autostart, notification sound. Use when the owner asks for a desktop setting, a taskbar indicator, "screen never turns off", or a session that survives logout/reboot.
+description: Change the XFCE desktop safely — power/blank/sleep, panel indicators (battery, volume), autologin/autostart, notification sound. Use when you ask for a desktop setting, a taskbar indicator, "screen never turns off", or a session that survives logout/reboot.
 ---
 
 # Desktop — XFCE settings that survive a restart

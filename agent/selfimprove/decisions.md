@@ -276,3 +276,27 @@ every failed class so far: **counterfactual rule attribution** — the arm must 
 each named rule contributes (`impact.txt`: n/ms recomputed with each of four rules disabled).
 A one-pass fold answers the numbers; attribution requires re-deriving the fold four times, which
 is exactly the plan→act→verify→report behaviour the loop is trying to buy.
+
+## 2026-11-21 — Fresh confirmation + a generated holdout family (issue #1, finding 4)
+
+- The missing step since the 2026-11-17 review is now code, not a caveat: `confirm.py` freezes a
+  candidate (arm sha + random nonce → seed) before any result exists, then generates the family
+  from that seed (2 unseen-seed audit variants, 2 unseen-seed brief variants, 3 tasks from
+  `settlement-audit`, a family absent from the dev suite), measures both arms in alternating
+  order, and decides on the unseen family only.
+- The development suite is enforced as the floor: `decide` refuses to run without an accepted
+  dev pair, and a dev regression rejects even a clean confirmation win.
+- Refusals pinned (9/9 in `selftest_confirm.py`, run by `maintain.py --check`): second freeze of
+  the same bytes; freeze after a measured result; arm edited after freeze; run older than the
+  freeze; run from a different seed/judge; 2 won/0 lost (p=0.50) is a screening result, not
+  confirmation; dev-floor regression; confirmation regression.
+- Policy: `confirmation.alpha = 0.2`, one-sided exact sign test over discordant tasks (at least
+  3 of 7 won, no loss). This is stricter than the gate's delta>=2 and reachable; 3 reps alone
+  remains a screening floor.
+- Judge hash changes once: `suite_sha()` hashes every fixture generator, and `_holdout.py` is new,
+  so history prints the expected "predates the current suite hash" warning. The dev tasks did not
+  change; the judge set did, deliberately.
+- Honest limit: generators are public — these are seeded post-freeze variants with weaker
+  independence than a hidden judge, exactly as stated to the reviewer. The seed proves the cases
+  did not exist when the candidate was written; it does not prove the proposer could not infer
+  the family shape.

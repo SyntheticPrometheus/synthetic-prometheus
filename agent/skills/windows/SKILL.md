@@ -1,6 +1,6 @@
 ---
 name: windows
-description: Tile the windows a session is working with before capturing anything, so screenshots show the work instead of one corner of it. Use whenever a session opens a window, drives two or more windows at once, takes a screenshot to check its own work or show the owner, or when a window is "missing", maximized, overlapping, off-screen, or the desktop layout looks wrong.
+description: Tile the windows a session is working with before capturing anything, so screenshots show the work instead of one corner of it. Use whenever a session opens a window, drives two or more windows at once, takes a screenshot to check its own work or show you, or when a window is "missing", maximized, overlapping, off-screen, or the desktop layout looks wrong.
 ---
 
 # Windows — tile, verify, capture, name them
@@ -30,7 +30,7 @@ is evidence only if the session knows what it contains.
    balanced fractal tree: four panels happen to come out 2×2 (mid = n/2, alternating axis), three
    come out half column + split, five come out ragged. `pi-tile grid` adds the check `tile` cannot
    do — one window per cell, no overlaps, equal areas, union covers the work area — so a grid claim
-   is a measurement (`~/.local/state/pi-win/events.jsonl`, `"event": "grid"`). The owner's own key
+   is a measurement (`~/.local/state/pi-win/events.jsonl`, `"event": "grid"`). Your own key
    for it is **Super+g** (xfconf `/commands/custom/<Super>g`, `--quiet --notify`).
    If a window is not in the log, it is not in the shot, and the reply must not imply it is.
 

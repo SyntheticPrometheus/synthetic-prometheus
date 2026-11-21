@@ -1,6 +1,6 @@
 ---
 name: audit
-description: Periodic activity audit — take the window since the last audit, measure it with one cheap evidence pack, rank findings by money, then attack them with adversarial debators and tester panels before shipping guarded fixes. Use on the agenda's weekly "audit" row, when the owner asks "what has this system actually done / what should change", when money or runway is in question, and before committing to a large piece of new work.
+description: Periodic activity audit — take the window since the last audit, measure it with one cheap evidence pack, rank findings by money, then attack them with adversarial debators and tester panels before shipping guarded fixes. Use on the agenda's weekly "audit" row, when you ask "what has this system actually done / what should change", when money or runway is in question, and before committing to a large piece of new work.
 ---
 
 # Activity audit — measure the window, then break your own fixes
@@ -103,7 +103,7 @@ skills/audit/scripts/window.py score      # yield, repeats, and the two rules be
 ## What this pack cannot see (say so in the report)
 
 It counts what is logged. It cannot see a UI that looks wrong, a service that is up but useless, or
-a fix that is correct and pointless — those need the owner or a screenshot (`bin/pi-shot`). And the
+a fix that is correct and pointless — those need you or a screenshot (`bin/pi-shot`). And the
 window is only as honest as the journals: the 2026-11-16 audit's first pass read 0 tool errors
 across 11,000 calls because `pi` stores tool results in their own row, which no real window produces
 — *a suspicious zero is a suspect too*.

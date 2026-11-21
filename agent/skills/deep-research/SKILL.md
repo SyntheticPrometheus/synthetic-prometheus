@@ -1,6 +1,6 @@
 ---
 name: deep-research
-description: Run a citation-graph literature review over OpenAlex and arXiv, then write a cited digest into research/ and a memory row. Use when the owner asks for deep research, a literature review, "look into papers", or evidence for a design decision; search engines are bot-walled on this host.
+description: Run a citation-graph literature review over OpenAlex and arXiv, then write a cited digest into research/ and a memory row. Use when you ask for deep research, a literature review, "look into papers", or evidence for a design decision; search engines are bot-walled on this host.
 ---
 
 # Deep research — a citation graph, not a search engine
